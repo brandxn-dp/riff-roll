@@ -40,6 +40,8 @@ mac:
   extendInfo:
     NSMicrophoneUsageDescription: Riff Roll uses your audio input to play your guitar through its amp simulator.
 linux:
+  # the package name (@riffroll/desktop) isn't a valid Linux file name
+  executableName: riff-roll
   target: [AppImage, deb]
   category: Audio
   maintainer: Riff Roll contributors

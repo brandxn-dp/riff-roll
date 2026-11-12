@@ -4,6 +4,7 @@
   "private": true,
   "description": "Riff Roll desktop app",
   "author": "Riff Roll",
+  "homepage": "https://github.com/brandxn-dp/riff-roll",
   "main": "dist-electron/main.cjs",
   "scripts": {
     "build:main": "node build.mjs",

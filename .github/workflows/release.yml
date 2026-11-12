@@ -27,7 +27,16 @@ jobs:
         run: pnpm fetch-instruments
       - run: pnpm test
       - name: Build installers
-        run: pnpm desktop:build --publish never
+        shell: bash
+        # empty secrets still arrive as empty variables, which electron-builder reads as "sign with a certificate
+        # at path ''": without a certificate, drop them so the build comes out unsigned instead of failing
+        run: |
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          if [ -z "$APPLE_ID" ]; then unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
+          pnpm desktop:build --publish never
         env:
           # macOS signing / notarisation: add these secrets to sign the dmg (unsigned builds still work, with a warning)
           CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
