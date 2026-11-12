@@ -22,6 +22,8 @@ const app = await buildServer({
   projectsDir,
   instrumentsDirs: [instrumentsDir, ...(bundledDir ? [bundledDir] : [])],
   basicAuth: process.env.RIFFROLL_BASIC_AUTH || undefined,
+  openSignup: process.env.RIFFROLL_SIGNUP === 'open',
+  resetPassword: process.env.RIFFROLL_RESET_PASSWORD || undefined,
   logger: true,
   instrumentStatus: () => status,
 });

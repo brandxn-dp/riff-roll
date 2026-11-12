@@ -9,10 +9,32 @@ import {
   installAutosave,
   newProject,
   openFromDisk,
-  restoreLastSession,
+  getStorage,
+  goHome,
   saveProject,
 } from './actions';
 import { printScore } from './print';
+import { getAuthState } from '../account';
+
+/** Start-up: sign-in screen when the server has accounts and nobody is signed in, otherwise the launch screen. */
+async function boot() {
+  const st = useStore.getState();
+  const storage = await getStorage();
+  if (storage.kind === 'rest') {
+    try {
+      const a = await getAuthState();
+      st.set({
+        auth: { accounts: a.accounts, setupNeeded: a.setupNeeded, signup: a.signup },
+        user: a.user,
+        screen: a.user ? 'home' : 'signin',
+      });
+      return;
+    } catch {
+      /* an older server without accounts */
+    }
+  }
+  st.set({ screen: 'home' });
+}
 
 const run = (fn: () => unknown) =>
   Promise.resolve()
@@ -22,21 +44,16 @@ const run = (fn: () => unknown) =>
 /** File keyboard shortcuts, desktop menu commands, autosave and session restore. */
 export function installFileActions(): () => void {
   const offs: (() => void)[] = [];
-  let started = false;
-  // restore first, then start autosaving (so restoring doesn't immediately write a copy of the example)
-  void restoreLastSession().then(() => {
-    if (started) return;
-    started = true;
-    offs.push(installAutosave());
-  });
+  void boot();
+  offs.push(installAutosave());
 
   offs.push(
     registerKeyHandler((e) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return false;
+      if (!mod || useStore.getState().screen !== 'editor') return false;
       const k = e.key.toLowerCase();
       if (k === 's') run(() => saveProject());
-      else if (k === 'o') useStore.getState().set({ modal: 'files' });
+      else if (k === 'o') run(goHome);
       else if (k === 'n' && !e.shiftKey) run(newProject);
       else if (k === 'p') run(() => printScore());
       else if (k === 'c' && e.shiftKey) run(copyAsciiTab);

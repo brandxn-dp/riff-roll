@@ -19,11 +19,14 @@ import {
   exportMusicXml,
   exportRiff,
   exportWav,
+  goHome,
   newProject,
   openFromDisk,
+  saveCopy,
   saveProject,
 } from '../../files/actions';
 import { printScore } from '../../files/print';
+import { DocBanner, shareCurrentSong } from '../DocBanner';
 
 const run = (fn: () => unknown) => () => {
   Promise.resolve()
@@ -38,6 +41,9 @@ function TopBar() {
   const st = useStore.getState();
   return (
     <header className="m-top">
+      <button className="m-icon" aria-label="All songs" onClick={run(goHome)}>
+        ⌂
+      </button>
       <button className="m-icon" aria-label="More controls" onClick={() => st.set({ sheet: true })}>
         ☰
       </button>
@@ -150,6 +156,8 @@ function BottomNav() {
 function Sheet() {
   const open = useStore((s) => s.sheet);
   const pref = useStore((s) => s.layoutPref);
+  const access = useStore((s) => s.doc.access);
+  const accounts = useStore((s) => s.auth.accounts);
   const st = useStore.getState();
   if (!open) return null;
   const close = () => st.set({ sheet: false });
@@ -177,10 +185,12 @@ function Sheet() {
         {section(
           'Song',
           <div className="m-items">
+            {item('All songs', goHome)}
             {item('New song', newProject)}
-            {item('Open…', () => st.set({ modal: 'files' }))}
             {item('Import file…', openFromDisk)}
-            {item('Save now', () => saveProject())}
+            {access !== 'view' && item('Save now', () => saveProject())}
+            {item('Save a copy', saveCopy)}
+            {accounts && access === 'owner' && item('Share…', shareCurrentSong)}
           </div>,
         )}
         {section('Transport & editing', <Toolbar />)}
@@ -254,6 +264,7 @@ export function MobileApp({ modals }: { modals: ReactNode }) {
     <div className="app mobile">
       <TopBar />
       <TrackChips />
+      <DocBanner />
       <main className="main">
         {view === 'notation' ? (
           <NotationView />

@@ -19,6 +19,11 @@ export function Modal({ title, children, wide }: { title: string; children: Reac
         tabIndex={-1}
         ref={ref}
         onKeyDown={(e) => {
+          // Escape closes the dialog even while typing in one of its fields
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            return close();
+          }
           if (e.key !== 'Tab') return;
           // keep keyboard focus inside the dialog
           const f = [

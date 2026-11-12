@@ -11,7 +11,14 @@ import { DrumGrid } from './views/DrumGrid';
 import { NotationView } from './views/NotationView';
 import { Mixer } from './components/Mixer';
 import { SongBar } from './components/SongBar';
-import { FileMenu, ProjectsDialog, SongTitle } from './components/FileMenu';
+import { FileMenu, SongTitle } from './components/FileMenu';
+import { SignIn } from './components/SignIn';
+import { Home } from './components/Home';
+import { ShareDialog } from './components/ShareDialog';
+import { UsersDialog } from './components/UsersDialog';
+import { AccountDialog } from './components/AccountDialog';
+import { DocBanner } from './components/DocBanner';
+import { goHome } from './files/actions';
 import { About } from './components/About';
 import { ToneEditor } from './components/ToneEditor';
 import { Instruments } from './components/Instruments';
@@ -30,6 +37,8 @@ export function App() {
   const status = useStore((s) => s.status);
   const trackType = useStore((s) => currentTrack(s)?.type);
   const layout = useStore((s) => s.layout);
+  const screen = useStore((s) => s.screen);
+  const user = useStore((s) => s.user);
 
   useEffect(() => {
     detectStorage().then(setStorage);
@@ -50,12 +59,23 @@ export function App() {
     <>
       {modal === 'shortcuts' && <ShortcutSheet />}
       {modal === 'mixer' && <Mixer />}
-      {modal === 'files' && <ProjectsDialog />}
+      {modal === 'share' && <ShareDialog />}
+      {modal === 'users' && <UsersDialog />}
+      {modal === 'account' && <AccountDialog />}
       {modal === 'about' && <About />}
       {modal === 'tone' && <ToneEditor />}
       {modal === 'instruments' && <Instruments />}
     </>
   );
+  if (screen === 'loading') return <div className="auth-screen" aria-busy="true" />;
+  if (screen === 'signin') return <SignIn />;
+  if (screen === 'home')
+    return (
+      <>
+        <Home />
+        {modals}
+      </>
+    );
   if (layout === 'mobile') return <MobileApp modals={modals} />;
 
   const showRoll = view === 'split' || view === 'roll';
@@ -67,6 +87,14 @@ export function App() {
         right={<InputControls />}
         left={
           <>
+            <button
+              className="btn"
+              onClick={() => void goHome()}
+              title="All songs (Ctrl+O)"
+              aria-label="All songs"
+            >
+              ⌂
+            </button>
             <FileMenu />
             <SongTitle />
           </>
@@ -75,6 +103,7 @@ export function App() {
       <div className="body">
         <TrackList />
         <main className="main">
+          <DocBanner />
           <SongBar />
           {view === 'notation' ? (
             <NotationView />
@@ -94,7 +123,9 @@ export function App() {
         <span role="status" aria-live="polite">
           {status}
         </span>
-        <span className="mute">storage: {storage?.kind ?? '…'}</span>
+        <span className="mute">
+          {user ? `${user.displayName} · ` : ''}storage: {storage?.kind ?? '…'}
+        </span>
       </footer>
       {modals}
     </div>

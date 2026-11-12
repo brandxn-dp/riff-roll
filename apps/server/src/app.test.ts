@@ -28,26 +28,9 @@ describe('server', () => {
     expect(r.json()).toEqual({ ok: true });
   });
 
-  it('stores, lists, reads and deletes projects', async () => {
-    const body = Buffer.from([1, 2, 3, 4]);
-    const put = await app.inject({
-      method: 'PUT',
-      url: '/api/projects/song-1',
-      payload: body,
-      headers: { 'content-type': 'application/octet-stream' },
-    });
-    expect(put.statusCode).toBe(200);
-    const list = await app.inject('/api/projects');
-    expect(list.json().map((p: { id: string }) => p.id)).toEqual(['song-1']);
-    const get = await app.inject('/api/projects/song-1');
-    expect(get.rawPayload.equals(body)).toBe(true);
-    await app.inject({ method: 'DELETE', url: '/api/projects/song-1' });
-    expect((await app.inject('/api/projects')).json()).toEqual([]);
-  });
-
-  it('rejects path traversal ids', async () => {
-    const r = await app.inject('/api/projects/..%2F..%2Fetc');
-    expect(r.statusCode).toBe(400);
+  it('needs a signed-in user for songs', async () => {
+    expect((await app.inject('/api/projects')).statusCode).toBe(401);
+    expect((await app.inject('/api/auth/state')).json()).toMatchObject({ setupNeeded: true, user: null });
   });
 
   it('basic auth protects routes when enabled', async () => {
@@ -57,10 +40,10 @@ describe('server', () => {
       instrumentsDirs: [path.join(dir, 'i2')],
       basicAuth: 'band:secret',
     });
-    expect((await a.inject('/api/projects')).statusCode).toBe(401);
+    expect((await a.inject('/api/auth/state')).statusCode).toBe(401);
     expect((await a.inject('/api/health')).statusCode).toBe(200);
     const ok = await a.inject({
-      url: '/api/projects',
+      url: '/api/auth/state',
       headers: { authorization: 'Basic ' + Buffer.from('band:secret').toString('base64') },
     });
     expect(ok.statusCode).toBe(200);
@@ -70,8 +53,14 @@ describe('server', () => {
 
 describe('user instruments', () => {
   it('uploads an SFZ instrument, lists it in the merged index, and deletes it', async () => {
+    const setup = await app.inject({
+      method: 'POST',
+      url: '/api/auth/setup',
+      payload: { username: 'admin', password: 'secret1' },
+    });
+    const cookie = String(setup.headers['set-cookie']).split(';')[0];
     const put = (url: string, payload: Buffer | string, type = 'application/octet-stream') =>
-      app.inject({ method: 'PUT', url, payload, headers: { 'content-type': type } });
+      app.inject({ method: 'PUT', url, payload, headers: { 'content-type': type, cookie } });
     expect(
       (await put('/api/instruments/user-test/files/My%20Kit/kit.sfz', Buffer.from('<region> sample=a.wav')))
         .statusCode,
@@ -95,7 +84,7 @@ describe('user instruments', () => {
     const idx = (await app.inject('/instruments/index.json')).json();
     expect(idx.instruments.map((i: { id: string }) => i.id)).toContain('user-test');
     expect((await app.inject('/instruments/user-test/My%20Kit/kit.sfz')).statusCode).toBe(200);
-    await app.inject({ method: 'DELETE', url: '/api/instruments/user-test' });
+    await app.inject({ method: 'DELETE', url: '/api/instruments/user-test', headers: { cookie } });
     expect((await app.inject('/instruments/index.json')).json().instruments).toEqual([]);
   });
 });

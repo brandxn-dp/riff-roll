@@ -18,5 +18,7 @@
   <Config Name="Instruments" Target="/data/instruments" Default="/mnt/user/appdata/riff-roll/instruments" Mode="rw" Description="Instruments you add yourself (the default ones are built into the image)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/riff-roll/instruments</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User id that owns the appdata folders (Unraid: 99 = nobody)" Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group id (Unraid: 100 = users)" Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
-  <Config Name="Basic auth" Target="RIFFROLL_BASIC_AUTH" Default="" Mode="" Description="Optional user:password to require a login (use together with HTTPS)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Open sign-up" Target="RIFFROLL_SIGNUP" Default="" Mode="" Description="Set to open to let people create their own accounts. Leave empty so only admins add users." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Reset password" Target="RIFFROLL_RESET_PASSWORD" Default="" Mode="" Description="One-off: username:new-password resets a forgotten password at startup. Remove it after signing in." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Basic auth" Target="RIFFROLL_BASIC_AUTH" Default="" Mode="" Description="Optional extra user:password in front of everything (accounts already need a sign-in)" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
 </Container>

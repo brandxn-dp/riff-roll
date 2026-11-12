@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { PublicUser } from './account';
+import type { Access } from './storage/types';
 import {
   BarMap,
   History,
@@ -68,7 +70,22 @@ export interface UiState {
   };
   /** user files stored inside the .riff (impulse responses) */
   assets: Record<string, Uint8Array>;
-  modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files' | 'instruments';
+  modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'instruments' | 'share' | 'users' | 'account';
+  /** sign-in screen, launch screen (recent + all songs), or the editor */
+  screen: 'loading' | 'signin' | 'home' | 'editor';
+  /** server accounts: whether the server has them, first-run setup, open sign-up */
+  auth: { accounts: boolean; setupNeeded: boolean; signup: boolean };
+  user: PublicUser | null;
+  /** the open song as stored: your access, the version it is based on, and why saving stopped (if it did) */
+  doc: {
+    access: Access;
+    version?: number;
+    owner?: string;
+    blocked: null | 'readonly' | 'conflict';
+    conflictBy?: string;
+  };
+  /** song the share dialog is for */
+  shareTarget: { id: string; title: string } | null;
 
   exec(cmd: Command): void;
   begin(label: string): void;
@@ -81,7 +98,8 @@ export interface UiState {
   select(ids: Iterable<Id>, focus?: Id | null): void;
 }
 
-function initialSong(): Song {
+/** The example song (also what the editor holds before anything is opened). */
+export function initialSong(): Song {
   const s = newSong('Untitled');
   // start with the prototype's example riff on Guitar 1 so the app is never empty on first launch
   return {
@@ -122,6 +140,11 @@ export const useStore = create<UiState>((set, get) => {
     sheet: false,
     midi: { inputs: [], inputId: null, armed: false, quantize: true, guitarChannels: false },
     modal: null,
+    screen: 'loading',
+    auth: { accounts: false, setupNeeded: false, signup: false },
+    user: null,
+    doc: { access: 'owner', blocked: null },
+    shareTarget: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),
     commit: () => {

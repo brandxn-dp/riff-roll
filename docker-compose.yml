@@ -11,8 +11,12 @@ services:
       # user/group the server runs as and that owns the volumes (Unraid: 99 / 100)
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
-      # optional: "user:password" to require basic auth (for LAN use)
+      # optional: "user:password" basic auth in front of everything (accounts already need a sign-in)
       RIFFROLL_BASIC_AUTH: ${RIFFROLL_BASIC_AUTH:-}
+      # optional: "open" lets people create their own accounts from the sign-in screen
+      RIFFROLL_SIGNUP: ${RIFFROLL_SIGNUP:-}
+      # optional, one-off: "username:new-password" resets a forgotten password at startup (then remove it)
+      RIFFROLL_RESET_PASSWORD: ${RIFFROLL_RESET_PASSWORD:-}
     volumes:
       - projects:/data/projects
       - instruments:/data/instruments

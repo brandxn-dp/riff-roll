@@ -237,3 +237,35 @@ tuning closest to the lowest note on each string (parts that only use the top st
 clearly use). Strums are lined up on their first note, blips become dead notes with their written length, pitch bend
 (with the RPN bend range) becomes a bend curve or vibrato, GM drum keys without a lane map to the nearest piece, and GM
 40 is the main snare when a part has no 38. Format 0 files still split by channel.
+
+## Accounts, launch screen and sharing
+
+- **Where accounts live**: only the server (Docker / Unraid) has accounts, because that's where several people use
+  the same songs folder. The desktop app is already per OS user and the browser-only mode has no server to share
+  through, so both stay single-user without a sign-in; they still get the launch screen.
+- **Storage**: `accounts.json` (users with scrypt hashes, sessions stored as sha-256 of the token) and
+  `library.json` (owner, title, version and shares per song; recently opened per user) sit next to the `.riff`
+  files in the projects volume. One volume to back up, no database to run, and the old layout of
+  `<id>.riff` files is unchanged. JSON writes are serialised and written atomically (write, then rename).
+- **First run**: the first account is created on the sign-in screen and is an admin; songs already on disk (from
+  before accounts, or copied in by hand later) belong to the first admin. Their titles are read from `song.json`
+  inside the zip on the server so the list isn't "Untitled".
+- **Who can sign up**: admins add people by default; `RIFFROLL_SIGNUP=open` allows self sign-up. Forgotten
+  passwords are reset with a one-off `RIFFROLL_RESET_PASSWORD=user:pass` variable, which works from the Unraid GUI
+  (no shell needed). A JSON-editing CLI was rejected: it would race the running server's in-memory copy.
+- **Sessions**: random 32-byte token in an HttpOnly, SameSite=Lax cookie (Secure behind HTTPS), 30 days.
+  SameSite plus JSON / octet-stream bodies covers CSRF for this API. Eight wrong passwords for an address +
+  username pause sign-in for 10 minutes. Changing a password signs out other devices.
+- **Isolation**: every `/api` route except health, instrument status and the auth routes needs a session. A song
+  you can't access answers 404 (not 403), so ids don't leak. Instruments stay shared by everyone on the server:
+  sample libraries are large and not personal.
+- **Sharing**: per person, `view` or `edit`. Viewers can play and try changes, which aren't saved; "Save a copy"
+  makes it theirs. Editors save into the owner's song. Recipients can remove a shared song from their own list
+  without touching the owner's. Deleting a user hands their songs to the admin who deleted them.
+- **Two people editing at once**: no live collaboration. Each save carries the version it was based on; if
+  someone else saved in between, the server refuses (409) and the editor stops saving and offers "Load their
+  version" or "Keep mine as a copy". Saves are queued so one tab never conflicts with itself.
+- **Imports** always get a new song id, so importing someone else's `.riff` can't collide with their copy (a
+  collision on save still falls back to a new id).
+- **Opening a song** doesn't count as an edit (no save, no version bump); "recently opened" is recorded by the
+  server when a song is loaded, or in localStorage in single-user mode.

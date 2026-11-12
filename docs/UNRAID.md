@@ -26,9 +26,22 @@ The Docker image is published to GitHub Container Registry on every push to `mai
    | Path | Instruments | `/data/instruments` | `/mnt/user/appdata/riff-roll/instruments` |
    | Variable | PUID | Key `PUID` | `99` |
    | Variable | PGID | Key `PGID` | `100` |
-   | Variable | Basic auth (optional) | Key `RIFFROLL_BASIC_AUTH` | `user:password` |
+   | Variable | Open sign-up (optional) | Key `RIFFROLL_SIGNUP` | `open` (or leave it out) |
 
 4. **Apply**. Unraid pulls the image and starts it. When the icon turns green (healthy), click it → **WebUI**.
+
+## First sign-in and adding people
+
+1. The first time you open the WebUI it says **Set up this server**. Create your account; it's the admin, and
+   any songs already in the projects folder become yours.
+2. Add everyone else under **your name (top right) → Manage users**: pick a username and a starting password and
+   give it to them. They can change it under **your name → Account**. To let people create their own accounts
+   instead, add the `RIFFROLL_SIGNUP` variable with the value `open`.
+3. Each person sees only their own songs and the songs shared with them. To share, use **Share** next to a song on
+   the launch screen (or **File → Share…** in the editor) and pick **View only** or **Can edit** per person.
+
+**Forgot the admin password?** Edit the container, add a Variable with Key `RIFFROLL_RESET_PASSWORD` and value
+`yourusername:a-new-password`, **Apply**, sign in, then remove the variable and **Apply** again.
 
 ## Option B: Use the template
 
@@ -56,11 +69,14 @@ HTTPS with the reverse proxy you already use on Unraid:
 - **SWAG**: copy a generic subdomain conf and set `upstream_app` to the Unraid IP and `upstream_port` to `8080`.
 - **Tailscale**: `tailscale serve` (or the Tailscale plugin) gives you an HTTPS `*.ts.net` address.
 
-Set **Basic auth** if the app is reachable from outside your LAN.
+Everyone has to sign in, but if the app is reachable from the internet use HTTPS so passwords aren't sent in
+the clear. You can also add the optional `RIFFROLL_BASIC_AUTH` variable (`user:password`) for an extra gate in
+front of the sign-in page.
 
 ## Backups
 
-Your songs are plain `.riff` files in `/mnt/user/appdata/riff-roll/projects`. Back up that folder (for example
+Your songs are plain `.riff` files in `/mnt/user/appdata/riff-roll/projects`, together with `accounts.json` and
+`library.json` (the accounts, who owns which song, and what is shared). Back up that whole folder (for example
 with the *Appdata Backup* plugin), or download songs from the app with **File → Download .riff**.
 
 ## Troubleshooting

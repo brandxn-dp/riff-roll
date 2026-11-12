@@ -1,4 +1,5 @@
-import type { ProjectInfo, StorageAdapter } from './types';
+import type { ProjectInfo, SaveMeta, StorageAdapter } from './types';
+import { forgetLocal, localMeta, noteLocal } from './local-meta';
 
 /** API exposed by apps/desktop/src/preload.ts via contextBridge. */
 export interface RiffRollBridge {
@@ -18,20 +19,25 @@ declare global {
   }
 }
 
-/** Desktop mode: Electron IPC to the main process, which uses the native file system. */
+/** Desktop mode: Electron IPC to the main process, which uses the native file system. Single user. */
 export class ElectronStorage implements StorageAdapter {
   readonly kind = 'electron' as const;
   constructor(private bridge: RiffRollBridge) {}
-  list() {
-    return this.bridge.projects.list();
+  async list() {
+    const items = await this.bridge.projects.list();
+    return items.map((p) => ({ ...p, name: localMeta(p.id).title, openedAt: localMeta(p.id).openedAt }));
   }
-  load(id: string) {
-    return this.bridge.projects.load(id);
+  async load(id: string) {
+    const data = await this.bridge.projects.load(id);
+    return { data, access: 'owner' as const };
   }
-  save(id: string, data: Uint8Array) {
-    return this.bridge.projects.save(id, data);
+  async save(id: string, data: Uint8Array, meta: SaveMeta) {
+    await this.bridge.projects.save(id, data);
+    noteLocal(id, { title: meta.title });
+    return {};
   }
-  remove(id: string) {
-    return this.bridge.projects.remove(id);
+  async remove(id: string) {
+    await this.bridge.projects.remove(id);
+    forgetLocal(id);
   }
 }

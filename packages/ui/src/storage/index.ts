@@ -3,7 +3,8 @@ import { IndexedDbStorage } from './indexeddb';
 import { RestStorage } from './rest';
 import type { StorageAdapter } from './types';
 
-export type { StorageAdapter, ProjectInfo } from './types';
+export type { StorageAdapter, ProjectInfo, Access, LoadedProject } from './types';
+export { SaveError } from './types';
 
 /** Pick the adapter for the environment we are running in. */
 export async function detectStorage(): Promise<StorageAdapter> {

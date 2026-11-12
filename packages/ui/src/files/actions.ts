@@ -3,6 +3,7 @@ import { zipSync } from 'fflate';
 import {
   asciiTab,
   midiToSong,
+  newId,
   newSong,
   packRiff,
   songToAlphaTex,
@@ -12,8 +13,10 @@ import {
   type Song,
 } from '@riffroll/core';
 import { audioBufferToWav, gateWorkletUrl, renderSong } from '@riffroll/audio';
-import { barMap, currentTrack, songEnd, useStore } from '../store';
-import { detectStorage, type StorageAdapter } from '../storage';
+import { barMap, currentTrack, initialSong, songEnd, useStore } from '../store';
+import { SaveError, detectStorage, type StorageAdapter } from '../storage';
+import { noteLocal } from '../storage/local-meta';
+import { stop } from '../transport';
 import { ensureEngine } from '../audio-setup';
 import { exportGp7, importScoreBytes } from './importScore';
 import type { RiffRollBridge } from '../storage/electron';
@@ -64,52 +67,158 @@ export async function saveFile(name: string, data: Uint8Array | string, mime: st
 }
 
 // ---------------- projects ----------------
-export async function saveProject(song = useStore.getState().song) {
+/** The id a song is stored under. */
+export const storeId = (songId: string) => songId.replace(/[^A-Za-z0-9_-]/g, '_');
+
+/** True while a song is being loaded, so loading it doesn't count as an edit to autosave. */
+let loading = false;
+function load(song: Song, assets: Record<string, Uint8Array> = {}) {
+  loading = true;
+  try {
+    useStore.getState().loadSong(song, assets);
+  } finally {
+    loading = false;
+  }
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function cancelPendingSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+}
+
+// saves run one at a time, so each one is based on the version the previous one produced
+let saveChain: Promise<unknown> = Promise.resolve();
+export function saveProject(song?: Song, opts: { auto?: boolean } = {}): Promise<void> {
+  const run = saveChain.then(() => doSave(song ?? useStore.getState().song, opts.auto ?? false));
+  saveChain = run.catch(() => {});
+  return run;
+}
+
+async function doSave(song: Song, auto: boolean) {
+  const st = useStore.getState();
+  if (st.doc.access === 'view' || st.doc.blocked) {
+    if (st.doc.access === 'view' && !st.doc.blocked) st.set({ doc: { ...st.doc, blocked: 'readonly' } });
+    if (!auto) status('Not saved: use “Save a copy” to keep your changes.');
+    return;
+  }
   const s = await getStorage();
-  await s.save(song.id.replace(/[^A-Za-z0-9_-]/g, '_'), packRiff(song, useStore.getState().assets));
-  useStore.getState().set({ dirty: false, status: `Saved “${song.title}”` });
+  try {
+    const r = await s.save(storeId(song.id), packRiff(song, st.assets), {
+      title: song.title || 'Untitled',
+      baseVersion: st.doc.version,
+    });
+    const now = useStore.getState();
+    if (now.song.id === song.id)
+      now.set({ dirty: now.song !== song, doc: { ...now.doc, version: r.version ?? now.doc.version } });
+    if (!auto) status(`Saved “${song.title}”`);
+  } catch (e) {
+    if (!(e instanceof SaveError)) throw e;
+    const now = useStore.getState();
+    if (e.code === 'taken') {
+      // the id belongs to another user's song (e.g. you imported a copy of their file): keep yours separately
+      const own = { ...now.song, id: newId('song') };
+      now.set({ doc: { access: 'owner', blocked: null } });
+      load(own, now.assets);
+      return doSave(own, auto);
+    }
+    if (e.code === 'conflict') now.set({ doc: { ...now.doc, blocked: 'conflict', conflictBy: e.updatedBy } });
+    else if (e.code === 'readonly') now.set({ doc: { ...now.doc, access: 'view', blocked: 'readonly' } });
+    status(e.message);
+  }
 }
 
 export async function openProject(id: string) {
+  cancelPendingSave();
   const s = await getStorage();
-  const { song, assets } = unpackRiff(await s.load(id));
-  useStore.getState().loadSong(song, assets);
-  status(`Opened “${song.title}”`);
+  const p = await s.load(id);
+  const { song, assets } = unpackRiff(p.data);
+  // the stored id is the one the store knows; keep the song's own id in step with it
+  const fixed = storeId(song.id) === id ? song : { ...song, id };
+  useStore.getState().set({
+    doc: { access: p.access, version: p.version, owner: p.owner, blocked: null },
+    screen: 'editor',
+    sheet: false,
+  });
+  load(fixed, assets);
+  useStore.getState().set({ dirty: false });
+  if (s.kind !== 'rest') noteLocal(id, { openedAt: new Date().toISOString(), title: fixed.title });
+  status(p.access === 'view' ? `Opened “${fixed.title}” (view only)` : `Opened “${fixed.title}”`);
 }
 
 export function newProject() {
+  cancelPendingSave();
   const song = newSong('Untitled');
-  useStore.getState().loadSong({ ...song, bars: 8 });
+  const st = useStore.getState();
+  st.set({ doc: { access: 'owner', blocked: null }, screen: 'editor', sheet: false });
+  // loading a new song is a change: it gets saved right away and shows up in your songs
+  st.loadSong({ ...song, bars: 8 });
   status('New song');
+}
+
+/** The example riff as a new song of yours. */
+export function openExample() {
+  cancelPendingSave();
+  const st = useStore.getState();
+  st.set({ doc: { access: 'owner', blocked: null }, screen: 'editor', sheet: false });
+  st.loadSong({ ...initialSong(), id: newId('song'), title: 'Example riff' });
+  status('Example riff: it’s your own song now, edit away');
+}
+
+/** Keep your changes to a song you can't save (view-only, or someone else saved first) as your own song. */
+export async function saveCopy() {
+  cancelPendingSave();
+  const st = useStore.getState();
+  const song = { ...st.song, id: newId('song'), title: `${st.song.title || 'Untitled'} (copy)` };
+  st.set({ doc: { access: 'owner', blocked: null } });
+  load(song, st.assets);
+  await saveProject(song);
+  status(`Saved a copy: “${song.title}”`);
+}
+
+/** Throw away local changes and open the stored version again (after a save conflict). */
+export async function reopenProject() {
+  await openProject(storeId(useStore.getState().song.id));
+}
+
+/** Save anything still waiting for autosave, and wait for saves in flight (before signing out). */
+export async function flushSaves() {
+  if (saveTimer) {
+    cancelPendingSave();
+    await saveProject(undefined, { auto: true }).catch(() => {});
+  }
+  await saveChain;
+}
+
+/** Signed out: forget the previous user's song (nothing of theirs stays in memory for the next person). */
+export function clearEditor() {
+  cancelPendingSave();
+  useStore.getState().set({ doc: { access: 'owner', blocked: null }, dirty: false });
+  load(initialSong());
+}
+
+/** Back to the launch screen; anything unsaved is saved first. */
+export async function goHome() {
+  const st = useStore.getState();
+  if (st.playing) stop();
+  if (saveTimer) {
+    cancelPendingSave();
+    await saveProject(undefined, { auto: true }).catch(() => {});
+  }
+  useStore.getState().set({ screen: 'home', modal: null, sheet: false });
 }
 
 /** Autosave + crash recovery: every change is saved to the project store shortly after you stop editing. */
 export function installAutosave() {
-  let timer: ReturnType<typeof setTimeout> | null = null;
   return useStore.subscribe((s, prev) => {
-    if (s.song === prev.song) return;
+    if (s.song === prev.song || loading || s.screen !== 'editor') return;
     if (!s.dirty) useStore.getState().set({ dirty: true });
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      saveProject(useStore.getState().song).catch((e) => status(`Autosave failed: ${(e as Error).message}`));
+    cancelPendingSave();
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      saveProject(undefined, { auto: true }).catch((e) => status(`Autosave failed: ${(e as Error).message}`));
     }, 1500);
   });
-}
-
-/** On startup reopen the most recently edited project (this is also the crash recovery). */
-export async function restoreLastSession(): Promise<boolean> {
-  try {
-    const s = await getStorage();
-    const list = await s.list();
-    if (!list.length) return false;
-    await openProject(list[0].id);
-    status(
-      `Restored “${useStore.getState().song.title}” (autosaved ${new Date(list[0].updatedAt).toLocaleString()})`,
-    );
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // ---------------- import ----------------
@@ -129,7 +238,11 @@ export async function importBytes(name: string, bytes: Uint8Array) {
     ({ song, warnings } = importScoreBytes(bytes));
     if (!song.title || song.title === 'Imported') song.title = name.replace(/\.[^.]+$/, '');
   }
-  useStore.getState().loadSong(song, assets);
+  // an import is always a new song of yours (importing the same .riff twice gives two songs)
+  song = { ...song, id: newId('song') };
+  cancelPendingSave();
+  useStore.getState().set({ doc: { access: 'owner', blocked: null }, screen: 'editor', sheet: false });
+  load(song, assets);
   await saveProject(song);
   status(`Imported ${name}${warnings.length ? ` — ${warnings.join('; ')}` : ''}`);
 }

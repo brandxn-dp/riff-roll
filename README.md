@@ -45,6 +45,10 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Phones**: a dedicated touch layout is picked automatically on phones (tap to add notes, an on-screen fret
   pad for tab, bottom navigation, full controls in the ☰ sheet). Tablets keep the full layout with larger touch
   targets. Override it under File → Phone layout or ☰ → App → Layout.
+- **Accounts and sharing** (Docker / Unraid server): everyone signs in and sees only their own songs plus songs
+  shared with them. Share a song **view only** (they can open, play and save their own copy) or **can edit**
+  (their changes save into your song; if two people save over each other, the second one is asked to reload or
+  keep a copy). After signing in, a launch screen shows recently opened songs and all your songs.
 
 Press **?** in the app for the keyboard cheat sheet.
 
@@ -71,7 +75,8 @@ Then open **http://localhost:8080**.
 
 ### Backups
 
-Projects are plain `.riff` files (zip archives). To back up the volume:
+Projects are plain `.riff` files (zip archives); `accounts.json` and `library.json` in the same volume hold the
+accounts and who owns and shares what. To back up the volume:
 
 ```bash
 docker run --rm -v better-tab-program_projects:/data -v "$PWD":/backup alpine tar czf /backup/riffroll-projects.tgz -C /data .
@@ -80,15 +85,32 @@ docker run --rm -v better-tab-program_projects:/data -v "$PWD":/backup alpine ta
 To restore, run the same command with `tar xzf /backup/riffroll-projects.tgz -C /data`. The volume name is your
 compose project name plus `_projects`; `docker volume ls` lists them.
 
-### Password protection for LAN use
+### Accounts
 
-Set `RIFFROLL_BASIC_AUTH=user:password`, for example in a `.env` file next to `docker-compose.yml`:
+The first time you open the app it asks you to **create the first account**. That account is an admin, and it
+takes over any songs already on the server. Admins add everyone else under **your name → Manage users** (people
+can't sign themselves up unless you set `RIFFROLL_SIGNUP=open`). Each person sees only their own songs and the
+ones shared with them, even on the same computer or browser.
+
+Accounts, sessions and sharing live in `accounts.json` and `library.json` next to the songs in the projects
+volume, so the usual backup covers them. Passwords are stored as scrypt hashes; sessions are HttpOnly cookies
+that last 30 days. Repeated wrong passwords lock that username out for 10 minutes.
+
+**Forgot the admin password?** Start the container once with `RIFFROLL_RESET_PASSWORD=username:new-password`,
+sign in, then remove the variable.
+
+The desktop app and the browser-only mode are single-user (no sign-in); they still get the launch screen.
+
+### Extra password for LAN use (optional)
+
+`RIFFROLL_BASIC_AUTH=user:password` adds HTTP basic auth in front of everything (including the sign-in page),
+for example in a `.env` file next to `docker-compose.yml`:
 
 ```bash
 RIFFROLL_BASIC_AUTH=band:correct-horse-battery-staple
 ```
 
-Every route except `/api/health` then requires HTTP basic auth.
+Every route except `/api/health` then requires it. With accounts this is rarely needed.
 
 ### HTTPS and reverse proxies (important for LAN access)
 
