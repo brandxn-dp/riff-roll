@@ -155,13 +155,34 @@ Installers are attached to each GitHub release:
 
 | OS | File |
 |---|---|
-| Windows | `Riff Roll Setup x.y.z.exe` (NSIS) |
-| macOS | `Riff Roll-x.y.z-universal.dmg` |
-| Linux | `Riff Roll-x.y.z.AppImage`, `riff-roll_x.y.z_amd64.deb` |
+| Windows | `Riff.Roll.Setup.x.y.z.exe` (NSIS) |
+| macOS | `Riff.Roll-x.y.z-universal.dmg` |
+| Linux | `riff-roll-x.y.z-x86_64.AppImage`, `riff-roll-x.y.z-amd64.deb` |
 
 The instruments are bundled, so the app works offline. It also has native menus and open/save dialogs, recent
 files, `.riff` file association, remembered window size and position, and autosave. Songs are stored in the app data
 folder.
+
+### Build the Windows installer yourself
+
+You need [Node.js 22](https://nodejs.org) or newer and [Git](https://git-scm.com). In a terminal (PowerShell or
+Command Prompt):
+
+```bash
+git clone https://github.com/brandxn-dp/riff-roll.git
+cd riff-roll
+corepack enable
+pnpm install
+pnpm fetch-instruments
+pnpm desktop:build
+```
+
+`corepack enable` provides the pinned pnpm version (run that terminal as administrator if it complains about
+permissions, or use `npm install -g pnpm@10` instead). `pnpm fetch-instruments` downloads the default sample packs
+(about 160 MB, a few minutes) so they are bundled into the installer. The installer is written to `apps/desktop/release/Riff Roll Setup x.y.z.exe`. Windows SmartScreen
+warns about an unknown publisher because the installer isn't code-signed: click **More info → Run anyway**. To
+update later: `git pull`, `pnpm install`, `pnpm desktop:build`. Builds for macOS must be made on a Mac and Linux
+builds on Linux (or let the release workflow build all three).
 
 macOS builds are unsigned unless signing secrets are configured, so on first launch right-click the app and choose
 **Open**. The secrets are listed in `.github/workflows/release.yml`.
