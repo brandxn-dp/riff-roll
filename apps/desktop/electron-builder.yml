@@ -42,6 +42,10 @@ mac:
 linux:
   # the package name (@riffroll/desktop) isn't a valid Linux file name
   executableName: riff-roll
+  # file and package names: no "@", "/", spaces or capitals
+  artifactName: riff-roll-${version}-${arch}.${ext}
   target: [AppImage, deb]
   category: Audio
   maintainer: Riff Roll contributors
+deb:
+  packageName: riff-roll
