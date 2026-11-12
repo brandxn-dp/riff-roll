@@ -6,8 +6,8 @@ export function About() {
   return (
     <Modal title="About Riff Roll" wide>
       <p>
-        Songwriting for rock bands: draw in the piano roll, get colour-coded tab, stomp from clean to distorted in one
-        track, and hear it through sampled instruments and an amp sim.
+        Songwriting for rock bands: draw in the piano roll, get colour-coded tab, stomp from clean to
+        distorted in one track, and hear it through sampled instruments and an amp sim.
       </p>
       <h3 className="h3">Instruments and samples</h3>
       <ul className="credits">
@@ -33,7 +33,9 @@ export function About() {
           </li>
         ))}
       </ul>
-      <p className="mute">Cabinet impulse responses are synthesised by Riff Roll itself; no third-party IR files are included.</p>
+      <p className="mute">
+        Cabinet impulse responses are synthesised by Riff Roll itself; no third-party IR files are included.
+      </p>
     </Modal>
   );
 }

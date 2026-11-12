@@ -47,7 +47,14 @@ function Slider({
   return (
     <label className="slider">
       <span>{label}</span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
       <output>{fmt ? fmt(value) : value.toFixed(2)}</output>
     </label>
   );
@@ -70,12 +77,30 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
           </button>
         </div>
       </header>
-      <Slider label="Volume" value={t.volume} min={0} max={1.5} onChange={(v) => set({ volume: v }, 'Volume')} fmt={(v) => db(v) + ' dB'} />
-      <Slider label="Pan" value={t.pan} min={-1} max={1} onChange={(v) => set({ pan: v }, 'Pan')} fmt={(v) => (Math.abs(v) < 0.01 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`)} />
+      <Slider
+        label="Volume"
+        value={t.volume}
+        min={0}
+        max={1.5}
+        onChange={(v) => set({ volume: v }, 'Volume')}
+        fmt={(v) => db(v) + ' dB'}
+      />
+      <Slider
+        label="Pan"
+        value={t.pan}
+        min={-1}
+        max={1}
+        onChange={(v) => set({ pan: v }, 'Pan')}
+        fmt={(v) =>
+          Math.abs(v) < 0.01 ? 'C' : v < 0 ? `L${Math.round(-v * 100)}` : `R${Math.round(v * 100)}`
+        }
+      />
       <label className="slider">
         <span>Instrument</span>
         <select value={t.instrument} onChange={(e) => set({ instrument: e.target.value }, 'Instrument')}>
-          {!options.some((o) => o.id === t.instrument) && <option value={t.instrument}>{t.instrument} (not installed)</option>}
+          {!options.some((o) => o.id === t.instrument) && (
+            <option value={t.instrument}>{t.instrument} (not installed)</option>
+          )}
           {options.map((o) => (
             <option key={o.id} value={o.id}>
               {o.name}
@@ -86,9 +111,30 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
       {t.type === 'drums' && (
         <>
           <h4>Kit</h4>
-          <Slider label="Close mics" value={t.drumMics?.close ?? 1} min={0} max={1.5} onChange={(v) => set({ drumMics: { close: v, oh: t.drumMics?.oh ?? 1 } }, 'Mic balance')} fmt={(v) => db(v) + ' dB'} />
-          <Slider label="Overheads" value={t.drumMics?.oh ?? 1} min={0} max={1.5} onChange={(v) => set({ drumMics: { close: t.drumMics?.close ?? 1, oh: v } }, 'Mic balance')} fmt={(v) => db(v) + ' dB'} />
-          <Slider label="Kit comp" value={t.drumComp ?? 0.35} min={0} max={1} onChange={(v) => set({ drumComp: v }, 'Kit compressor')} fmt={(v) => Math.round(v * 100) + '%'} />
+          <Slider
+            label="Close mics"
+            value={t.drumMics?.close ?? 1}
+            min={0}
+            max={1.5}
+            onChange={(v) => set({ drumMics: { close: v, oh: t.drumMics?.oh ?? 1 } }, 'Mic balance')}
+            fmt={(v) => db(v) + ' dB'}
+          />
+          <Slider
+            label="Overheads"
+            value={t.drumMics?.oh ?? 1}
+            min={0}
+            max={1.5}
+            onChange={(v) => set({ drumMics: { close: t.drumMics?.close ?? 1, oh: v } }, 'Mic balance')}
+            fmt={(v) => db(v) + ' dB'}
+          />
+          <Slider
+            label="Kit comp"
+            value={t.drumComp ?? 0.35}
+            min={0}
+            max={1}
+            onChange={(v) => set({ drumComp: v }, 'Kit compressor')}
+            fmt={(v) => Math.round(v * 100) + '%'}
+          />
           <h4>Pieces</h4>
           {PIECES.map((p) => (
             <Slider
@@ -125,7 +171,8 @@ export function Mixer() {
         ))}
       </div>
       <p className="mute">
-        Master: glue compressor → limiter. Output latency: {latency == null ? '…' : `${latency} ms`} (interactive latency hint).
+        Master: glue compressor → limiter. Output latency: {latency == null ? '…' : `${latency} ms`}{' '}
+        (interactive latency hint).
       </p>
     </Modal>
   );

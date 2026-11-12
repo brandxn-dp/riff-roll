@@ -20,4 +20,5 @@ export function setAudioHooks(h: AudioHooks) {
 
 export const preview = (track: Track, pitch: number, tick: number, len?: number) =>
   hooks.preview(track, pitch, tick, len);
-export const previewDrum = (track: Track, lane: string, velocity = 100) => hooks.previewDrum(track, lane, velocity);
+export const previewDrum = (track: Track, lane: string, velocity = 100) =>
+  hooks.previewDrum(track, lane, velocity);

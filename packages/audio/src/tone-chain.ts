@@ -97,7 +97,11 @@ export class ToneChainNode {
 
     // gate
     if (deps.gateWorklet) {
-      n.gate = new AudioWorkletNode(c, 'riffroll-gate', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+      n.gate = new AudioWorkletNode(c, 'riffroll-gate', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+      });
       node.connect(n.gate);
       node = n.gate;
     }
@@ -123,7 +127,12 @@ export class ToneChainNode {
     n.driveWet = g(0);
     n.driveDry = g(1);
     n.driveSum = g();
-    node.connect(n.driveHp).connect(n.driveMid).connect(n.driveGain).connect(n.driveClip).connect(n.driveTone);
+    node
+      .connect(n.driveHp)
+      .connect(n.driveMid)
+      .connect(n.driveGain)
+      .connect(n.driveClip)
+      .connect(n.driveTone);
     // the pedal passes some lows clean so it tightens rather than thins the amp
     n.driveTone.connect(n.driveLevel).connect(n.driveWet).connect(n.driveSum);
     node.connect(n.driveDry).connect(n.driveSum);

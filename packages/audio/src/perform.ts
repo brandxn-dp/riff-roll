@@ -1,4 +1,12 @@
-import { BarMap, laneById, toneChanges, trackFingering, type Note, type Song, type Track } from '@riffroll/core';
+import {
+  BarMap,
+  laneById,
+  toneChanges,
+  trackFingering,
+  type Note,
+  type Song,
+  type Track,
+} from '@riffroll/core';
 import type { Sampler, Voice } from './sampler';
 import type { TrackGraph } from './graph';
 
@@ -16,7 +24,18 @@ export interface Humanize {
 }
 
 /** Natural harmonic at a fret → semitones above the open string. */
-const NATURAL_HARMONICS: Record<number, number> = { 12: 12, 24: 24, 7: 19, 19: 19, 5: 24, 4: 28, 9: 28, 16: 28, 3: 31, 2: 34 };
+const NATURAL_HARMONICS: Record<number, number> = {
+  12: 12,
+  24: 24,
+  7: 19,
+  19: 19,
+  5: 24,
+  4: 28,
+  9: 28,
+  16: 28,
+  3: 31,
+  2: 34,
+};
 
 /** first index with start >= tick */
 function lb(notes: readonly Note[], tick: number) {
@@ -46,7 +65,8 @@ export function scheduleTrack(
   human: Humanize,
 ) {
   if (track.type !== 'drums') {
-    for (const ch of toneChanges(track.pedal)) if (ch.tick > 0 && ch.tick >= t0 && ch.tick < t1) graph.setTone(ch.toneId, timeOf(ch.tick));
+    for (const ch of toneChanges(track.pedal))
+      if (ch.tick > 0 && ch.tick >= t0 && ch.tick < t1) graph.setTone(ch.toneId, timeOf(ch.tick));
   }
   if (!sampler) return;
   if (track.type === 'drums') return scheduleDrums(ctx, track, sampler, graph, t0, t1, timeOf, st, human);
@@ -64,7 +84,10 @@ export function scheduleTrack(
       if (notes[j].tech?.tieFromPrevious && notes[j].pitch === n.pitch && notes[j].start === endTick)
         endTick = notes[j].start + notes[j].duration;
     const dur = Math.max(0.02, timeOf(endTick) - timeOf(n.start));
-    const vel = Math.max(1, Math.min(127, n.velocity + (human.velocity ? Math.round((Math.random() * 2 - 1) * human.velocity) : 0)));
+    const vel = Math.max(
+      1,
+      Math.min(127, n.velocity + (human.velocity ? Math.round((Math.random() * 2 - 1) * human.velocity) : 0)),
+    );
 
     const tech = n.tech ?? {};
     // a new note on a string cuts the previous note on that string, unless it was let ring
@@ -79,12 +102,23 @@ export function scheduleTrack(
       else if (tech.harmonic === 'pinch') pitch = n.pitch + 19;
       else pitch = n.pitch + 12; // artificial / tapped: octave harmonic
     }
-    const legato = !!(tech.hammer || tech.tap || ((tech.slide === 'legato' || tech.slide === 'shift') && prev));
+    const legato = !!(
+      tech.hammer ||
+      tech.tap ||
+      ((tech.slide === 'legato' || tech.slide === 'shift') && prev)
+    );
     const detune = detuneFor(n, when, dur) ?? [];
-    if ((tech.slide === 'legato' || tech.slide === 'shift') && prev?.pitch != null && prev.pitch !== n.pitch) {
+    if (
+      (tech.slide === 'legato' || tech.slide === 'shift') &&
+      prev?.pitch != null &&
+      prev.pitch !== n.pitch
+    ) {
       // slide: glide from the previous pitch on this string
       const glide = Math.min(0.09, dur * 0.5);
-      detune.unshift({ time: when, cents: (prev.pitch - n.pitch) * 100 }, { time: when + glide, cents: 0, ramp: true });
+      detune.unshift(
+        { time: when, cents: (prev.pitch - n.pitch) * 100 },
+        { time: when + glide, cents: 0, ramp: true },
+      );
     }
     const base = {
       pitch,
@@ -106,11 +140,22 @@ export function scheduleTrack(
       for (let k = 0; k < count; k++) {
         const trillUp = tech.trill && k % 2 === 1 && pos ? n.pitch - pos.fret + tech.trill.fret - n.pitch : 0;
         voices.push(
-          ...sampler.play(ctx, graph.input, { ...base, pitch: pitch + trillUp, velocity: k % 2 ? v * 0.85 : v, when: when + k * step, duration: step * 0.95 }),
+          ...sampler.play(ctx, graph.input, {
+            ...base,
+            pitch: pitch + trillUp,
+            velocity: k % 2 ? v * 0.85 : v,
+            when: when + k * step,
+            duration: step * 0.95,
+          }),
         );
       }
     } else {
-      voices = sampler.play(ctx, graph.input, { ...base, velocity: v, when, duration: tech.letRing ? undefined : sounding });
+      voices = sampler.play(ctx, graph.input, {
+        ...base,
+        velocity: v,
+        when,
+        duration: tech.letRing ? undefined : sounding,
+      });
     }
     if (pos) st.strings.set(pos.string, { voices, letRing: !!tech.letRing, pitch: n.pitch });
     st.voices.push(...voices);
@@ -121,7 +166,8 @@ export function scheduleTrack(
 /** Mic balance for kits with close/overhead samples (regions tagged riffroll_mic=close|oh). */
 export function micGain(track: Track) {
   const m = track.drumMics ?? { close: 1, oh: 1 };
-  return (r: { raw: Record<string, string> }) => (r.raw.riffroll_mic === 'oh' ? m.oh : r.raw.riffroll_mic === 'close' ? m.close : 1);
+  return (r: { raw: Record<string, string> }) =>
+    r.raw.riffroll_mic === 'oh' ? m.oh : r.raw.riffroll_mic === 'close' ? m.close : 1;
 }
 
 /** Play one drum lane hit (also used for previews in the drum grid). */
@@ -140,7 +186,16 @@ export function playDrum(
   const regionGain = micGain(track);
   const vel = Math.max(1, Math.min(127, Math.round(velocity * (lane.velScale ?? 1))));
   const out: Voice[] = [];
-  if (lane.flam) out.push(...sampler.play(ctx, dest, { pitch: lane.key, velocity: vel * 0.55, when: Math.max(ctx.currentTime, when - lane.flam), gain: piece, regionGain }));
+  if (lane.flam)
+    out.push(
+      ...sampler.play(ctx, dest, {
+        pitch: lane.key,
+        velocity: vel * 0.55,
+        when: Math.max(ctx.currentTime, when - lane.flam),
+        gain: piece,
+        regionGain,
+      }),
+    );
   out.push(...sampler.play(ctx, dest, { pitch: lane.key, velocity: vel, when, gain: piece, regionGain }));
   return out;
 }
@@ -168,7 +223,17 @@ function scheduleDrums(
     const h = hits[i];
     const jitter = human.timingMs ? ((Math.random() * 2 - 1) * human.timingMs) / 1000 : 0;
     const vel = h.velocity + (human.velocity ? Math.round((Math.random() * 2 - 1) * human.velocity) : 0);
-    st.voices.push(...playDrum(ctx, track, sampler, graph.input, `${h.piece}:${h.articulation}`, vel, Math.max(ctx.currentTime, timeOf(h.start) + jitter)));
+    st.voices.push(
+      ...playDrum(
+        ctx,
+        track,
+        sampler,
+        graph.input,
+        `${h.piece}:${h.articulation}`,
+        vel,
+        Math.max(ctx.currentTime, timeOf(h.start) + jitter),
+      ),
+    );
   }
 }
 

@@ -34,7 +34,8 @@ class RiffRollGate extends AudioWorkletProcessor {
       let target = this.gain;
       if (this.env > open) target = 1;
       else if (this.env < thr) target = 0;
-      this.gain = target > this.gain ? target + (this.gain - target) * atk : target + (this.gain - target) * rel;
+      this.gain =
+        target > this.gain ? target + (this.gain - target) * atk : target + (this.gain - target) * rel;
       const g = enabled ? this.gain : 1;
       for (let c = 0; c < output.length; c++) output[c][i] = (input[c] ? input[c][i] : input[0][i]) * g;
     }

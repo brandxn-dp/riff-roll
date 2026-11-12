@@ -16,7 +16,7 @@ export interface RiffFile {
 export function packRiff(song: Song, assets: Record<string, Uint8Array> = {}): Uint8Array {
   const files: Zippable = {
     'song.json': [strToU8(JSON.stringify(song, null, 1)), { level: 6 }],
-    'mimetype': [strToU8(RIFF_MIME), { level: 0 }],
+    mimetype: [strToU8(RIFF_MIME), { level: 0 }],
   };
   // audio assets are already compressed: store them
   for (const [name, data] of Object.entries(assets)) files[`assets/${name}`] = [data, { level: 0 }];
@@ -39,9 +39,11 @@ export function unpackRiff(bytes: Uint8Array): RiffFile {
     throw new Error('song.json in this .riff file is not valid JSON.');
   }
   const assets: Record<string, Uint8Array> = {};
-  for (const [name, data] of Object.entries(entries)) if (name.startsWith('assets/') && data.length) assets[name.slice(7)] = data;
+  for (const [name, data] of Object.entries(entries))
+    if (name.startsWith('assets/') && data.length) assets[name.slice(7)] = data;
   return { song: parseSong(raw), assets };
 }
 
 /** True if the bytes look like a zip (PK\x03\x04). */
-export const isZip = (b: Uint8Array) => b.length > 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 3 && b[3] === 4;
+export const isZip = (b: Uint8Array) =>
+  b.length > 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 3 && b[3] === 4;

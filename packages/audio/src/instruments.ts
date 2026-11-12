@@ -57,7 +57,8 @@ export class InstrumentLibrary {
       p = (async () => {
         const info = await this.resolve(id, role);
         if (!info) {
-          const text = role === 'drums' ? fallbackDrumSfz() : fallbackSfz(role === 'bass' ? 'bass' : 'guitar');
+          const text =
+            role === 'drums' ? fallbackDrumSfz() : fallbackSfz(role === 'bass' ? 'bass' : 'guitar');
           const s = new Sampler(text, 'fallback://', this.fallbackLoader);
           (s as Sampler & { fallback?: boolean }).fallback = true;
           return s;

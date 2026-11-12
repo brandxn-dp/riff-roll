@@ -41,7 +41,9 @@ export function sfzNote(v: string): number {
   if (!Number.isNaN(n)) return n;
   const m = /^([a-gA-G])([#b]?)(-?\d+)$/.exec(v.trim());
   if (!m) return NaN;
-  return (Number(m[3]) + 1) * 12 + NOTE_OFFSETS[m[1].toLowerCase()] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+  return (
+    (Number(m[3]) + 1) * 12 + NOTE_OFFSETS[m[1].toLowerCase()] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0)
+  );
 }
 
 type Opcodes = Record<string, string>;
@@ -70,7 +72,8 @@ function parseOpcodes(body: string, into: Opcodes) {
   }
 }
 
-const num = (o: Opcodes, k: string, d: number) => (o[k] !== undefined && !Number.isNaN(Number(o[k])) ? Number(o[k]) : d);
+const num = (o: Opcodes, k: string, d: number) =>
+  o[k] !== undefined && !Number.isNaN(Number(o[k])) ? Number(o[k]) : d;
 const key = (o: Opcodes, k: string, d: number) => (o[k] !== undefined ? sfzNote(o[k]) : d);
 
 function toRegion(o: Opcodes, defaultPath: string): SfzRegion | null {
@@ -113,8 +116,14 @@ function toRegion(o: Opcodes, defaultPath: string): SfzRegion | null {
     pan: num(o, 'pan', 0),
     offset: num(o, 'offset', 0),
     loopMode: (o.loop_mode ?? o.loopmode ?? 'no_loop') as SfzRegion['loopMode'],
-    loopStart: o.loop_start !== undefined || o.loopstart !== undefined ? num(o, o.loop_start ? 'loop_start' : 'loopstart', 0) : undefined,
-    loopEnd: o.loop_end !== undefined || o.loopend !== undefined ? num(o, o.loop_end ? 'loop_end' : 'loopend', 0) : undefined,
+    loopStart:
+      o.loop_start !== undefined || o.loopstart !== undefined
+        ? num(o, o.loop_start ? 'loop_start' : 'loopstart', 0)
+        : undefined,
+    loopEnd:
+      o.loop_end !== undefined || o.loopend !== undefined
+        ? num(o, o.loop_end ? 'loop_end' : 'loopend', 0)
+        : undefined,
     pitchKeytrack: num(o, 'pitch_keytrack', 100),
     raw: o,
   };
@@ -195,7 +204,7 @@ export function selectRegions(
     if (velocity < r.lovel || velocity > r.hivel) continue;
     if (r.trigger !== trigger && !(trigger === 'attack' && r.trigger === 'first')) continue;
     if (rand < r.lorand || (rand >= r.hirand && r.hirand < 1)) continue;
-    if (r.seqLength > 1 && ((seqCounter(r) % r.seqLength) + 1) !== r.seqPosition) continue;
+    if (r.seqLength > 1 && (seqCounter(r) % r.seqLength) + 1 !== r.seqPosition) continue;
     out.push(r);
   }
   return out;

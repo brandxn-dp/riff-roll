@@ -48,7 +48,10 @@ export const DI_TRIM: Record<Track['type'], number> = { guitar: 0.35, bass: 0.6,
 
 export class TrackGraph {
   readonly input: GainNode; // DI signal from the sampler
-  private chains = new Map<string, { node: ToneChainNode; fade: GainNode; sendFade: GainNode; json: string }>();
+  private chains = new Map<
+    string,
+    { node: ToneChainNode; fade: GainNode; sendFade: GainNode; json: string }
+  >();
   private vol: GainNode;
   private pan: StereoPannerNode;
   private mute: GainNode;
@@ -116,7 +119,10 @@ export class TrackGraph {
         }
         continue;
       }
-      const node = new ToneChainNode(this.ctx, tone.chain, { gateWorklet: this.gateWorklet, reverbInput: this.sendSum });
+      const node = new ToneChainNode(this.ctx, tone.chain, {
+        gateWorklet: this.gateWorklet,
+        reverbInput: this.sendSum,
+      });
       const fade = this.ctx.createGain();
       fade.gain.value = 0;
       this.input.connect(node.input);

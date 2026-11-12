@@ -39,7 +39,9 @@ export function SongBar() {
   const tempoHere = song.tempos.find((t) => t.tick === bar.start);
   const sigHere = song.timeSigs.find((t) => t.bar === bar.index);
   const loop = song.loop;
-  const loopBars = loop ? [bm.barAtTick(loop.start).index, bm.barAtTick(Math.max(loop.start, loop.end - 1)).index] : null;
+  const loopBars = loop
+    ? [bm.barAtTick(loop.start).index, bm.barAtTick(Math.max(loop.start, loop.end - 1)).index]
+    : null;
 
   return (
     <div className="songbar">
@@ -63,11 +65,19 @@ export function SongBar() {
             />
           ) : (
             <span key={s.id} className="secchip">
-              <button onClick={() => seek(s.tick)} onDoubleClick={() => setEditing(s.id)} title="Jump (double-click to rename)">
+              <button
+                onClick={() => seek(s.tick)}
+                onDoubleClick={() => setEditing(s.id)}
+                title="Jump (double-click to rename)"
+              >
                 {s.name}
                 <small>{bm.barAtTick(s.tick).index + 1}</small>
               </button>
-              <button className="x" aria-label={`Delete section ${s.name}`} onClick={() => st.exec(removeSection(s.id))}>
+              <button
+                className="x"
+                aria-label={`Delete section ${s.name}`}
+                onClick={() => st.exec(removeSection(s.id))}
+              >
                 ×
               </button>
             </span>
@@ -98,9 +108,21 @@ export function SongBar() {
               value={tempoHere.bpm}
               min={20}
               max={400}
-              onChange={(e) => st.exec(setTempos(song.tempos.map((t) => (t === tempoHere ? { ...t, bpm: Number(e.target.value) || t.bpm } : t))))}
+              onChange={(e) =>
+                st.exec(
+                  setTempos(
+                    song.tempos.map((t) =>
+                      t === tempoHere ? { ...t, bpm: Number(e.target.value) || t.bpm } : t,
+                    ),
+                  ),
+                )
+              }
             />
-            <button className="ib small" onClick={() => st.exec(setTempos(song.tempos.filter((t) => t !== tempoHere)))} aria-label="Remove tempo change">
+            <button
+              className="ib small"
+              onClick={() => st.exec(setTempos(song.tempos.filter((t) => t !== tempoHere)))}
+              aria-label="Remove tempo change"
+            >
               ×
             </button>
           </span>
@@ -114,7 +136,15 @@ export function SongBar() {
               <input
                 type="checkbox"
                 checked={!!before.ramp}
-                onChange={(e) => st.exec(setTempos(song.tempos.map((t) => (t === before ? { ...t, ramp: e.target.checked || undefined } : t))))}
+                onChange={(e) =>
+                  st.exec(
+                    setTempos(
+                      song.tempos.map((t) =>
+                        t === before ? { ...t, ramp: e.target.checked || undefined } : t,
+                      ),
+                    ),
+                  )
+                }
               />
               Gradual
             </label>
@@ -126,7 +156,8 @@ export function SongBar() {
           value={sigHere ? `${sigHere.num}/${sigHere.den}` : ''}
           onChange={(e) => {
             const others = song.timeSigs.filter((t) => t.bar !== bar.index);
-            if (!e.target.value) return st.exec(setTimeSigs(others.length ? others : [{ bar: 0, num: 4, den: 4 }]));
+            if (!e.target.value)
+              return st.exec(setTimeSigs(others.length ? others : [{ bar: 0, num: 4, den: 4 }]));
             const [num, den] = e.target.value.split('/').map(Number);
             st.exec(setTimeSigs([...others, { bar: bar.index, num, den }]));
           }}
@@ -144,7 +175,12 @@ export function SongBar() {
             if (!loopBars) return;
             const [a, b] = loopBars;
             const others = song.repeats.filter((r) => r.endBar < a || r.startBar > b);
-            st.exec(updateSong({ repeats: [...others, { id: newId('rep'), startBar: a, endBar: b, times: 2 }] }, 'Add repeat'));
+            st.exec(
+              updateSong(
+                { repeats: [...others, { id: newId('rep'), startBar: a, endBar: b, times: 2 }] },
+                'Add repeat',
+              ),
+            );
           }}
         >
           Repeat loop ×2
@@ -152,7 +188,16 @@ export function SongBar() {
         {song.repeats.some((r) => bar.index >= r.startBar && bar.index <= r.endBar) && (
           <button
             className="ib small"
-            onClick={() => st.exec(updateSong({ repeats: song.repeats.filter((r) => !(bar.index >= r.startBar && bar.index <= r.endBar)) }, 'Remove repeat'))}
+            onClick={() =>
+              st.exec(
+                updateSong(
+                  {
+                    repeats: song.repeats.filter((r) => !(bar.index >= r.startBar && bar.index <= r.endBar)),
+                  },
+                  'Remove repeat',
+                ),
+              )
+            }
           >
             Remove repeat
           </button>

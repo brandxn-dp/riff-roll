@@ -13,7 +13,10 @@ function trackRhythm(song: Song, t: Track): RBar<Note>[] {
   const hit = rhythmCache.get(t.notes);
   if (hit && hit.key === song.timeSigs && hit.bars === song.bars) return hit.value;
   const f = trackFingering(t);
-  const value = rhythmize(t.notes.filter((n) => f.get(n.id)), song);
+  const value = rhythmize(
+    t.notes.filter((n) => f.get(n.id)),
+    song,
+  );
   rhythmCache.set(t.notes, { key: song.timeSigs, bars: song.bars, value });
   return value;
 }
@@ -83,7 +86,13 @@ export function drawTabMeta(c: CanvasRenderingContext2D, song: Song, a: TimeAxis
 }
 
 /** Repeat bar lines and alternate-ending brackets on the tab staff. */
-export function drawRepeats(c: CanvasRenderingContext2D, song: Song, a: TimeAxis, tabY: number, staffH: number) {
+export function drawRepeats(
+  c: CanvasRenderingContext2D,
+  song: Song,
+  a: TimeAxis,
+  tabY: number,
+  staffH: number,
+) {
   const bm = barMap(song);
   for (const r of song.repeats) {
     const xs = tickToX(a, bm.barStart(r.startBar)),
@@ -153,8 +162,10 @@ export function drawTechniques(
       c.stroke();
       if (tech.slide === 'legato') c.fillText('sl', (prev.x + it.x) / 2, it.y - 9);
     }
-    if (tech.slide === 'in-below' || tech.slide === 'in-above') c.fillText(tech.slide === 'in-below' ? '/' : '\\', it.x - it.tw / 2 - 6, it.y);
-    if (tech.slide === 'out-down' || tech.slide === 'out-up') c.fillText(tech.slide === 'out-down' ? '\\' : '/', it.x + it.tw / 2 + 6, it.y);
+    if (tech.slide === 'in-below' || tech.slide === 'in-above')
+      c.fillText(tech.slide === 'in-below' ? '/' : '\\', it.x - it.tw / 2 - 6, it.y);
+    if (tech.slide === 'out-down' || tech.slide === 'out-up')
+      c.fillText(tech.slide === 'out-down' ? '\\' : '/', it.x + it.tw / 2 + 6, it.y);
     if (tech.bend?.length) {
       const peak = Math.max(...tech.bend.map((p) => p.value));
       const label = peak >= 2 ? 'full' : peak >= 1 ? '½' : '¼';
@@ -198,7 +209,14 @@ export function drawTechniques(
 const FLAGS: Record<number, number> = { 1: 0, 2: 0, 4: 0, 8: 1, 16: 2, 32: 3, 64: 4 };
 
 /** Rhythm stems with beams under the tab (Guitar Pro style). */
-export function drawRhythm(c: CanvasRenderingContext2D, song: Song, t: Track, a: TimeAxis, y0: number, w: number) {
+export function drawRhythm(
+  c: CanvasRenderingContext2D,
+  song: Song,
+  t: Track,
+  a: TimeAxis,
+  y0: number,
+  w: number,
+) {
   const bars = trackRhythm(song, t);
   const [t0, t1] = [xToTick(a, -50), xToTick(a, w + 50)];
   const stemTop = y0 + 4,
@@ -210,7 +228,8 @@ export function drawRhythm(c: CanvasRenderingContext2D, song: Song, t: Track, a:
     if (bar.start > t1) break;
     if (bar.start + bar.length < t0) continue;
     const beatLen = (song.ppq * 4) / bar.den;
-    const xOf = (b: (typeof bar.beats)[number]) => tickToX(a, b.start) + Math.min(8, (b.duration * a.ppt) / 2);
+    const xOf = (b: (typeof bar.beats)[number]) =>
+      tickToX(a, b.start) + Math.min(8, (b.duration * a.ppt) / 2);
     // group beamable beats within one beat of the time signature
     let group: typeof bar.beats = [];
     const flush = () => {

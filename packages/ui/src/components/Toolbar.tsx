@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { PPQ, setBars, setLoop, setTempos, setTuning, tuningByName, tuningsFor, updateSong, updateTrack } from '@riffroll/core';
+import {
+  PPQ,
+  setBars,
+  setLoop,
+  setTempos,
+  setTuning,
+  tuningByName,
+  tuningsFor,
+  updateSong,
+  updateTrack,
+} from '@riffroll/core';
 import { SNAPS, ZOOMS, barMap, currentTrack, useStore, type MainView } from '../store';
 import { togglePlay } from '../transport';
 
@@ -37,7 +47,11 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
     <header className="topbar">
       <div className="brand">Riff Roll</div>
       {left}
-      <button className={'btn play' + (playing ? ' on' : '')} onClick={togglePlay} title="Play / stop (Space)">
+      <button
+        className={'btn play' + (playing ? ' on' : '')}
+        onClick={togglePlay}
+        title="Play / stop (Space)"
+      >
         {playing ? '■ Stop' : '▶ Play'}
       </button>
       <div className="group" role="group" aria-label="Transport options">
@@ -59,7 +73,9 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
         <button
           aria-pressed={song.metronome.on}
           title="Metronome"
-          onClick={() => st.exec(updateSong({ metronome: { ...song.metronome, on: !song.metronome.on } }, 'Metronome'))}
+          onClick={() =>
+            st.exec(updateSong({ metronome: { ...song.metronome, on: !song.metronome.on } }, 'Metronome'))
+          }
         >
           Click
         </button>
@@ -68,7 +84,11 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           aria-label="Count-in bars"
           title="Count-in"
           value={song.metronome.countIn}
-          onChange={(e) => st.exec(updateSong({ metronome: { ...song.metronome, countIn: Number(e.target.value) } }, 'Count-in'))}
+          onChange={(e) =>
+            st.exec(
+              updateSong({ metronome: { ...song.metronome, countIn: Number(e.target.value) } }, 'Count-in'),
+            )
+          }
         >
           <option value={0}>No count-in</option>
           <option value={1}>Count-in 1 bar</option>
@@ -106,7 +126,9 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           value={`${song.timeSigs[0].num}/${song.timeSigs[0].den}`}
           onChange={(e) => {
             const [num, den] = e.target.value.split('/').map(Number);
-            st.exec(updateSong({ timeSigs: [{ bar: 0, num, den }, ...song.timeSigs.slice(1)] }, 'Time signature'));
+            st.exec(
+              updateSong({ timeSigs: [{ bar: 0, num, den }, ...song.timeSigs.slice(1)] }, 'Time signature'),
+            );
           }}
         >
           {['4/4', '3/4', '6/8', '7/8', '5/4', '12/8', '2/4'].map((s) => (
@@ -134,7 +156,10 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
       {track && track.type !== 'drums' && (
         <label className="field">
           Capo
-          <select value={track.capo} onChange={(e) => st.exec(updateTrack(track.id, { capo: Number(e.target.value) }, 'Capo'))}>
+          <select
+            value={track.capo}
+            onChange={(e) => st.exec(updateTrack(track.id, { capo: Number(e.target.value) }, 'Capo'))}
+          >
             {Array.from({ length: 13 }, (_, i) => (
               <option key={i} value={i}>
                 {i || '–'}
@@ -156,7 +181,11 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
       <div className="group" role="group" aria-label="New note length">
         <span className="glabel">Note</span>
         {LENS.map((l) => (
-          <button key={l.label} aria-pressed={noteLen === l.ticks} onClick={() => st.set({ noteLen: l.ticks })}>
+          <button
+            key={l.label}
+            aria-pressed={noteLen === l.ticks}
+            onClick={() => st.set({ noteLen: l.ticks })}
+          >
             {l.label}
           </button>
         ))}
@@ -176,15 +205,28 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
         <button aria-label="Zoom out" onClick={() => st.set({ zoom: Math.max(0, st.zoom - 1) })}>
           −
         </button>
-        <button aria-label="Zoom in" onClick={() => st.set({ zoom: Math.min(ZOOMS.length - 1, st.zoom + 1) })}>
+        <button
+          aria-label="Zoom in"
+          onClick={() => st.set({ zoom: Math.min(ZOOMS.length - 1, st.zoom + 1) })}
+        >
           +
         </button>
       </div>
       <div className="group" role="group" aria-label="Undo">
-        <button disabled={!st.history.canUndo} title={`Undo ${st.history.undoLabel ?? ''} (Ctrl+Z)`} onClick={st.undo} aria-label="Undo">
+        <button
+          disabled={!st.history.canUndo}
+          title={`Undo ${st.history.undoLabel ?? ''} (Ctrl+Z)`}
+          onClick={st.undo}
+          aria-label="Undo"
+        >
           ↶
         </button>
-        <button disabled={!st.history.canRedo} title={`Redo ${st.history.redoLabel ?? ''} (Ctrl+Shift+Z)`} onClick={st.redo} aria-label="Redo">
+        <button
+          disabled={!st.history.canRedo}
+          title={`Redo ${st.history.redoLabel ?? ''} (Ctrl+Shift+Z)`}
+          onClick={st.redo}
+          aria-label="Redo"
+        >
           ↷
         </button>
       </div>
@@ -203,7 +245,12 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
       <button className="btn" onClick={() => st.set({ modal: 'mixer' })} title="Mixer">
         Mixer
       </button>
-      <button className="btn ghost" onClick={() => st.set({ modal: 'shortcuts' })} aria-label="Keyboard shortcuts" title="Shortcuts (?)">
+      <button
+        className="btn ghost"
+        onClick={() => st.set({ modal: 'shortcuts' })}
+        aria-label="Keyboard shortcuts"
+        title="Shortcuts (?)"
+      >
         ?
       </button>
     </header>

@@ -35,7 +35,12 @@ export async function getStorage() {
 }
 
 const status = (msg: string) => useStore.getState().set({ status: msg });
-const safeName = (s: string) => (s || 'untitled').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'untitled';
+const safeName = (s: string) =>
+  (s || 'untitled')
+    .replace(/[^\w\- ]+/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase() || 'untitled';
 
 /** Save a file: native dialog on desktop, browser download on the web. */
 export async function saveFile(name: string, data: Uint8Array | string, mime: string) {
@@ -98,7 +103,9 @@ export async function restoreLastSession(): Promise<boolean> {
     const list = await s.list();
     if (!list.length) return false;
     await openProject(list[0].id);
-    status(`Restored “${useStore.getState().song.title}” (autosaved ${new Date(list[0].updatedAt).toLocaleString()})`);
+    status(
+      `Restored “${useStore.getState().song.title}” (autosaved ${new Date(list[0].updatedAt).toLocaleString()})`,
+    );
     return true;
   } catch {
     return false;
@@ -149,11 +156,21 @@ export async function openFromDisk() {
 // ---------------- export ----------------
 const base = () => safeName(useStore.getState().song.title);
 
-export const exportRiff = () => saveFile(`${base()}.riff`, packRiff(useStore.getState().song), 'application/x-riffroll');
+export const exportRiff = () =>
+  saveFile(`${base()}.riff`, packRiff(useStore.getState().song), 'application/x-riffroll');
 export const exportMidi = () => saveFile(`${base()}.mid`, songToMidi(useStore.getState().song), 'audio/midi');
 export const exportMusicXml = () =>
-  saveFile(`${base()}.musicxml`, songToMusicXml(useStore.getState().song), 'application/vnd.recordare.musicxml+xml');
-export const exportGuitarPro = () => saveFile(`${base()}.gp`, exportGp7(songToAlphaTex(useStore.getState().song).tex), 'application/octet-stream');
+  saveFile(
+    `${base()}.musicxml`,
+    songToMusicXml(useStore.getState().song),
+    'application/vnd.recordare.musicxml+xml',
+  );
+export const exportGuitarPro = () =>
+  saveFile(
+    `${base()}.gp`,
+    exportGp7(songToAlphaTex(useStore.getState().song).tex),
+    'application/octet-stream',
+  );
 
 export async function exportWav(stems = false) {
   const song = useStore.getState().song;

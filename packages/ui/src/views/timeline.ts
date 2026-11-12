@@ -14,7 +14,14 @@ export const xToTick = (a: TimeAxis, x: number) => (x - KEYS_W + a.scrollX) / a.
 export const visibleTicks = (a: TimeAxis) => [xToTick(a, KEYS_W), xToTick(a, a.width)] as const;
 
 /** Vertical grid lines: bars (strong), beats, and snap subdivisions when there is room. */
-export function drawGrid(c: CanvasRenderingContext2D, song: Song, a: TimeAxis, snap: number, y0: number, h: number) {
+export function drawGrid(
+  c: CanvasRenderingContext2D,
+  song: Song,
+  a: TimeAxis,
+  snap: number,
+  y0: number,
+  h: number,
+) {
   const bm = barMap(song);
   const [t0, t1] = visibleTicks(a);
   const end = songEnd(song);
@@ -46,7 +53,14 @@ export function toneOf(track: Track, id: string): Tone | undefined {
 }
 
 /** Tint the background of non-clean pedal segments (prototype: subtle red wash on distorted parts). */
-export function drawToneWash(c: CanvasRenderingContext2D, song: Song, track: Track, a: TimeAxis, y0: number, h: number) {
+export function drawToneWash(
+  c: CanvasRenderingContext2D,
+  song: Song,
+  track: Track,
+  a: TimeAxis,
+  y0: number,
+  h: number,
+) {
   if (track.type === 'drums' || !track.tones.length) return;
   for (const sg of pedalSegments(track.pedal, songEnd(song))) {
     const tone = toneOf(track, sg.toneId);
@@ -56,7 +70,13 @@ export function drawToneWash(c: CanvasRenderingContext2D, song: Song, track: Tra
   }
 }
 
-export function drawPlayhead(c: CanvasRenderingContext2D, a: TimeAxis, tick: number | null, y0: number, h: number) {
+export function drawPlayhead(
+  c: CanvasRenderingContext2D,
+  a: TimeAxis,
+  tick: number | null,
+  y0: number,
+  h: number,
+) {
   if (tick == null) return;
   c.fillStyle = COL.head;
   c.fillRect(tickToX(a, tick), y0, 1.5, h);

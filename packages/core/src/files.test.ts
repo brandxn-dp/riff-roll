@@ -9,7 +9,13 @@ import { PPQ } from './model';
 
 const demo = () => {
   const s = newSong('Demo');
-  return { ...s, bars: 4, tracks: s.tracks.map((t, i) => (i === 0 ? exampleBeat(t) : i === 1 ? exampleRiff(t) : i === 3 ? exampleBass(t) : t)) };
+  return {
+    ...s,
+    bars: 4,
+    tracks: s.tracks.map((t, i) =>
+      i === 0 ? exampleBeat(t) : i === 1 ? exampleRiff(t) : i === 3 ? exampleBass(t) : t,
+    ),
+  };
 };
 
 describe('.riff files', () => {
@@ -38,7 +44,9 @@ describe('MIDI', () => {
     const drums = back.tracks.find((t) => t.type === 'drums')!;
     expect(drums.hits.length).toBe(song.tracks[0].hits.length);
     const gtr = back.tracks.find((t) => t.name === 'Guitar 1')!;
-    expect(gtr.notes.map((n) => [n.pitch, n.start, n.duration])).toEqual(song.tracks[1].notes.map((n) => [n.pitch, n.start, n.duration]));
+    expect(gtr.notes.map((n) => [n.pitch, n.start, n.duration])).toEqual(
+      song.tracks[1].notes.map((n) => [n.pitch, n.start, n.duration]),
+    );
     expect(back.tracks.find((t) => t.name === 'Bass')!.type).toBe('bass');
   });
 });

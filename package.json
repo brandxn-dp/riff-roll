@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Songwriting app for rock bands: piano roll to tab, pedal stomps, sampled playback.",
   "packageManager": "pnpm@10.12.1",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "pnpm --filter @riffroll/ui dev",
     "build": "pnpm -r --filter ./packages/** --filter ./apps/server run build",
@@ -34,6 +36,9 @@
     "vitest": "^5.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }

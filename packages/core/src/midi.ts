@@ -37,7 +37,11 @@ function chunk(events: Ev[]): number[] {
   return [...text('MTrk'), ...u32(body.length), ...body];
 }
 
-const meta = (tick: number, type: number, data: number[]): Ev => ({ tick, order: 0, data: [0xff, type, ...vlq(data.length), ...data] });
+const meta = (tick: number, type: number, data: number[]): Ev => ({
+  tick,
+  order: 0,
+  data: [0xff, type, ...vlq(data.length), ...data],
+});
 
 function toneProgram(track: Track, toneId: string): { program: number; driven: boolean } {
   const tone = track.tones.find((t) => t.id === toneId);
@@ -70,7 +74,10 @@ export function songToMidi(song: Song): Uint8Array {
     const evs: Ev[] = [meta(0, 0x03, text(t.name))];
     const vol = Math.round(Math.min(1, t.volume / 1.25) * 127);
     const pan = Math.round((t.pan + 1) * 63.5);
-    evs.push({ tick: 0, order: 2, data: [0xb0 | channel, 7, vol] }, { tick: 0, order: 2, data: [0xb0 | channel, 10, Math.min(127, pan)] });
+    evs.push(
+      { tick: 0, order: 2, data: [0xb0 | channel, 7, vol] },
+      { tick: 0, order: 2, data: [0xb0 | channel, 10, Math.min(127, pan)] },
+    );
     if (t.type === 'drums') {
       for (const h of t.hits) {
         const lane = laneById.get(`${h.piece}:${h.articulation}`);
@@ -149,7 +156,8 @@ export function midiToSong(bytes: Uint8Array, title = 'Imported MIDI'): Song {
         const ml = readVlq();
         const d = bytes.subarray(q, q + ml);
         q += ml;
-        if (mt === 0x51 && ml === 3) tempos.push({ tick: tick * scale, bpm: 60_000_000 / ((d[0] << 16) | (d[1] << 8) | d[2]) });
+        if (mt === 0x51 && ml === 3)
+          tempos.push({ tick: tick * scale, bpm: 60_000_000 / ((d[0] << 16) | (d[1] << 8) | d[2]) });
         else if (mt === 0x58) sigs.push({ tick: tick * scale, num: d[0], den: 2 ** d[1] });
         else if (mt === 0x03 && !names.has(ti)) names.set(ti, new TextDecoder().decode(d));
         else if (mt === 0x06) markers.push({ tick: tick * scale, name: new TextDecoder().decode(d) });
@@ -180,7 +188,9 @@ export function midiToSong(bytes: Uint8Array, title = 'Imported MIDI'): Song {
 
   const song = newSong(title);
   song.tracks = [];
-  song.tempos = tempos.length ? dedupe(tempos.map((t) => ({ tick: Math.round(t.tick), bpm: Math.round(t.bpm * 100) / 100 }))) : [{ tick: 0, bpm: 120 }];
+  song.tempos = tempos.length
+    ? dedupe(tempos.map((t) => ({ tick: Math.round(t.tick), bpm: Math.round(t.bpm * 100) / 100 })))
+    : [{ tick: 0, bpm: 120 }];
   // time signatures: convert ticks to bars
   const firstSig = sigs.find((s) => s.tick === 0) ?? { tick: 0, num: 4, den: 4 };
   song.timeSigs = [{ bar: 0, num: firstSig.num, den: firstSig.den }];
@@ -205,7 +215,13 @@ export function midiToSong(bytes: Uint8Array, title = 'Imported MIDI'): Song {
       const hits: DrumHit[] = [];
       for (const n of list) {
         const lane = laneForGm(n.pitch) ?? DRUM_LANES.find((l) => l.id === 'snare:center')!;
-        hits.push({ id: newId('h'), start: Math.round(n.start), piece: lane.piece, articulation: lane.articulation, velocity: n.velocity });
+        hits.push({
+          id: newId('h'),
+          start: Math.round(n.start),
+          piece: lane.piece,
+          articulation: lane.articulation,
+          velocity: n.velocity,
+        });
       }
       song.tracks.push({ ...t, hits: hits.sort((a, b) => a.start - b.start) });
     } else {
@@ -213,7 +229,8 @@ export function midiToSong(bytes: Uint8Array, title = 'Imported MIDI'): Song {
       const isBass = (program >= 32 && program <= 39) || lowest < 40;
       const t = makeTrack(isBass ? 'bass' : 'guitar', name, color);
       // 7-string range? pick a tuning that reaches the lowest note
-      if (!isBass && lowest < 40) t.tuning = tuningByName(lowest >= 35 ? '7-string Standard B' : '8-string Standard F#')!;
+      if (!isBass && lowest < 40)
+        t.tuning = tuningByName(lowest >= 35 ? '7-string Standard B' : '8-string Standard F#')!;
       if (isBass && lowest < 28) t.tuning = tuningByName('5-string Bass Standard B')!;
       const ns: Note[] = list.map((n) => ({
         id: newId('n'),

@@ -46,8 +46,12 @@ describe('sfz parser', () => {
   it('selects by key, velocity and random range', () => {
     const inst = parseSfz(GUITAR);
     const rr = () => 0;
-    expect(selectRegions(inst, 36, 80, 0.2, rr).map((r) => r.sample)).toEqual(['samples/bridge/C2 soft 01.flac']);
-    expect(selectRegions(inst, 36, 80, 0.7, rr).map((r) => r.sample)).toEqual(['samples/bridge/C2 soft 02.flac']);
+    expect(selectRegions(inst, 36, 80, 0.2, rr).map((r) => r.sample)).toEqual([
+      'samples/bridge/C2 soft 01.flac',
+    ]);
+    expect(selectRegions(inst, 36, 80, 0.7, rr).map((r) => r.sample)).toEqual([
+      'samples/bridge/C2 soft 02.flac',
+    ]);
     expect(selectRegions(inst, 36, 120, 0.7, rr).map((r) => r.sample)).toEqual(['samples/bridge/C2_01.flac']);
     expect(selectRegions(inst, 50, 80, 0.2, rr)).toEqual([]);
   });

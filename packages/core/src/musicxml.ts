@@ -9,11 +9,31 @@ import { rhythmize, type RBeat } from './rhythm';
 import { BarMap } from './timesig';
 import type { Note, Song, Track } from './model';
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const STEPS: [string, number][] = [
-  ['C', 0], ['C', 1], ['D', 0], ['D', 1], ['E', 0], ['F', 0], ['F', 1], ['G', 0], ['G', 1], ['A', 0], ['A', 1], ['B', 0],
+  ['C', 0],
+  ['C', 1],
+  ['D', 0],
+  ['D', 1],
+  ['E', 0],
+  ['F', 0],
+  ['F', 1],
+  ['G', 0],
+  ['G', 1],
+  ['A', 0],
+  ['A', 1],
+  ['B', 0],
 ];
-const TYPE: Record<number, string> = { 1: 'whole', 2: 'half', 4: 'quarter', 8: 'eighth', 16: '16th', 32: '32nd', 64: '64th' };
+const TYPE: Record<number, string> = {
+  1: 'whole',
+  2: 'half',
+  4: 'quarter',
+  8: 'eighth',
+  16: '16th',
+  32: '32nd',
+  64: '64th',
+};
 
 function pitchXml(p: number) {
   const [step, alter] = STEPS[((p % 12) + 12) % 12];
@@ -23,7 +43,9 @@ function pitchXml(p: number) {
 function beatTiming(b: RBeat) {
   let x = `<type>${TYPE[b.value]}</type>`;
   for (let i = 0; i < b.dots; i++) x += '<dot/>';
-  if (b.tuplet) x += '<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>';
+  if (b.tuplet)
+    x +=
+      '<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>';
   return x;
 }
 
@@ -37,12 +59,20 @@ function partXml(song: Song, track: Track, pid: string): string {
           const starts = [...new Set(track.hits.map((h) => h.start))].sort((a, b) => a - b);
           return track.hits.map((h) => {
             const next = starts.find((s) => s > h.start) ?? h.start + song.ppq;
-            return { id: h.id, pitch: 60, start: h.start, duration: Math.min(song.ppq, next - h.start), velocity: h.velocity, gm: laneById.get(`${h.piece}:${h.articulation}`)?.gm ?? 38 };
+            return {
+              id: h.id,
+              pitch: 60,
+              start: h.start,
+              duration: Math.min(song.ppq, next - h.start),
+              velocity: h.velocity,
+              gm: laneById.get(`${h.piece}:${h.articulation}`)?.gm ?? 38,
+            };
           });
         })()
       : track.notes.filter((x) => fing!.get(x.id));
   const bars = rhythmize(events, song);
-  const stomps = track.type === 'drums' ? [] : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
+  const stomps =
+    track.type === 'drums' ? [] : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
   const toneName = (id: string) => track.tones.find((t) => t.id === id)?.name ?? '';
   const out: string[] = [`<part id="${pid}">`];
   let prevSig = '';
@@ -53,20 +83,26 @@ function partXml(song: Song, track: Track, pid: string): string {
       out.push('<attributes>');
       if (bar.index === 0) {
         out.push(`<divisions>${song.ppq}</divisions>`);
-        out.push(`<key><fifths>${song.keySig.fifths}</fifths><mode>${song.keySig.minor ? 'minor' : 'major'}</mode></key>`);
+        out.push(
+          `<key><fifths>${song.keySig.fifths}</fifths><mode>${song.keySig.minor ? 'minor' : 'major'}</mode></key>`,
+        );
       }
       out.push(`<time><beats>${bar.num}</beats><beat-type>${bar.den}</beat-type></time>`);
       if (bar.index === 0) {
         if (track.type === 'drums') out.push('<clef><sign>percussion</sign></clef>');
         else {
           out.push('<staves>2</staves>');
-          out.push(`<clef number="1"><sign>G</sign><line>2</line>${track.type === 'bass' ? '<clef-octave-change>-2</clef-octave-change>' : '<clef-octave-change>-1</clef-octave-change>'}</clef>`);
+          out.push(
+            `<clef number="1"><sign>G</sign><line>2</line>${track.type === 'bass' ? '<clef-octave-change>-2</clef-octave-change>' : '<clef-octave-change>-1</clef-octave-change>'}</clef>`,
+          );
           out.push('<clef number="2"><sign>TAB</sign><line>5</line></clef>');
           out.push(`<staff-details number="2"><staff-lines>${n}</staff-lines>`);
           for (let i = 0; i < n; i++) {
             const p = track.tuning.strings[i];
             const [step, alter] = STEPS[p % 12];
-            out.push(`<staff-tuning line="${i + 1}"><tuning-step>${step}</tuning-step>${alter ? `<tuning-alter>${alter}</tuning-alter>` : ''}<tuning-octave>${Math.floor(p / 12) - 1}</tuning-octave></staff-tuning>`);
+            out.push(
+              `<staff-tuning line="${i + 1}"><tuning-step>${step}</tuning-step>${alter ? `<tuning-alter>${alter}</tuning-alter>` : ''}<tuning-octave>${Math.floor(p / 12) - 1}</tuning-octave></staff-tuning>`,
+            );
           }
           if (track.capo) out.push(`<capo>${track.capo}</capo>`);
           out.push('</staff-details>');
@@ -79,31 +115,44 @@ function partXml(song: Song, track: Track, pid: string): string {
     if (pid === 'P1') {
       for (const s of song.sections)
         if (s.tick >= bar.start && s.tick < bar.start + bar.length)
-          out.push(`<direction placement="above"><direction-type><rehearsal>${esc(s.name)}</rehearsal></direction-type></direction>`);
+          out.push(
+            `<direction placement="above"><direction-type><rehearsal>${esc(s.name)}</rehearsal></direction-type></direction>`,
+          );
       for (const t of song.tempos)
         if (t.tick >= bar.start && t.tick < bar.start + bar.length)
-          out.push(`<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${Math.round(t.bpm)}</per-minute></metronome></direction-type><sound tempo="${t.bpm}"/></direction>`);
+          out.push(
+            `<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${Math.round(t.bpm)}</per-minute></metronome></direction-type><sound tempo="${t.bpm}"/></direction>`,
+          );
     }
     for (const r of song.repeats) {
-      if (r.startBar === bar.index) out.push('<barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward"/></barline>');
+      if (r.startBar === bar.index)
+        out.push(
+          '<barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward"/></barline>',
+        );
     }
     for (const s of stomps)
       if (s.start >= bar.start && s.start < bar.start + bar.length)
-        out.push(`<direction placement="above"><direction-type><words>${esc(toneName(s.toneId))}</words></direction-type><offset>${s.start - bar.start}</offset></direction>`);
+        out.push(
+          `<direction placement="above"><direction-type><words>${esc(toneName(s.toneId))}</words></direction-type><offset>${s.start - bar.start}</offset></direction>`,
+        );
 
     const staves = track.type === 'drums' ? [1] : [1, 2];
     staves.forEach((staff, si) => {
       if (si > 0) out.push(`<backup><duration>${bar.length}</duration></backup>`);
       for (const b of bar.beats) {
         if (b.rest || !b.notes.length) {
-          out.push(`<note><rest/><duration>${Math.round(b.duration)}</duration><voice>${staff}</voice>${beatTiming(b)}${track.type === 'drums' ? '' : `<staff>${staff}</staff>`}</note>`);
+          out.push(
+            `<note><rest/><duration>${Math.round(b.duration)}</duration><voice>${staff}</voice>${beatTiming(b)}${track.type === 'drums' ? '' : `<staff>${staff}</staff>`}</note>`,
+          );
           continue;
         }
         b.notes.forEach(({ event, tied }, k) => {
           const parts: string[] = ['<note>'];
           if (k > 0) parts.push('<chord/>');
           if (track.type === 'drums') {
-            parts.push(`<unpitched><display-step>${['F', 'C', 'G', 'E', 'A'][((event as { gm?: number }).gm ?? 38) % 5]}</display-step><display-octave>${(event as { gm?: number }).gm! >= 42 ? 5 : 4}</display-octave></unpitched>`);
+            parts.push(
+              `<unpitched><display-step>${['F', 'C', 'G', 'E', 'A'][((event as { gm?: number }).gm ?? 38) % 5]}</display-step><display-octave>${(event as { gm?: number }).gm! >= 42 ? 5 : 4}</display-octave></unpitched>`,
+            );
           } else parts.push(pitchXml(event.pitch));
           parts.push(`<duration>${Math.round(b.duration)}</duration>`);
           const tieStop = tied;
@@ -112,7 +161,10 @@ function partXml(song: Song, track: Track, pid: string): string {
           if (tieStart) parts.push('<tie type="start"/>');
           parts.push(`<voice>${staff}</voice>`);
           parts.push(beatTiming(b));
-          if (track.type === 'drums') parts.push('<notehead>' + (((event as { gm?: number }).gm ?? 0) >= 42 ? 'x' : 'normal') + '</notehead>');
+          if (track.type === 'drums')
+            parts.push(
+              '<notehead>' + (((event as { gm?: number }).gm ?? 0) >= 42 ? 'x' : 'normal') + '</notehead>',
+            );
           else parts.push(`<staff>${staff}</staff>`);
           const nots: string[] = [];
           if (tieStop) nots.push('<tied type="stop"/>');
@@ -123,7 +175,8 @@ function partXml(song: Song, track: Track, pid: string): string {
             const t = event.tech ?? {};
             if (!tied) {
               if (t.hammer) tech.push('<hammer-on type="stop">H</hammer-on>');
-              if (t.bend?.length) tech.push(`<bend><bend-alter>${Math.max(...t.bend.map((x) => x.value))}</bend-alter></bend>`);
+              if (t.bend?.length)
+                tech.push(`<bend><bend-alter>${Math.max(...t.bend.map((x) => x.value))}</bend-alter></bend>`);
               if (t.harmonic) tech.push('<harmonic/>');
               if (t.tap) tech.push('<tap/>');
               if (t.dead) tech.push('<stopped/>');
@@ -144,7 +197,9 @@ function partXml(song: Song, track: Track, pid: string): string {
     });
     for (const r of song.repeats)
       if (r.endBar === bar.index)
-        out.push(`<barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" times="${r.times}"/></barline>`);
+        out.push(
+          `<barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" times="${r.times}"/></barline>`,
+        );
     out.push('</measure>');
   }
   out.push('</part>');

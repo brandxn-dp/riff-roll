@@ -31,8 +31,10 @@ function notesAt(t: Track, tick: number) {
 
 export function noteOnString(t: Track, tick: number, string: number): Note | undefined {
   const f = trackFingering(t);
-  return t.notes.find((n) => n.start === tick && f.get(n.id)?.string === string) ??
-    t.notes.find((n) => n.start <= tick && n.start + n.duration > tick && f.get(n.id)?.string === string);
+  return (
+    t.notes.find((n) => n.start === tick && f.get(n.id)?.string === string) ??
+    t.notes.find((n) => n.start <= tick && n.start + n.duration > tick && f.get(n.id)?.string === string)
+  );
 }
 
 function setCursor(tick: number, string: number) {
@@ -40,7 +42,10 @@ function setCursor(tick: number, string: number) {
   const t = currentTrack(st);
   if (!t) return;
   const n = t.tuning.strings.length;
-  const c = { tick: Math.max(0, Math.min(songEnd(st.song) - 1, tick)), string: Math.max(0, Math.min(n - 1, string)) };
+  const c = {
+    tick: Math.max(0, Math.min(songEnd(st.song) - 1, tick)),
+    string: Math.max(0, Math.min(n - 1, string)),
+  };
   const at = noteOnString(t, c.tick, c.string);
   st.set({ tabCursor: c, cursor: c.tick });
   st.select(at ? [at.id] : [], at?.id ?? null);
@@ -54,7 +59,15 @@ export function tabCursorTo(tick: number, string: number) {
 const TOGGLES: Record<string, (t: Techniques) => Partial<Techniques>> = {
   h: (t) => ({ hammer: !t.hammer || undefined }),
   s: (t) => ({ slide: t.slide ? undefined : 'legato' }),
-  b: (t) => ({ bend: t.bend ? undefined : [{ pos: 0, value: 0 }, { pos: 0.5, value: 2 }, { pos: 1, value: 2 }] }),
+  b: (t) => ({
+    bend: t.bend
+      ? undefined
+      : [
+          { pos: 0, value: 0 },
+          { pos: 0.5, value: 2 },
+          { pos: 1, value: 2 },
+        ],
+  }),
   v: (t) => ({ vibrato: t.vibrato ? undefined : 'normal' }),
   p: (t) => ({ palmMute: !t.palmMute || undefined }),
   x: (t) => ({ dead: !t.dead || undefined }),
@@ -109,7 +122,10 @@ export function handleTabKey(e: KeyboardEvent): boolean {
     return true;
   }
   if (e.key === 'ArrowRight') {
-    const step = notesAt(t, c.tick).filter((n) => n.start === c.tick).reduce((m, n) => Math.max(m, n.duration), 0) || len;
+    const step =
+      notesAt(t, c.tick)
+        .filter((n) => n.start === c.tick)
+        .reduce((m, n) => Math.max(m, n.duration), 0) || len;
     tabCursorTo(c.tick + step, c.string);
     return true;
   }
@@ -126,14 +142,22 @@ export function handleTabKey(e: KeyboardEvent): boolean {
   if (/^[0-9]$/.test(e.key) && !mod) {
     const now = Date.now();
     let fret = Number(e.key);
-    if (digitBuf && now - digitAt < 700 && Number(digitBuf + e.key) <= t.maxFret) fret = Number(digitBuf + e.key);
+    if (digitBuf && now - digitAt < 700 && Number(digitBuf + e.key) <= t.maxFret)
+      fret = Number(digitBuf + e.key);
     digitBuf = String(fret).length === 1 && fret <= Math.floor(t.maxFret / 10) ? e.key : '';
     digitAt = now;
     const pitch = t.tuning.strings[c.string] + t.capo + fret;
     if (here && here.start === c.tick) {
       st.exec(updateNotes(t.id, { [here.id]: { pitch, pinnedString: c.string } }, 'Enter fret'));
     } else {
-      const n: Note = { id: newId('n'), pitch, start: c.tick, duration: Math.min(len, end - c.tick), velocity: 100, pinnedString: c.string };
+      const n: Note = {
+        id: newId('n'),
+        pitch,
+        start: c.tick,
+        duration: Math.min(len, end - c.tick),
+        velocity: 100,
+        pinnedString: c.string,
+      };
       st.exec(addNotes(t.id, [n], 'Enter fret'));
       st.select([n.id], n.id);
     }
@@ -148,7 +172,12 @@ export function handleTabKey(e: KeyboardEvent): boolean {
   if (e.key === 'Delete' && mod) {
     const beat = t.notes.filter((n) => n.start >= c.tick && n.start < c.tick + len);
     st.begin('Delete beat');
-    st.exec(removeNotes(t.id, beat.map((n) => n.id)));
+    st.exec(
+      removeNotes(
+        t.id,
+        beat.map((n) => n.id),
+      ),
+    );
     shiftFrom(currentTrack()!, c.tick + len, -len, 'Delete beat');
     st.commit();
     return true;
@@ -162,7 +191,20 @@ export function handleTabKey(e: KeyboardEvent): boolean {
     const next = Math.max(PPQ / 16, Math.min(PPQ * 4, longer ? len * 2 : len / 2));
     st.set({ noteLen: next });
     if (here && here.start === c.tick)
-      st.exec(updateNotes(t.id, { [here.id]: { duration: Math.min(end - here.start, longer ? here.duration * 2 : Math.max(PPQ / 16, here.duration / 2)) } }, 'Note length'));
+      st.exec(
+        updateNotes(
+          t.id,
+          {
+            [here.id]: {
+              duration: Math.min(
+                end - here.start,
+                longer ? here.duration * 2 : Math.max(PPQ / 16, here.duration / 2),
+              ),
+            },
+          },
+          'Note length',
+        ),
+      );
     return true;
   }
   if (e.key === '.' || e.key === 't' || e.key === 'T') {
@@ -174,12 +216,22 @@ export function handleTabKey(e: KeyboardEvent): boolean {
       return plain(d * 1.5) ? d * 1.5 : plain(d) ? (d * 2) / 3 : d;
     };
     st.set({ noteLen: apply(len) });
-    if (here && here.start === c.tick) st.exec(updateNotes(t.id, { [here.id]: { duration: apply(here.duration) } }, dotted ? 'Dotted' : 'Triplet'));
+    if (here && here.start === c.tick)
+      st.exec(
+        updateNotes(t.id, { [here.id]: { duration: apply(here.duration) } }, dotted ? 'Dotted' : 'Triplet'),
+      );
     return true;
   }
   if ((e.key === 'r' || e.key === 'R') && !mod) {
     const beat = t.notes.filter((n) => n.start === c.tick);
-    if (beat.length) st.exec(removeNotes(t.id, beat.map((n) => n.id), 'Rest'));
+    if (beat.length)
+      st.exec(
+        removeNotes(
+          t.id,
+          beat.map((n) => n.id),
+          'Rest',
+        ),
+      );
     tabCursorTo(c.tick + len, c.string);
     return true;
   }

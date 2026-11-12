@@ -9,7 +9,9 @@ const MAP: KitPieceMap[] = [
 ];
 
 const files = [
-  ...[1, 2].flatMap((vl) => [1, 2, 3, 4].flatMap((rr) => ['kick', 'oh', 'sn'].map((m) => `Samples/kick/${m}/k_vl${vl}_rr${rr}.flac`))),
+  ...[1, 2].flatMap((vl) =>
+    [1, 2, 3, 4].flatMap((rr) => ['kick', 'oh', 'sn'].map((m) => `Samples/kick/${m}/k_vl${vl}_rr${rr}.flac`)),
+  ),
   'Samples/hh_closed/cl/hh_vl1_rr1.flac',
   'Samples/hh_open/cl/ho_vl1_rr1.flac',
   'Samples/other/cl/x_vl1_rr1.flac',
@@ -26,7 +28,10 @@ describe('normalised drum kit', () => {
   it('writes an SFZ the sampler can play: velocity layers, round robins, mic layering, chokes', () => {
     const inst = parseSfz(kitSfz(selectKitFiles(files, MAP, 2), MAP, 2));
     const soft = selectRegions(inst, 36, 30, 0.5, () => 0);
-    expect(soft.map((r) => r.sample).sort()).toEqual(['Samples/kick/kick/k_vl1_rr1.flac', 'Samples/kick/oh/k_vl1_rr1.flac']);
+    expect(soft.map((r) => r.sample).sort()).toEqual([
+      'Samples/kick/kick/k_vl1_rr1.flac',
+      'Samples/kick/oh/k_vl1_rr1.flac',
+    ]);
     const loudRr2 = selectRegions(inst, 36, 120, 0.5, () => 1);
     expect(loudRr2.every((r) => r.sample.includes('vl2_rr2'))).toBe(true);
     expect(loudRr2.find((r) => r.raw.riffroll_mic === 'oh')?.volume).toBe(-6);

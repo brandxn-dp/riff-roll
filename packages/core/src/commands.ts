@@ -38,7 +38,11 @@ export const addNotes = (trackId: Id, notes: Note[], label = notes.length > 1 ? 
     notes.length ? mapTrack(s, trackId, (t) => ({ ...t, notes: [...t.notes, ...notes].sort(byStart) })) : s,
   );
 
-export const removeNotes = (trackId: Id, ids: Id[], label = ids.length > 1 ? 'Delete notes' : 'Delete note') =>
+export const removeNotes = (
+  trackId: Id,
+  ids: Id[],
+  label = ids.length > 1 ? 'Delete notes' : 'Delete note',
+) =>
   cmd(label, (s) => {
     const set = new Set(ids);
     return mapTrack(s, trackId, (t) =>
@@ -62,7 +66,9 @@ export const updateNotes = (trackId: Id, changes: Record<Id, Partial<Note>>, lab
 
 // ---------------- drum hits ----------------
 export const addHits = (trackId: Id, hits: DrumHit[], label = 'Add drum hits') =>
-  cmd(label, (s) => (hits.length ? mapTrack(s, trackId, (t) => ({ ...t, hits: [...t.hits, ...hits].sort(byStart) })) : s));
+  cmd(label, (s) =>
+    hits.length ? mapTrack(s, trackId, (t) => ({ ...t, hits: [...t.hits, ...hits].sort(byStart) })) : s,
+  );
 
 export const removeHits = (trackId: Id, ids: Id[], label = 'Delete drum hits') =>
   cmd(label, (s) => {
@@ -94,7 +100,10 @@ export const addStomp = (trackId: Id, stomp: Stomp) =>
 
 export const removeStomp = (trackId: Id, stompId: Id) =>
   cmd('Remove stomp', (s) =>
-    mapTrack(s, trackId, (t) => ({ ...t, pedal: { ...t.pedal, stomps: t.pedal.stomps.filter((x) => x.id !== stompId) } })),
+    mapTrack(s, trackId, (t) => ({
+      ...t,
+      pedal: { ...t.pedal, stomps: t.pedal.stomps.filter((x) => x.id !== stompId) },
+    })),
   );
 
 export const updateStomp = (trackId: Id, stompId: Id, changes: Partial<Stomp>, label = 'Move stomp') =>
@@ -103,7 +112,9 @@ export const updateStomp = (trackId: Id, stompId: Id, changes: Partial<Stomp>, l
       ...t,
       pedal: {
         ...t.pedal,
-        stomps: sortStomps(t.pedal.stomps.map((x) => (x.id === stompId ? { ...x, ...changes, id: x.id } : x))),
+        stomps: sortStomps(
+          t.pedal.stomps.map((x) => (x.id === stompId ? { ...x, ...changes, id: x.id } : x)),
+        ),
       },
     })),
   );
@@ -194,7 +205,9 @@ export const updateSong = (changes: Partial<Omit<Song, 'tracks'>>, label = 'Song
 export const setTempos = (tempos: TempoPoint[]) =>
   cmd('Change tempo', (s) => ({
     ...s,
-    tempos: [...tempos].sort((a, b) => a.tick - b.tick).map((p) => ({ ...p, bpm: Math.max(20, Math.min(400, p.bpm)) })),
+    tempos: [...tempos]
+      .sort((a, b) => a.tick - b.tick)
+      .map((p) => ({ ...p, bpm: Math.max(20, Math.min(400, p.bpm)) })),
   }));
 
 export const setTimeSigs = (timeSigs: TimeSig[]) =>
@@ -226,7 +239,9 @@ export const addSection = (section: Section) =>
 export const updateSection = (id: Id, changes: Partial<Section>) =>
   cmd('Edit section', (s) => ({
     ...s,
-    sections: s.sections.map((x) => (x.id === id ? { ...x, ...changes, id } : x)).sort((a, b) => a.tick - b.tick),
+    sections: s.sections
+      .map((x) => (x.id === id ? { ...x, ...changes, id } : x))
+      .sort((a, b) => a.tick - b.tick),
   }));
 export const removeSection = (id: Id) =>
   cmd('Delete section', (s) => ({ ...s, sections: s.sections.filter((x) => x.id !== id) }));

@@ -36,7 +36,8 @@ export async function generateNotices() {
     '## Instruments and samples',
     '',
     ...instruments.map(
-      (i: Record<string, string>) => `- **${i.name}** by ${i.author} — ${i.license} — ${i.url}\n  ${i.attribution}`,
+      (i: Record<string, string>) =>
+        `- **${i.name}** by ${i.author} — ${i.license} — ${i.url}\n  ${i.attribution}`,
     ),
     '',
     '## Software',

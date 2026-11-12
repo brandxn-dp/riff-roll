@@ -40,7 +40,14 @@ export function App() {
 
   return (
     <div className="app">
-      <Toolbar left={<><FileMenu /><SongTitle /></>} />
+      <Toolbar
+        left={
+          <>
+            <FileMenu />
+            <SongTitle />
+          </>
+        }
+      />
       <div className="body">
         <TrackList />
         <main className="main">

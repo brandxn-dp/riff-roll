@@ -80,16 +80,26 @@ function registerIpc() {
     const r = await dialog.showOpenDialog(win, {
       properties: ['openFile'],
       filters: [
-        { name: 'Riff Roll / Guitar Pro / MIDI / MusicXML', extensions: ['riff', 'gp', 'gp3', 'gp4', 'gp5', 'gpx', 'mid', 'midi', 'musicxml', 'xml'] },
+        {
+          name: 'Riff Roll / Guitar Pro / MIDI / MusicXML',
+          extensions: ['riff', 'gp', 'gp3', 'gp4', 'gp5', 'gpx', 'mid', 'midi', 'musicxml', 'xml'],
+        },
       ],
     });
     if (r.canceled || !r.filePaths[0]) return null;
     app.addRecentDocument(r.filePaths[0]);
-    return { path: r.filePaths[0], name: path.basename(r.filePaths[0]), data: new Uint8Array(await readFile(r.filePaths[0])) };
+    return {
+      path: r.filePaths[0],
+      name: path.basename(r.filePaths[0]),
+      data: new Uint8Array(await readFile(r.filePaths[0])),
+    };
   });
   ipcMain.handle('dialog:save', async (e, suggested: string, data: Uint8Array, ext: string) => {
     const win = BrowserWindow.fromWebContents(e.sender)!;
-    const r = await dialog.showSaveDialog(win, { defaultPath: suggested, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
+    const r = await dialog.showSaveDialog(win, {
+      defaultPath: suggested,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    });
     if (r.canceled || !r.filePath) return null;
     await writeFile(r.filePath, data);
     app.addRecentDocument(r.filePath);
@@ -127,15 +137,37 @@ async function createWindow(fileToOpen?: string) {
   });
   await win.loadURL(DEV_URL ?? 'app://riffroll/');
   if (fileToOpen) win.webContents.send('file:open-path', fileToOpen);
+  if (process.env.RIFFROLL_SCREENSHOT) {
+    // docs: capture the window (README screenshots), then quit
+    setTimeout(async () => {
+      if (process.env.RIFFROLL_SCREENSHOT_JS)
+        await win.webContents.executeJavaScript(process.env.RIFFROLL_SCREENSHOT_JS);
+      await new Promise((r) => setTimeout(r, 1500));
+      const img = await win.webContents.capturePage();
+      await writeFile(process.env.RIFFROLL_SCREENSHOT!, img.toPNG());
+      app.exit(0);
+    }, 2500);
+  }
   if (process.env.RIFFROLL_SMOKE) {
     // CI / dev smoke test: report what the renderer sees, then quit
-    setTimeout(async () => {
-      const report = await win.webContents.executeJavaScript(
-        `JSON.stringify({ title: document.title, text: document.body.innerText.slice(0, 200), bridge: !!window.riffroll, ctx: typeof AudioContext, secure: isSecureContext })`,
-      );
-      console.log('SMOKE ' + report);
-      app.exit(0);
-    }, Number(process.env.RIFFROLL_SMOKE) > 1 ? Number(process.env.RIFFROLL_SMOKE) : 3000);
+    setTimeout(
+      async () => {
+        const report = await win.webContents.executeJavaScript(
+          `(async () => JSON.stringify({
+          title: document.title,
+          text: document.body.innerText.slice(0, 120),
+          bridge: !!window.riffroll,
+          ctx: typeof AudioContext,
+          worklet: typeof AudioWorkletNode,
+          secure: isSecureContext,
+          instruments: (await fetch('./instruments/index.json').then((r) => r.json()).catch(() => ({ instruments: [] }))).instruments.map((i) => i.id),
+        }))()`,
+        );
+        console.log('SMOKE ' + report);
+        app.exit(0);
+      },
+      Number(process.env.RIFFROLL_SMOKE) > 1 ? Number(process.env.RIFFROLL_SMOKE) : 3000,
+    );
   }
   return win;
 }

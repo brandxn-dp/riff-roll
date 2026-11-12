@@ -44,7 +44,8 @@ describe('tempo map', () => {
     // ∫ 60/(960*bpm) over a 60→120 ramp of 4 beats = 4 * ln(2) seconds
     expect(m.tickToSeconds(PPQ * 4)).toBeCloseTo(4 * Math.log(2), 6);
     expect(m.bpmAt(PPQ * 2)).toBeCloseTo(90);
-    for (const t of [0, 100, 1234, 3000, PPQ * 4, PPQ * 9]) expect(m.secondsToTick(m.tickToSeconds(t))).toBeCloseTo(t, 4);
+    for (const t of [0, 100, 1234, 3000, PPQ * 4, PPQ * 9])
+      expect(m.secondsToTick(m.tickToSeconds(t))).toBeCloseTo(t, 4);
   });
 });
 

@@ -12,7 +12,20 @@ import {
   type Track,
 } from '@riffroll/core';
 import { barMap, currentTrack, songEnd, useStore } from '../store';
-import { COL, DISP, BODY, RULER_H, alpha, fit, floorTick, frameScheduler, lowerBound, pxPerTick, rr, snapTick } from '../canvas';
+import {
+  COL,
+  DISP,
+  BODY,
+  RULER_H,
+  alpha,
+  fit,
+  floorTick,
+  frameScheduler,
+  lowerBound,
+  pxPerTick,
+  rr,
+  snapTick,
+} from '../canvas';
 import { previewDrum } from '../audio-bridge';
 import { seek } from '../transport';
 
@@ -245,11 +258,34 @@ export function DrumGrid() {
       if (d.done.has(key)) return;
       d.done.add(key);
       const l = DRUM_LANES[li];
-      const existing = t.hits.filter((h) => hitLane(h) === l.id && h.start >= cell && h.start < cell + st.snap);
+      const existing = t.hits.filter(
+        (h) => hitLane(h) === l.id && h.start >= cell && h.start < cell + st.snap,
+      );
       if (d.add && !existing.length) {
-        st.exec(addHits(t.id, [{ id: newId('h'), start: cell, piece: l.piece, articulation: l.articulation, velocity: velRef.current }], 'Paint drums'));
+        st.exec(
+          addHits(
+            t.id,
+            [
+              {
+                id: newId('h'),
+                start: cell,
+                piece: l.piece,
+                articulation: l.articulation,
+                velocity: velRef.current,
+              },
+            ],
+            'Paint drums',
+          ),
+        );
         previewDrum(t, l.id, velRef.current);
-      } else if (!d.add && existing.length) st.exec(removeHits(t.id, existing.map((h) => h.id), 'Erase drums'));
+      } else if (!d.add && existing.length)
+        st.exec(
+          removeHits(
+            t.id,
+            existing.map((h) => h.id),
+            'Erase drums',
+          ),
+        );
     }
 
     function setVelAt(t: Track, ly: number, ids: string[]) {
@@ -303,7 +339,9 @@ export function DrumGrid() {
       if (li == null) return;
       const tick = tickOf(p.lx);
       const cell = floorTick(tick, st.snap);
-      const has = t.hits.some((h) => hitLane(h) === DRUM_LANES[li].id && h.start >= cell && h.start < cell + st.snap);
+      const has = t.hits.some(
+        (h) => hitLane(h) === DRUM_LANES[li].id && h.start >= cell && h.start < cell + st.snap,
+      );
       const add = e.button === 0 && !has;
       if (e.button !== 0 && e.button !== 2) return;
       st.begin(add ? 'Paint drums' : 'Erase drums');
@@ -399,15 +437,31 @@ function PatternTools({ lane, vel, setVel }: { lane: DrumLane; vel: number; setV
     const existing = new Set(t.hits.filter((h) => hitLane(h) === lane.id && inBar(h)).map((h) => h.start));
     const hits: DrumHit[] = [];
     for (let k = bar.start; k < bar.start + bar.length; k += step)
-      if (!existing.has(k)) hits.push({ id: newId('h'), start: k, piece: lane.piece, articulation: lane.articulation, velocity: vel });
+      if (!existing.has(k))
+        hits.push({
+          id: newId('h'),
+          start: k,
+          piece: lane.piece,
+          articulation: lane.articulation,
+          velocity: vel,
+        });
     st.exec(addHits(t.id, hits, `Fill bar with ${step === song.ppq / 2 ? '8ths' : '16ths'}`));
   };
-  const clearBar = () => st.exec(removeHits(t.id, t.hits.filter((h) => inBar(h)).map((h) => h.id), 'Clear bar'));
+  const clearBar = () =>
+    st.exec(
+      removeHits(
+        t.id,
+        t.hits.filter((h) => inBar(h)).map((h) => h.id),
+        'Clear bar',
+      ),
+    );
   const copyBar = () => {
     if (bar.index + 1 >= song.bars) return;
     const next = bm.bar(bar.index + 1);
     const remove = t.hits.filter((h) => inBar(h, next)).map((h) => h.id);
-    const add = t.hits.filter((h) => inBar(h) && h.start - bar.start < next.length).map((h) => ({ ...h, id: newId('h'), start: h.start - bar.start + next.start }));
+    const add = t.hits
+      .filter((h) => inBar(h) && h.start - bar.start < next.length)
+      .map((h) => ({ ...h, id: newId('h'), start: h.start - bar.start + next.start }));
     st.begin('Copy bar');
     st.exec(removeHits(t.id, remove));
     st.exec(addHits(t.id, add));
@@ -451,7 +505,10 @@ function PatternTools({ lane, vel, setVel }: { lane: DrumLane; vel: number; setV
         <input type="range" min={1} max={127} value={vel} onChange={(e) => setVel(Number(e.target.value))} />
         <output>{vel}</output>
       </label>
-      <span className="mute">Click/drag to paint, right-drag to erase, Shift-drag paints across lanes. Click the ruler to pick the bar.</span>
+      <span className="mute">
+        Click/drag to paint, right-drag to erase, Shift-drag paints across lanes. Click the ruler to pick the
+        bar.
+      </span>
     </div>
   );
 }

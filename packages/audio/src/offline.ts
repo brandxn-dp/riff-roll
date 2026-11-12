@@ -17,7 +17,11 @@ export interface RenderOptions {
   onProgress?: (fraction: number) => void;
 }
 
-export async function renderSong(song: Song, lib: InstrumentLibrary, o: RenderOptions = {}): Promise<AudioBuffer> {
+export async function renderSong(
+  song: Song,
+  lib: InstrumentLibrary,
+  o: RenderOptions = {},
+): Promise<AudioBuffer> {
   const sr = o.sampleRate ?? 44100;
   const tempo = new TempoMap(song.tempos, song.ppq);
   const segments = playbackSegments(song);
@@ -48,7 +52,10 @@ export async function renderSong(song: Song, lib: InstrumentLibrary, o: RenderOp
     g.update(t, true);
     graphs.set(t.id, g);
     const s = await lib.sampler(t.instrument, t.type);
-    const pitches = t.type === 'drums' ? t.hits.map((h) => laneById.get(`${h.piece}:${h.articulation}`)?.key ?? 0) : t.notes.map((n) => n.pitch);
+    const pitches =
+      t.type === 'drums'
+        ? t.hits.map((h) => laneById.get(`${h.piece}:${h.articulation}`)?.key ?? 0)
+        : t.notes.map((n) => n.pitch);
     await s.preload(pitches);
     samplers.set(t.id, s);
   }

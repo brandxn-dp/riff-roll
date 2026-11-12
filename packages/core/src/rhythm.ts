@@ -84,12 +84,16 @@ export function splitDuration(span: number, ppq: number): Dur[] {
 /** A tiny unrepresentable remainder is folded into the last value (notation can't show it anyway). */
 function absorb(out: Dur[], rem: number): Dur[] {
   if (!out.length && rem > 0) return [{ ticks: rem, value: 64, dots: 0 }];
-  if (out.length && rem > 0) out[out.length - 1] = { ...out[out.length - 1], ticks: out[out.length - 1].ticks + rem };
+  if (out.length && rem > 0)
+    out[out.length - 1] = { ...out[out.length - 1], ticks: out[out.length - 1].ticks + rem };
   return out;
 }
 
 /** Quantise events into bars of beats. Events should already be on (or near) a grid. */
-export function rhythmize<E extends RhythmEvent>(events: readonly E[], song: Pick<Song, 'timeSigs' | 'ppq' | 'bars'>): RBar<E>[] {
+export function rhythmize<E extends RhythmEvent>(
+  events: readonly E[],
+  song: Pick<Song, 'timeSigs' | 'ppq' | 'bars'>,
+): RBar<E>[] {
   const bm = new BarMap(song.timeSigs, song.ppq);
   const sorted = [...events].sort((a, b) => a.start - b.start);
   const bars: RBar<E>[] = [];

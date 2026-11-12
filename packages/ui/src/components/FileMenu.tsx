@@ -114,7 +114,13 @@ export function ProjectsDialog() {
   return (
     <Modal title="Open song">
       <p className="mute">
-        Songs are saved automatically ({kind === 'rest' ? 'on the server' : kind === 'electron' ? 'in your app data folder' : 'in this browser'}).
+        Songs are saved automatically (
+        {kind === 'rest'
+          ? 'on the server'
+          : kind === 'electron'
+            ? 'in your app data folder'
+            : 'in this browser'}
+        ).
       </p>
       <ul className="projects">
         {list?.map((p) => (

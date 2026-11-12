@@ -31,7 +31,10 @@ describe('rhythm quantisation', () => {
 
   it('ties notes across the bar line', () => {
     const bars = rhythmize([ev('long', PPQ * 3, PPQ * 2)], song);
-    expect(bars[0].beats.at(-1)!.notes[0]).toEqual({ event: expect.objectContaining({ id: 'long' }), tied: false });
+    expect(bars[0].beats.at(-1)!.notes[0]).toEqual({
+      event: expect.objectContaining({ id: 'long' }),
+      tied: false,
+    });
     expect(bars[1].beats[0].notes[0].tied).toBe(true);
     expect(bars[1].beats[0].value).toBe(4);
   });
@@ -47,7 +50,10 @@ describe('rhythm quantisation', () => {
   });
 
   it('every bar adds up to its length', () => {
-    const bars = rhythmize([ev('a', 100, 333), ev('b', 2000, 1300)], { ...song, timeSigs: [{ bar: 0, num: 7, den: 8 }] });
+    const bars = rhythmize([ev('a', 100, 333), ev('b', 2000, 1300)], {
+      ...song,
+      timeSigs: [{ bar: 0, num: 7, den: 8 }],
+    });
     for (const b of bars) expect(b.beats.reduce((s, x) => s + x.duration, 0)).toBe(b.length);
   });
 });

@@ -58,7 +58,8 @@ function techniques(n: ATNote, b: ATBeat): Techniques | undefined {
   else if (h === at.HarmonicType.Pinch) t.harmonic = 'pinch';
   else if (h === at.HarmonicType.Tap) t.harmonic = 'tapped';
   if (b.tap) t.tap = true;
-  if (b.isTremolo && b.tremoloSpeed) t.tremolo = (b.tremoloSpeed as number) >= 32 ? 32 : (b.tremoloSpeed as number) >= 16 ? 16 : 8;
+  if (b.isTremolo && b.tremoloSpeed)
+    t.tremolo = (b.tremoloSpeed as number) >= 32 ? 32 : (b.tremoloSpeed as number) >= 16 ? 16 : 8;
   if (n.isGhost) t.ghost = true;
   if (n.accentuated === at.AccentuationType.Heavy) t.accent = 'heavy';
   else if (n.accentuated === at.AccentuationType.Normal) t.accent = 'normal';
@@ -68,7 +69,8 @@ function techniques(n: ATNote, b: ATBeat): Techniques | undefined {
   const wh = curve(b.whammyBarPoints);
   if (wh && wh.some((p) => p.value !== 0)) t.whammy = wh;
   if (b.fadeIn) t.fadeIn = true;
-  if (n.trillValue >= 0 && n.isTrill) t.trill = { fret: n.trillFret ?? n.trillValue, speed: (n.trillSpeed as number) >= 32 ? 32 : 16 };
+  if (n.trillValue >= 0 && n.isTrill)
+    t.trill = { fret: n.trillFret ?? n.trillValue, speed: (n.trillSpeed as number) >= 32 ? 32 : 16 };
   return Object.keys(t).length ? t : undefined;
 }
 
@@ -84,14 +86,25 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
           for (const n of b.notes) {
             const art = at.percussionArticulations[n.percussionArticulation];
             const gm = art?.outputMidiNumber ?? n.percussionArticulation;
-            const lane = laneForGm(gm) ?? DRUM_LANES.find((l) => l.gm === gm) ?? DRUM_LANES.find((l) => l.id === 'snare:center')!;
-            hits.push({ id: newId('h'), start: b.absolutePlaybackStart, piece: lane.piece, articulation: lane.articulation, velocity: velocityOf(n) });
+            const lane =
+              laneForGm(gm) ??
+              DRUM_LANES.find((l) => l.gm === gm) ??
+              DRUM_LANES.find((l) => l.id === 'snare:center')!;
+            hits.push({
+              id: newId('h'),
+              start: b.absolutePlaybackStart,
+              piece: lane.piece,
+              articulation: lane.articulation,
+              velocity: velocityOf(n),
+            });
           }
     return { ...t, hits: hits.sort((a, b) => a.start - b.start) };
   }
   let strings = [...staff.tuning].reverse();
   let lowest = 127;
-  for (const bar of staff.bars) for (const v of bar.voices) for (const b of v.beats) for (const n of b.notes) lowest = Math.min(lowest, n.realValue);
+  for (const bar of staff.bars)
+    for (const v of bar.voices)
+      for (const b of v.beats) for (const n of b.notes) lowest = Math.min(lowest, n.realValue);
   const isBass =
     (strings.length ? strings[0] < 36 : lowest < 40) ||
     (at.playbackInfo.program >= 32 && at.playbackInfo.program <= 39) ||
@@ -100,7 +113,15 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
   if (strings.length) t.tuning = { name: staff.tuningName || strings.map(pitchName).join(' '), strings };
   else {
     // notation-only files (e.g. some MusicXML) carry no tab tuning: pick a standard one that reaches every note
-    const pick = isBass ? (lowest < 28 ? '5-string Bass Standard B' : 'Bass Standard E') : lowest < 35 ? '8-string Standard F#' : lowest < 40 ? '7-string Standard B' : 'Standard E';
+    const pick = isBass
+      ? lowest < 28
+        ? '5-string Bass Standard B'
+        : 'Bass Standard E'
+      : lowest < 35
+        ? '8-string Standard F#'
+        : lowest < 40
+          ? '7-string Standard B'
+          : 'Standard E';
     t.tuning = tuningByName(pick)!;
     strings = t.tuning.strings;
   }
@@ -110,7 +131,9 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
   const tieTargets = new Map<string, Note>();
   // pedal: instrument automations switching between clean and driven programs
   const program = at.playbackInfo.program;
-  const tones = isBass ? [makeTone(BASS_PRESETS.clean), makeTone(BASS_PRESETS.driven)] : [makeTone(GUITAR_PRESETS.clean), makeTone(GUITAR_PRESETS.dist)];
+  const tones = isBass
+    ? [makeTone(BASS_PRESETS.clean), makeTone(BASS_PRESETS.driven)]
+    : [makeTone(GUITAR_PRESETS.clean), makeTone(GUITAR_PRESETS.dist)];
   const stomps: Stomp[] = [];
   let driven = DIST_PROGRAMS.has(program);
   const startDriven = driven;
@@ -151,7 +174,12 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
   return {
     ...t,
     tones,
-    pedal: { mode: 'simple', startTone: tones[startDriven ? 1 : 0].id, toggle: [tones[0].id, tones[1].id], stomps },
+    pedal: {
+      mode: 'simple',
+      startTone: tones[startDriven ? 1 : 0].id,
+      toggle: [tones[0].id, tones[1].id],
+      stomps,
+    },
     notes: notes.sort((a, b) => a.start - b.start),
   };
 }
@@ -177,18 +205,29 @@ export function scoreToSong(score: ATScore): { song: Song; warnings: string[] } 
   let openRepeat: number | null = null;
   for (const mb of score.masterBars) {
     const sig = `${mb.timeSignatureNumerator}/${mb.timeSignatureDenominator}`;
-    if (sig !== prevSig) song.timeSigs.push({ bar: mb.index, num: mb.timeSignatureNumerator, den: mb.timeSignatureDenominator });
+    if (sig !== prevSig)
+      song.timeSigs.push({ bar: mb.index, num: mb.timeSignatureNumerator, den: mb.timeSignatureDenominator });
     prevSig = sig;
     for (const a of mb.tempoAutomations) {
       const tick = mb.start + Math.round(a.ratioPosition * mb.calculateDuration());
       if (tick === 0) song.tempos[0] = { tick: 0, bpm: a.value };
       else song.tempos.push({ tick, bpm: a.value, ...(a.isLinear ? { ramp: true } : {}) });
     }
-    if (mb.section) song.sections.push({ id: newId('sec'), tick: mb.start, name: mb.section.text || mb.section.marker || 'Section' });
+    if (mb.section)
+      song.sections.push({
+        id: newId('sec'),
+        tick: mb.start,
+        name: mb.section.text || mb.section.marker || 'Section',
+      });
     if (mb.isRepeatStart) openRepeat = mb.index;
     if (mb.repeatCount > 0) {
       const start = openRepeat ?? 0;
-      song.repeats.push({ id: newId('rep'), startBar: start, endBar: mb.index, times: Math.max(2, mb.repeatCount) });
+      song.repeats.push({
+        id: newId('rep'),
+        startBar: start,
+        endBar: mb.index,
+        times: Math.max(2, mb.repeatCount),
+      });
       openRepeat = null;
     }
   }

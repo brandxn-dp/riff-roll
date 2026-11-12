@@ -6,7 +6,9 @@ import type { Song } from './model';
  * Alternate endings: a bar listed in `endings` only plays on the passes it names.
  */
 export function playbackBars(song: Pick<Song, 'bars' | 'repeats'>): number[] {
-  const reps = [...song.repeats].filter((r) => r.endBar >= r.startBar && r.times >= 2).sort((a, b) => a.startBar - b.startBar);
+  const reps = [...song.repeats]
+    .filter((r) => r.endBar >= r.startBar && r.times >= 2)
+    .sort((a, b) => a.startBar - b.startBar);
   const out: number[] = [];
   let bar = 0;
   let guard = 0;
@@ -36,7 +38,9 @@ export function playbackBars(song: Pick<Song, 'bars' | 'repeats'>): number[] {
 }
 
 /** Playback order as tick segments (consecutive bars merged). */
-export function playbackSegments(song: Pick<Song, 'bars' | 'repeats' | 'timeSigs' | 'ppq'>): { start: number; end: number }[] {
+export function playbackSegments(
+  song: Pick<Song, 'bars' | 'repeats' | 'timeSigs' | 'ppq'>,
+): { start: number; end: number }[] {
   const bm = new BarMap(song.timeSigs, song.ppq);
   const segs: { start: number; end: number }[] = [];
   let prev = -2;

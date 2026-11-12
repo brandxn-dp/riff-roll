@@ -1,5 +1,12 @@
 import { useRef } from 'react';
-import { trackFingering, updateNotes, type CurvePoint, type Note, type Techniques, type Track } from '@riffroll/core';
+import {
+  trackFingering,
+  updateNotes,
+  type CurvePoint,
+  type Note,
+  type Techniques,
+  type Track,
+} from '@riffroll/core';
 import { useStore } from '../store';
 
 const BEND_PRESETS: Record<string, CurvePoint[]> = {
@@ -48,7 +55,19 @@ const WHAMMY_PRESETS: Record<string, CurvePoint[]> = {
 };
 
 /** A tiny curve editor: drag points vertically in quarter-tone steps (bend) or semitones (whammy). */
-function CurveEditor({ curve, min, max, step, onChange }: { curve: CurvePoint[]; min: number; max: number; step: number; onChange: (c: CurvePoint[]) => void }) {
+function CurveEditor({
+  curve,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  curve: CurvePoint[];
+  min: number;
+  max: number;
+  step: number;
+  onChange: (c: CurvePoint[]) => void;
+}) {
   const W = 140,
     H = 54,
     P = 6;
@@ -75,9 +94,22 @@ function CurveEditor({ curve, min, max, step, onChange }: { curve: CurvePoint[];
   return (
     <svg ref={ref} width={W} height={H} className="curve" role="img" aria-label="Curve editor">
       <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke="#4a5160" />
-      <polyline fill="none" stroke="#e6e8ee" strokeWidth={1.5} points={curve.map((p) => `${x(p.pos)},${y(p.value)}`).join(' ')} />
+      <polyline
+        fill="none"
+        stroke="#e6e8ee"
+        strokeWidth={1.5}
+        points={curve.map((p) => `${x(p.pos)},${y(p.value)}`).join(' ')}
+      />
       {curve.map((p, i) => (
-        <circle key={i} cx={x(p.pos)} cy={y(p.value)} r={5} fill="#8cb4ff" onPointerDown={drag(i)} style={{ cursor: 'ns-resize' }} />
+        <circle
+          key={i}
+          cx={x(p.pos)}
+          cy={y(p.value)}
+          r={5}
+          fill="#8cb4ff"
+          onPointerDown={drag(i)}
+          style={{ cursor: 'ns-resize' }}
+        />
       ))}
     </svg>
   );
@@ -97,23 +129,39 @@ export function TechniquePanel({ track, notes }: { track: Track; notes: Note[] }
     st.exec(updateNotes(track.id, ch, label));
   };
   const tog = (key: keyof Techniques, label: string, title: string) => (
-    <button className="tech" aria-pressed={!!t[key]} title={title} onClick={() => set({ [key]: t[key] ? undefined : true } as Partial<Techniques>, title)}>
+    <button
+      className="tech"
+      aria-pressed={!!t[key]}
+      title={title}
+      onClick={() => set({ [key]: t[key] ? undefined : true } as Partial<Techniques>, title)}
+    >
       {label}
     </button>
   );
-  const sel = <K extends keyof Techniques>(key: K, label: string, options: [string, Techniques[K] | undefined][]) => (
+  const sel = <K extends keyof Techniques>(
+    key: K,
+    label: string,
+    options: [string, Techniques[K] | undefined][],
+  ) => (
     <label className="techsel" title={label}>
       <span>{label}</span>
       <select
-        value={String(options.find(([, v]) => JSON.stringify(v) === JSON.stringify(t[key]))?.[0] ?? (t[key] ? 'custom' : ''))}
-        onChange={(e) => set({ [key]: options.find(([k]) => k === e.target.value)?.[1] } as Partial<Techniques>, label)}
+        value={String(
+          options.find(([, v]) => JSON.stringify(v) === JSON.stringify(t[key]))?.[0] ??
+            (t[key] ? 'custom' : ''),
+        )}
+        onChange={(e) =>
+          set({ [key]: options.find(([k]) => k === e.target.value)?.[1] } as Partial<Techniques>, label)
+        }
       >
         {options.map(([k]) => (
           <option key={k} value={k}>
             {k || '—'}
           </option>
         ))}
-        {t[key] && !options.some(([, v]) => JSON.stringify(v) === JSON.stringify(t[key])) && <option value="custom">custom</option>}
+        {t[key] && !options.some(([, v]) => JSON.stringify(v) === JSON.stringify(t[key])) && (
+          <option value="custom">custom</option>
+        )}
       </select>
     </label>
   );
@@ -132,7 +180,15 @@ export function TechniquePanel({ track, notes }: { track: Track; notes: Note[] }
         ['out up', 'out-up'],
       ])}
       {sel('bend', 'Bend', [['', undefined], ...Object.entries(BEND_PRESETS)])}
-      {t.bend && <CurveEditor curve={t.bend} min={0} max={3} step={0.5} onChange={(c) => set({ bend: c }, 'Bend curve')} />}
+      {t.bend && (
+        <CurveEditor
+          curve={t.bend}
+          min={0}
+          max={3}
+          step={0.5}
+          onChange={(c) => set({ bend: c }, 'Bend curve')}
+        />
+      )}
       {sel('vibrato', 'Vib', [
         ['', undefined],
         ['normal', 'normal'],
@@ -168,7 +224,15 @@ export function TechniquePanel({ track, notes }: { track: Track; notes: Note[] }
         ['up V', 'up'],
       ])}
       {sel('whammy', 'Whammy', [['', undefined], ...Object.entries(WHAMMY_PRESETS)])}
-      {t.whammy && <CurveEditor curve={t.whammy} min={-12} max={2} step={1} onChange={(c) => set({ whammy: c }, 'Whammy curve')} />}
+      {t.whammy && (
+        <CurveEditor
+          curve={t.whammy}
+          min={-12}
+          max={2}
+          step={1}
+          onChange={(c) => set({ whammy: c }, 'Whammy curve')}
+        />
+      )}
       {tog('fadeIn', 'Swell', 'Fade in / volume swell (F)')}
       {sel('trill', 'Trill', [
         ['', undefined],

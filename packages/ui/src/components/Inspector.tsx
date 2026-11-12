@@ -54,7 +54,8 @@ export function Inspector() {
             </span>
           )}
           Click the grid to add a note, drag to move, drag the right edge to resize, right-click to delete,
-          Ctrl-drag to box-select. Click the pedal lane to add or remove a stomp. Press <kbd>?</kbd> for shortcuts.
+          Ctrl-drag to box-select. Click the pedal lane to add or remove a stomp. Press <kbd>?</kbd> for
+          shortcuts.
         </div>
         <Legend t={track} />
       </div>
@@ -76,18 +77,52 @@ export function Inspector() {
           <span className="mute">Arrows move, Ctrl+D duplicates, Q quantizes, Delete removes.</span>
         </div>
         <div className="row">
-          <button className="ib" onClick={() => edit((n) => ({ start: Math.max(0, n.start - snap) }), 'Move notes')} aria-label="Move earlier">◀</button>
-          <button className="ib" onClick={() => edit((n) => ({ start: Math.min(end - n.duration, n.start + snap) }), 'Move notes')} aria-label="Move later">▶</button>
+          <button
+            className="ib"
+            onClick={() => edit((n) => ({ start: Math.max(0, n.start - snap) }), 'Move notes')}
+            aria-label="Move earlier"
+          >
+            ◀
+          </button>
+          <button
+            className="ib"
+            onClick={() => edit((n) => ({ start: Math.min(end - n.duration, n.start + snap) }), 'Move notes')}
+            aria-label="Move later"
+          >
+            ▶
+          </button>
           <span className="sep" />
-          <button className="ib" onClick={() => edit((n) => ({ pitch: n.pitch - 1, pinnedString: null }), 'Transpose')} aria-label="Semitone down">▼</button>
-          <button className="ib" onClick={() => edit((n) => ({ pitch: n.pitch + 1, pinnedString: null }), 'Transpose')} aria-label="Semitone up">▲</button>
+          <button
+            className="ib"
+            onClick={() => edit((n) => ({ pitch: n.pitch - 1, pinnedString: null }), 'Transpose')}
+            aria-label="Semitone down"
+          >
+            ▼
+          </button>
+          <button
+            className="ib"
+            onClick={() => edit((n) => ({ pitch: n.pitch + 1, pinnedString: null }), 'Transpose')}
+            aria-label="Semitone up"
+          >
+            ▲
+          </button>
           <span className="sep" />
           {pinned && (
             <button className="ib" onClick={() => edit(() => ({ pinnedString: null }), 'Auto fingering')}>
               Auto
             </button>
           )}
-          <button className="ib danger" onClick={() => exec(removeNotes(track.id, sel.map((n) => n.id)))}>
+          <button
+            className="ib danger"
+            onClick={() =>
+              exec(
+                removeNotes(
+                  track.id,
+                  sel.map((n) => n.id),
+                ),
+              )
+            }
+          >
             Delete
           </button>
           <button className="ib" onClick={() => st.select([])}>
@@ -124,7 +159,11 @@ export function Inspector() {
         {tone && (
           <span
             className={'pill' + (clean ? ' clean' : ' dist')}
-            style={clean ? { color: tone.color, borderColor: tone.color } : { background: tone.color, borderColor: tone.color }}
+            style={
+              clean
+                ? { color: tone.color, borderColor: tone.color }
+                : { background: tone.color, borderColor: tone.color }
+            }
           >
             {tone.name}
           </span>
@@ -160,8 +199,20 @@ export function Inspector() {
         )}
       </div>
       <div className="row">
-        <button className="ib" onClick={() => one({ start: Math.max(0, n.start - snap) }, 'Move note')} aria-label="Move earlier">◀</button>
-        <button className="ib" onClick={() => one({ start: Math.min(end - n.duration, n.start + snap) }, 'Move note')} aria-label="Move later">▶</button>
+        <button
+          className="ib"
+          onClick={() => one({ start: Math.max(0, n.start - snap) }, 'Move note')}
+          aria-label="Move earlier"
+        >
+          ◀
+        </button>
+        <button
+          className="ib"
+          onClick={() => one({ start: Math.min(end - n.duration, n.start + snap) }, 'Move note')}
+          aria-label="Move later"
+        >
+          ▶
+        </button>
         <span className="sep" />
         <button
           className="ib"
@@ -184,11 +235,19 @@ export function Inspector() {
           ▲
         </button>
         <span className="sep" />
-        <button className="ib" aria-label="Shorter" onClick={() => one({ duration: Math.max(snap, n.duration - snap) }, 'Resize note')}>
+        <button
+          className="ib"
+          aria-label="Shorter"
+          onClick={() => one({ duration: Math.max(snap, n.duration - snap) }, 'Resize note')}
+        >
           −
         </button>
         <span className="lenv">{lengthLabel(n.duration)}</span>
-        <button className="ib" aria-label="Longer" onClick={() => one({ duration: Math.min(end - n.start, n.duration + snap) }, 'Resize note')}>
+        <button
+          className="ib"
+          aria-label="Longer"
+          onClick={() => one({ duration: Math.min(end - n.start, n.duration + snap) }, 'Resize note')}
+        >
           +
         </button>
         <span className="sep" />

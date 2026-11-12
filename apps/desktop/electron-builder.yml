@@ -13,7 +13,7 @@ extraResources:
   # instruments are bundled by default (offline-first); run `pnpm fetch-instruments` before packaging
   - from: ../../instruments/packs
     to: instruments
-    filter: ['**/*']
+    filter: ['**/*', '!.cache/**', '!**/*.staging/**']
   - from: ../../THIRD_PARTY_NOTICES.md
     to: THIRD_PARTY_NOTICES.md
 fileAssociations:

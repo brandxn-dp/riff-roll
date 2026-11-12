@@ -30,7 +30,13 @@ const pos = (string: number, fret: number): Position => ({ string, fret });
 
 describe('fingering engine (Standard E, 1/8 notes, hand near fret 2)', () => {
   it('Em arpeggio E2 B2 E3 G3 B3 → low E 0, A 2, D 2, G 0, B 0', () => {
-    expect(run(seq('E2', 'B2', 'E3', 'G3', 'B3'))).toEqual([pos(E, 0), pos(A, 2), pos(D, 2), pos(G, 0), pos(B, 0)]);
+    expect(run(seq('E2', 'B2', 'E3', 'G3', 'B3'))).toEqual([
+      pos(E, 0),
+      pos(A, 2),
+      pos(D, 2),
+      pos(G, 0),
+      pos(B, 0),
+    ]);
   });
 
   it('C3 G3 C4 E4 → A 3, G 0, B 1, high e 0', () => {
@@ -116,7 +122,13 @@ describe('fingering engine (Standard E, 1/8 notes, hand near fret 2)', () => {
         notes.push({ id: `b${notes.length}`, pitch: r, start: t, duration: EIGHTH });
         notes.push({ id: `b${notes.length}`, pitch: r + 7, start: t, duration: EIGHTH });
         notes.push({ id: `b${notes.length}`, pitch: r + 12, start: t, duration: EIGHTH });
-      } else notes.push({ id: `b${notes.length}`, pitch: pitches[(i * 7) % pitches.length], start: t, duration: EIGHTH });
+      } else
+        notes.push({
+          id: `b${notes.length}`,
+          pitch: pitches[(i * 7) % pitches.length],
+          start: t,
+          duration: EIGHTH,
+        });
       t += EIGHTH / 2;
     }
     assignFingering(notes, { strings: STD }); // warm up the JIT

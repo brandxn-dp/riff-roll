@@ -17,7 +17,11 @@ class Remote {
   constructor(private url: string) {}
   private async resolve(force = false) {
     if (!this.final || force) {
-      const r = await fetch(this.url, { method: 'HEAD', redirect: 'follow', headers: { 'user-agent': 'riffroll-fetch-instruments' } });
+      const r = await fetch(this.url, {
+        method: 'HEAD',
+        redirect: 'follow',
+        headers: { 'user-agent': 'riffroll-fetch-instruments' },
+      });
       if (!r.ok) throw new Error(`HEAD ${r.status} ${this.url}`);
       this.final = r.url;
       this.size = Number(r.headers.get('content-length'));
@@ -27,7 +31,9 @@ class Remote {
   size = 0;
   async range(a: number, b: number, attempt = 0): Promise<Uint8Array> {
     const url = await this.resolve(attempt > 0);
-    const r = await fetch(url, { headers: { Range: `bytes=${a}-${b}`, 'user-agent': 'riffroll-fetch-instruments' } });
+    const r = await fetch(url, {
+      headers: { Range: `bytes=${a}-${b}`, 'user-agent': 'riffroll-fetch-instruments' },
+    });
     if (r.status === 206) return new Uint8Array(await r.arrayBuffer());
     // signed CDN URLs expire: re-resolve and retry a few times
     if (attempt < 3) return this.range(a, b, attempt + 1);
@@ -51,7 +57,8 @@ export class RemoteZip {
     const tailLen = Math.min(size, 65557);
     const tail = await this.remote.range(size - tailLen, size - 1);
     let i = tail.length - 22;
-    while (i >= 0 && !(tail[i] === 0x50 && tail[i + 1] === 0x4b && tail[i + 2] === 5 && tail[i + 3] === 6)) i--;
+    while (i >= 0 && !(tail[i] === 0x50 && tail[i + 1] === 0x4b && tail[i + 2] === 5 && tail[i + 3] === 6))
+      i--;
     if (i < 0) throw new Error('not a zip file (no end of central directory)');
     const eocd = new DataView(tail.buffer, tail.byteOffset + i);
     const count = eocd.getUint16(10, true);
@@ -70,7 +77,13 @@ export class RemoteZip {
         el = v.getUint16(p + 30, true),
         cl = v.getUint16(p + 32, true);
       const localOffset = v.getUint32(p + 42, true);
-      this.entries.push({ name: dec.decode(cd.subarray(p + 46, p + 46 + nl)), method, compressedSize, size, localOffset });
+      this.entries.push({
+        name: dec.decode(cd.subarray(p + 46, p + 46 + nl)),
+        method,
+        compressedSize,
+        size,
+        localOffset,
+      });
       p += 46 + nl + el + cl;
     }
     return this.entries;
@@ -81,7 +94,9 @@ export class RemoteZip {
     const hv = new DataView(head.buffer, head.byteOffset);
     if (hv.getUint32(0, true) !== 0x04034b50) throw new Error(`bad local header for ${e.name}`);
     const start = e.localOffset + 30 + hv.getUint16(26, true) + hv.getUint16(28, true);
-    const data = e.compressedSize ? await this.remote.range(start, start + e.compressedSize - 1) : new Uint8Array();
+    const data = e.compressedSize
+      ? await this.remote.range(start, start + e.compressedSize - 1)
+      : new Uint8Array();
     if (e.method === 0) return data;
     if (e.method === 8) return new Uint8Array(inflateRawSync(data));
     throw new Error(`unsupported zip compression method ${e.method} for ${e.name}`);

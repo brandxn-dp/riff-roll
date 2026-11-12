@@ -61,5 +61,7 @@ export const laneById = new Map(DRUM_LANES.map((l) => [l.id, l]));
 
 export function laneForGm(note: number): DrumLane | undefined {
   // prefer the "main" articulation when several lanes share a GM note
-  return DRUM_LANES.find((l) => l.gm === note && !['choke', 'ghost', 'flam', 'half'].includes(l.articulation));
+  return DRUM_LANES.find(
+    (l) => l.gm === note && !['choke', 'ghost', 'flam', 'half'].includes(l.articulation),
+  );
 }

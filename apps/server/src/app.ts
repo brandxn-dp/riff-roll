@@ -98,7 +98,8 @@ export async function buildServer(opts: ServerOptions): Promise<FastifyInstance>
       const f = path.join(dir, 'index.json');
       if (!existsSync(f)) continue;
       try {
-        for (const i of JSON.parse(await readFile(f, 'utf8')).instruments ?? []) if (!seen.has(i.id)) seen.set(i.id, i);
+        for (const i of JSON.parse(await readFile(f, 'utf8')).instruments ?? [])
+          if (!seen.has(i.id)) seen.set(i.id, i);
       } catch {
         /* ignore broken index */
       }

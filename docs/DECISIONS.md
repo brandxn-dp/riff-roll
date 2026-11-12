@@ -142,3 +142,21 @@ Non-obvious choices and why. Newest at the bottom of each section.
   `api.print()` is blocked by the desktop app's window-open policy, so it isn't used).
 - **ASCII tab** (Ctrl+Shift+C) copies the selected bars (or 4 bars from the cursor) on a 1/16 grid with simple
   technique marks (h, /, b, ~, <harm>, (ghost), PM).
+
+## Packaging
+
+- **Docker build stage is Debian (bookworm-slim), runtime is Alpine.** The bundled 7-Zip binary (7zip-bin) needs
+  glibc; it also loses its executable bit under pnpm, so the fetch code `chmod`s it before use. Instruments are
+  fetched in their own layer before `COPY . .`, so code changes don't re-download ~160 MB.
+- The image runs as the unprivileged `node` user, exposes 8080, and has two volumes (`/data/projects`,
+  `/data/instruments`). Final size ≈ 635 MB with instruments, ≈ 290 MB without (`INCLUDE_INSTRUMENTS=false`).
+- **Host port is configurable** (`RIFFROLL_PORT`, default 8080) because 8080 is often taken on dev machines.
+- **Sample URLs are encoded with `encodeURI` per path segment**, not `encodeURIComponent`: `@fastify/static`/`send`
+  decode with `decodeURI`, which leaves `%2B` alone, so the FreePats folder `SFZ+FLAC` 404'd. Found by running the
+  real container; covered by a unit test.
+- **Electron installers**: NSIS (Windows, per-user, choose directory), universal dmg (macOS), AppImage + deb
+  (Linux). Instruments ship inside the installer (~160 MB, offline-first); `RIFFROLL_INSTRUMENTS_DIR` points the app
+  at another folder. The Windows installer is ~285 MB. macOS signing/notarisation is wired to optional secrets.
+- The app icon is generated from the same shapes as the SVG favicon by `scripts/gen-icon.mjs` (no image deps).
+- README screenshots are captured by the packaged app itself (`RIFFROLL_SCREENSHOT=<file>`), so they show the real
+  build.

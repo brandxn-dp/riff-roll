@@ -84,11 +84,15 @@ export function kitSfz(files: string[], map: KitPieceMap[], roundRobins = 2): st
     '<global> loop_mode=one_shot ampeg_release=0.05 off_mode=fast',
   ];
   for (const piece of map) {
-    const parsed = files.map((f) => parse(f, piece.dir)).filter((p): p is Parsed => !!p && piece.mics[p.mic] !== undefined);
+    const parsed = files
+      .map((f) => parse(f, piece.dir))
+      .filter((p): p is Parsed => !!p && piece.mics[p.mic] !== undefined);
     if (!parsed.length) continue;
     const layers = Math.max(...parsed.map((p) => p.vl));
     const rrs = Math.min(roundRobins, Math.max(...parsed.map((p) => p.rr)));
-    lines.push(`<group> key=${piece.key} pitch_keytrack=0${piece.group ? ` group=${piece.group}` : ''}${piece.offBy ? ` off_by=${piece.offBy}` : ''}${piece.tune ? ` tune=${piece.tune}` : ''} seq_length=${rrs} amp_veltrack=40`);
+    lines.push(
+      `<group> key=${piece.key} pitch_keytrack=0${piece.group ? ` group=${piece.group}` : ''}${piece.offBy ? ` off_by=${piece.offBy}` : ''}${piece.tune ? ` tune=${piece.tune}` : ''} seq_length=${rrs} amp_veltrack=40`,
+    );
     for (const p of parsed.sort((a, b) => a.mic.localeCompare(b.mic) || a.vl - b.vl || a.rr - b.rr)) {
       if (p.rr > rrs) continue;
       const lo = Math.floor(((p.vl - 1) * 127) / layers) + 1;

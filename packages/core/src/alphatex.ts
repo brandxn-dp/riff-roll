@@ -59,7 +59,8 @@ function hammerOrigins(track: Track, fing: Map<string, Position | null>): Set<st
     if (!p) continue;
     const prev = lastOnString.get(p.string);
     if (n.tech?.hammer && prev) origins.add(prev.id);
-    if ((n.tech?.slide === 'legato' || n.tech?.slide === 'shift') && prev) origins.add('slide:' + prev.id + ':' + n.tech.slide);
+    if ((n.tech?.slide === 'legato' || n.tech?.slide === 'shift') && prev)
+      origins.add('slide:' + prev.id + ':' + n.tech.slide);
     lastOnString.set(p.string, n);
   }
   return origins;
@@ -136,12 +137,17 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
       lines.push(`\\tuning ${[...track.tuning.strings].reverse().map(texPitch).join(' ')}`);
       if (track.capo) lines.push(`\\capo ${track.capo}`);
       // the track's initial program follows its starting tone
-      lines.push(`\\instrument ${track.tones.length ? toneProgram(track, track.pedal.startTone) : GM_PROGRAM[track.type]}`);
+      lines.push(
+        `\\instrument ${track.tones.length ? toneProgram(track, track.pedal.startTone) : GM_PROGRAM[track.type]}`,
+      );
     }
     const fing = track.type === 'drums' ? new Map() : trackFingering(track);
     const nStr = track.tuning.strings.length;
     // stomp markers: text on the first beat at or after each stomp
-    const stomps = track.type === 'drums' ? [] : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
+    const stomps =
+      track.type === 'drums'
+        ? []
+        : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
     const toneName = (id: string) => track.tones.find((t) => t.id === id)?.name ?? '';
     let si = 0;
 
@@ -151,11 +157,21 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
       const starts = [...new Set(track.hits.map((h) => h.start))].sort((a, b) => a - b);
       const events = track.hits.map((h) => {
         const next = starts.find((s) => s > h.start) ?? h.start + song.ppq;
-        return { id: h.id, start: h.start, duration: Math.min(song.ppq, next - h.start), velocity: h.velocity, pitch: laneById.get(`${h.piece}:${h.articulation}`)?.gm ?? 38, hit: h } as unknown as Note;
+        return {
+          id: h.id,
+          start: h.start,
+          duration: Math.min(song.ppq, next - h.start),
+          velocity: h.velocity,
+          pitch: laneById.get(`${h.piece}:${h.articulation}`)?.gm ?? 38,
+          hit: h,
+        } as unknown as Note;
       });
       bars = rhythmize(events, song);
     } else {
-      bars = rhythmize(track.notes.filter((n) => fing.get(n.id)), song);
+      bars = rhythmize(
+        track.notes.filter((n) => fing.get(n.id)),
+        song,
+      );
     }
     const origins = track.type === 'drums' ? new Set<string>() : hammerOrigins(track, fing);
     let prevSig = '';
@@ -166,8 +182,12 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
       if (sig !== prevSig) meta.push(`\\ts ${sig}`);
       prevSig = sig;
       if (ti === 0) {
-        for (const sec of song.sections) if (sec.tick >= bar.start && sec.tick < bar.start + bar.length) meta.push(`\\section ${q(sec.name)}`);
-        for (const tp of song.tempos) if (tp.tick > 0 && tp.tick >= bar.start && tp.tick < bar.start + bar.length) meta.push(`\\tempo ${Math.round(tp.bpm)}`);
+        for (const sec of song.sections)
+          if (sec.tick >= bar.start && sec.tick < bar.start + bar.length)
+            meta.push(`\\section ${q(sec.name)}`);
+        for (const tp of song.tempos)
+          if (tp.tick > 0 && tp.tick >= bar.start && tp.tick < bar.start + bar.length)
+            meta.push(`\\tempo ${Math.round(tp.bpm)}`);
       }
       for (const r of song.repeats) {
         if (r.startBar === bar.index) meta.push('\\ro');
@@ -221,7 +241,13 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
           const m = /^\.(\d+)(?: \{(.*)\})?$/.exec(dur)!;
           parts.push(`:${m[1]} ${head}${m[2] ? ` {${m[2]}}` : ''}`);
         } else parts.push(head + withEffects(dur, beatEffects(b, stomp, stompProgram)));
-        beats.push({ trackIndex: ti, bar: bar.index, beat: bi, start: b.start, noteIds: b.notes.map((n) => n.event.id) });
+        beats.push({
+          trackIndex: ti,
+          bar: bar.index,
+          beat: bi,
+          start: b.start,
+          noteIds: b.notes.map((n) => n.event.id),
+        });
       });
       barTex.push([...meta, parts.join(' ')].join(' '));
     }

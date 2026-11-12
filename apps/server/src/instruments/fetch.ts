@@ -6,7 +6,7 @@
  * was built with INCLUDE_INSTRUMENTS=false.
  */
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync } from 'node:fs';
+import { chmodSync, createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -84,6 +84,14 @@ const DESCRIPTOR = 'instrument.json';
 function sevenZipPath(): string {
   const require = createRequire(import.meta.url);
   const bin = require('7zip-bin') as { path7za: string };
+  // package managers don't always keep the executable bit on the bundled binary (e.g. pnpm in Docker)
+  if (process.platform !== 'win32') {
+    try {
+      chmodSync(bin.path7za, 0o755);
+    } catch {
+      /* read-only install: spawn will report the problem */
+    }
+  }
   return bin.path7za;
 }
 
@@ -93,7 +101,9 @@ function run(cmd: string, args: string[]): Promise<void> {
     let err = '';
     p.stderr.on('data', (d) => (err += d));
     p.on('error', reject);
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${path.basename(cmd)} exited ${code}: ${err}`))));
+    p.on('close', (code) =>
+      code === 0 ? resolve() : reject(new Error(`${path.basename(cmd)} exited ${code}: ${err}`)),
+    );
   });
 }
 
@@ -105,7 +115,10 @@ async function sha256(file: string): Promise<string> {
 }
 
 async function download(url: string, dest: string, onBytes: (received: number, total: number) => void) {
-  const res = await fetch(url, { redirect: 'follow', headers: { 'user-agent': 'riffroll-fetch-instruments' } });
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: { 'user-agent': 'riffroll-fetch-instruments' },
+  });
   if (!res.ok || !res.body) throw new Error(`download failed ${res.status} ${url}`);
   const total = Number(res.headers.get('content-length') ?? 0);
   let received = 0;
@@ -132,7 +145,9 @@ async function walk(dir: string, base = dir): Promise<string[]> {
 /** Pick the main SFZ: prefer the shallowest file, then the shortest name. */
 export function pickMainSfz(files: string[]): string | undefined {
   const sfz = files.filter((f) => f.toLowerCase().endsWith('.sfz'));
-  return sfz.sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length || a.localeCompare(b))[0];
+  return sfz.sort(
+    (a, b) => a.split('/').length - b.split('/').length || a.length - b.length || a.localeCompare(b),
+  )[0];
 }
 
 export async function readManifest(file: string): Promise<Manifest> {
@@ -169,7 +184,8 @@ export async function fetchInstruments(opts: FetchOptions): Promise<InstalledIns
   const emit = () => opts.onProgress?.({ ...progress, done: [...progress.done] });
 
   const wanted = manifest.instruments.filter(
-    (i) => (opts.only?.length ? opts.only.includes(i.id) : i.default !== false) && !(opts.skipLarge && i.large),
+    (i) =>
+      (opts.only?.length ? opts.only.includes(i.id) : i.default !== false) && !(opts.skipLarge && i.large),
   );
   const have = await installedIds(outDir);
 
@@ -275,7 +291,9 @@ async function installFromRemoteZip(
   );
   const byName = new Map(entries.map((e) => [e.name, e]));
   const total = wanted.reduce((a, n) => a + (byName.get(n)?.compressedSize ?? 0), 0);
-  log(`  ${wanted.length} files, ${(total / 1e6).toFixed(1)} MB (of ${entries.length} entries in the archive)`);
+  log(
+    `  ${wanted.length} files, ${(total / 1e6).toFixed(1)} MB (of ${entries.length} entries in the archive)`,
+  );
   const target = path.join(outDir, inst.id);
   const staging = target + '.staging';
   await rm(staging, { recursive: true, force: true });

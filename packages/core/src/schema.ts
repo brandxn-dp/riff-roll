@@ -37,7 +37,20 @@ const note = z.object({
   tech: techniques.optional(),
 });
 
-const drumPiece = z.enum(['kick', 'snare', 'hihat', 'ride', 'crash1', 'crash2', 'china', 'splash', 'tom1', 'tom2', 'tom3', 'tom4']);
+const drumPiece = z.enum([
+  'kick',
+  'snare',
+  'hihat',
+  'ride',
+  'crash1',
+  'crash2',
+  'china',
+  'splash',
+  'tom1',
+  'tom2',
+  'tom3',
+  'tom4',
+]);
 
 const hit = z.object({
   id: z.string(),
@@ -86,7 +99,9 @@ const track = z.object({
     mode: z.enum(['simple', 'advanced']),
     startTone: z.string(),
     toggle: z.tuple([z.string(), z.string()]),
-    stomps: z.array(z.object({ id: z.string(), tick: z.number().int().min(0), toneId: z.string().optional() })),
+    stomps: z.array(
+      z.object({ id: z.string(), tick: z.number().int().min(0), toneId: z.string().optional() }),
+    ),
   }),
   notes: z.array(note),
   hits: z.array(hit),
@@ -102,8 +117,16 @@ export const songSchema = z.object({
   artist: z.string(),
   ppq: z.number().int().positive(),
   bars: z.number().int().min(1),
-  tempos: z.array(z.object({ tick: z.number().min(0), bpm: z.number().min(10).max(500), ramp: z.boolean().optional() })).min(1),
-  timeSigs: z.array(z.object({ bar: z.number().int().min(0), num: z.number().int().min(1).max(32), den: z.number().int() })).min(1),
+  tempos: z
+    .array(
+      z.object({ tick: z.number().min(0), bpm: z.number().min(10).max(500), ramp: z.boolean().optional() }),
+    )
+    .min(1),
+  timeSigs: z
+    .array(
+      z.object({ bar: z.number().int().min(0), num: z.number().int().min(1).max(32), den: z.number().int() }),
+    )
+    .min(1),
   keySig: z.object({ fifths: z.number().int().min(-7).max(7), minor: z.boolean() }),
   sections: z.array(z.object({ id: z.string(), tick: z.number().min(0), name: z.string() })),
   repeats: z.array(
@@ -130,7 +153,8 @@ const migrations: Record<number, Migration> = {
 export function migrate(raw: any): any {
   let doc = raw;
   let v = typeof doc?.schemaVersion === 'number' ? doc.schemaVersion : 0;
-  if (v > SCHEMA_VERSION) throw new Error(`This song was saved by a newer version of Riff Roll (schema ${v}).`);
+  if (v > SCHEMA_VERSION)
+    throw new Error(`This song was saved by a newer version of Riff Roll (schema ${v}).`);
   while (v < SCHEMA_VERSION) {
     const m = migrations[v];
     if (!m) throw new Error(`No migration from schema version ${v}`);

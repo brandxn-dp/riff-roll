@@ -34,7 +34,11 @@ export const SHORTCUTS: Shortcut[] = [
   { group: 'Pedal lane', keys: 'Right-click stomp', what: 'Pick its tone (advanced mode)' },
   { group: 'Tab entry', keys: 'Click a tab line', what: 'Put the cursor there (Esc leaves tab entry)' },
   { group: 'Tab entry', keys: '← → ↑ ↓', what: 'Move by beat / change string' },
-  { group: 'Tab entry', keys: '0–9', what: 'Type a fret (two digits quickly for 10–24); pins the note to that string' },
+  {
+    group: 'Tab entry',
+    keys: '0–9',
+    what: 'Type a fret (two digits quickly for 10–24); pins the note to that string',
+  },
   { group: 'Tab entry', keys: '+ / −', what: 'Longer / shorter note value' },
   { group: 'Tab entry', keys: '.  /  T', what: 'Dotted / triplet' },
   { group: 'Tab entry', keys: 'R  /  L', what: 'Rest / tie to previous' },
@@ -88,8 +92,16 @@ export function installShortcuts() {
     else if (e.key === '?') st.set({ modal: st.modal === 'shortcuts' ? null : 'shortcuts' });
     else if (!mod && e.key.startsWith('Arrow') && currentTrack(st)?.type !== 'drums') {
       const bar = st.song.ppq * 4;
-      const dt = e.key === 'ArrowLeft' ? -(e.shiftKey ? bar : st.snap) : e.key === 'ArrowRight' ? (e.shiftKey ? bar : st.snap) : 0;
-      const dp = e.key === 'ArrowUp' ? (e.shiftKey ? 12 : 1) : e.key === 'ArrowDown' ? (e.shiftKey ? -12 : -1) : 0;
+      const dt =
+        e.key === 'ArrowLeft'
+          ? -(e.shiftKey ? bar : st.snap)
+          : e.key === 'ArrowRight'
+            ? e.shiftKey
+              ? bar
+              : st.snap
+            : 0;
+      const dp =
+        e.key === 'ArrowUp' ? (e.shiftKey ? 12 : 1) : e.key === 'ArrowDown' ? (e.shiftKey ? -12 : -1) : 0;
       handled = nudge(dt, dp);
     } else handled = false;
     if (handled) e.preventDefault();

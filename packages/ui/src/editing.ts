@@ -35,8 +35,20 @@ function selected() {
 export function deleteSelection() {
   const s = selected();
   if (!s) return;
-  if (s.notes.length) s.st.exec(removeNotes(s.t.id, s.notes.map((n) => n.id)));
-  if (s.hits.length) s.st.exec(removeHits(s.t.id, s.hits.map((h) => h.id)));
+  if (s.notes.length)
+    s.st.exec(
+      removeNotes(
+        s.t.id,
+        s.notes.map((n) => n.id),
+      ),
+    );
+  if (s.hits.length)
+    s.st.exec(
+      removeHits(
+        s.t.id,
+        s.hits.map((h) => h.id),
+      ),
+    );
   s.st.select([]);
 }
 

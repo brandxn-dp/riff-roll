@@ -104,11 +104,14 @@ export class AudioEngine {
         this.samplerKeys.set(t.id, key);
         this.samplers.delete(t.id);
         this.lib.sampler(t.instrument, t.type).then((s) => {
-            if (this.samplerKeys.get(t.id) === key) {
-              this.samplers.set(t.id, s);
-              if (isFallback(s)) this.opts.onStatus?.('Instruments not installed — using a basic fallback sound. Run "pnpm fetch-instruments".');
-            }
-          });
+          if (this.samplerKeys.get(t.id) === key) {
+            this.samplers.set(t.id, s);
+            if (isFallback(s))
+              this.opts.onStatus?.(
+                'Instruments not installed — using a basic fallback sound. Run "pnpm fetch-instruments".',
+              );
+          }
+        });
       }
     }
     // tempo edits while playing: re-anchor at the current position
@@ -133,16 +136,16 @@ export class AudioEngine {
       onProgress?.(d, t);
     };
     for (const t of song.tracks) {
-      const pitches = t.type === 'drums' ? t.hits.map((h) => laneById.get(`${h.piece}:${h.articulation}`)?.key ?? 0) : t.notes.map((n) => n.pitch);
+      const pitches =
+        t.type === 'drums'
+          ? t.hits.map((h) => laneById.get(`${h.piece}:${h.articulation}`)?.key ?? 0)
+          : t.notes.map((n) => n.pitch);
       jobs.push(
         this.lib.sampler(t.instrument, t.type).then((s) =>
-          s.preload(
-            pitches,
-            (d, n) => {
-              prog.set(t.id, [d, n]);
-              report();
-            },
-          ),
+          s.preload(pitches, (d, n) => {
+            prog.set(t.id, [d, n]);
+            report();
+          }),
         ),
       );
     }
@@ -163,7 +166,12 @@ export class AudioEngine {
     if (!this.st) g.setTone(toneAt(track.pedal, tick), this.ctx.currentTime, 0);
     const song = this.song;
     const secs = song ? (lengthTicks * 60) / (this.tempoMap(song).bpmAt(tick) * song.ppq) : 0.4;
-    s.play(this.ctx, g.input, { pitch, velocity: 100, when: this.ctx.currentTime + 0.005, duration: Math.min(1.2, Math.max(0.15, secs)) });
+    s.play(this.ctx, g.input, {
+      pitch,
+      velocity: 100,
+      when: this.ctx.currentTime + 0.005,
+      duration: Math.min(1.2, Math.max(0.15, secs)),
+    });
   }
 
   /** Audition a drum lane (drum grid clicks). */
@@ -262,9 +270,28 @@ export class AudioEngine {
           if (!audible.has(t.id)) continue;
           const g = this.graphs.get(t.id);
           if (!g) continue;
-          scheduleTrack(this.ctx, t, this.samplers.get(t.id), g, st.next, until, (x) => this.timeOf(x), st.perf.get(t.id) ?? newPerfState(), song.humanize);
+          scheduleTrack(
+            this.ctx,
+            t,
+            this.samplers.get(t.id),
+            g,
+            st.next,
+            until,
+            (x) => this.timeOf(x),
+            st.perf.get(t.id) ?? newPerfState(),
+            song.humanize,
+          );
         }
-        if (song.metronome.on) scheduleClicks(this.ctx, song, this.master.metronome, st.next, until, (x) => this.timeOf(x), song.metronome.volume);
+        if (song.metronome.on)
+          scheduleClicks(
+            this.ctx,
+            song,
+            this.master.metronome,
+            st.next,
+            until,
+            (x) => this.timeOf(x),
+            song.metronome.volume,
+          );
         st.next = until;
       }
       if (st.next < st.segEnd) break;
@@ -278,7 +305,8 @@ export class AudioEngine {
         st.next = loop.start;
         st.anchors.push({ time: wrapTime, tick: loop.start });
         if (st.anchors.length > 8) st.anchors.shift();
-        for (const t of song.tracks) this.graphs.get(t.id)?.setTone(toneAt(t.pedal, loop.start), wrapTime, 0.01);
+        for (const t of song.tracks)
+          this.graphs.get(t.id)?.setTone(toneAt(t.pedal, loop.start), wrapTime, 0.01);
         for (const p of st.perf.values()) for (const v of p.voices) if (v.end > wrapTime) v.stop(wrapTime);
       } else if (st.queue.length) {
         // jump for a repeat / alternate ending; ringing notes carry over like a real performance
@@ -290,7 +318,8 @@ export class AudioEngine {
         st.next = nextSeg.start;
         st.anchors.push({ time: jumpTime, tick: nextSeg.start });
         if (st.anchors.length > 8) st.anchors.shift();
-        for (const t of song.tracks) this.graphs.get(t.id)?.setTone(toneAt(t.pedal, nextSeg.start), jumpTime, 0.01);
+        for (const t of song.tracks)
+          this.graphs.get(t.id)?.setTone(toneAt(t.pedal, nextSeg.start), jumpTime, 0.01);
       } else {
         st.endTime = this.timeOf(st.segEnd) + 0.3;
         break;

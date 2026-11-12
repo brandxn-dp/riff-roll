@@ -15,10 +15,30 @@ import {
   type Track,
 } from '@riffroll/core';
 import { currentTrack, songEnd, useStore } from '../store';
-import { COL, DISP, KEYS_W, MONO, alpha, fit, frameScheduler, lowerBound, pxPerTick, rr, snapTick } from '../canvas';
+import {
+  COL,
+  DISP,
+  KEYS_W,
+  MONO,
+  alpha,
+  fit,
+  frameScheduler,
+  lowerBound,
+  pxPerTick,
+  rr,
+  snapTick,
+} from '../canvas';
 import { drawGrid, drawPlayhead, isCleanTone, tickToX, toneOf, xToTick, type TimeAxis } from './timeline';
 import { preview } from '../audio-bridge';
-import { META_ROW, RHYTHM_H, drawRepeats, drawRhythm, drawTabCursor, drawTabMeta, drawTechniques } from './tabDraw';
+import {
+  META_ROW,
+  RHYTHM_H,
+  drawRepeats,
+  drawRhythm,
+  drawTabCursor,
+  drawTabMeta,
+  drawTechniques,
+} from './tabDraw';
 import { floorTick } from '../canvas';
 import { tabCursorTo } from '../tabEntry';
 
@@ -60,7 +80,13 @@ function drawFootswitch(c: CanvasRenderingContext2D, x: number, y: number, r = S
   c.fill();
 }
 
-export function LowerPanel({ showVelocity = true, showTab = true }: { showVelocity?: boolean; showTab?: boolean }) {
+export function LowerPanel({
+  showVelocity = true,
+  showTab = true,
+}: {
+  showVelocity?: boolean;
+  showTab?: boolean;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
   const scRef = useRef<HTMLDivElement>(null);
@@ -69,7 +95,9 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
   const strings = useStore((s) => currentTrack(s)?.tuning.strings.length ?? 6);
   const trackType = useStore((s) => currentTrack(s)?.type);
   const pedalOn = trackType === 'guitar' || trackType === 'bass';
-  const height = pedalOn ? lowerPanelHeight(showTab ? strings : 1, showVelocity) - (showTab ? 0 : LS + 8) : 60;
+  const height = pedalOn
+    ? lowerPanelHeight(showTab ? strings : 1, showVelocity) - (showTab ? 0 : LS + 8)
+    : 60;
 
   useEffect(() => {
     const cv = cvRef.current!,
@@ -204,7 +232,14 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
           if (!pos) continue;
           const txt = nt.tech?.dead ? 'x' : String(pos.fret);
           const y = tabY + (n - 1 - pos.string) * LS;
-          items.push({ nt, x: tickToX(a, nt.start) + Math.min(8, (nt.duration * a.ppt) / 2), y, txt, tw: c.measureText(txt).width, s: pos.string });
+          items.push({
+            nt,
+            x: tickToX(a, nt.start) + Math.min(8, (nt.duration * a.ppt) / 2),
+            y,
+            txt,
+            tw: c.measureText(txt).width,
+            s: pos.string,
+          });
         }
         drawTabMeta(c, st.song, a, tabY, w);
         drawRepeats(c, st.song, a, tabY, (n - 1) * LS);
@@ -360,7 +395,9 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
         const stomp: Stomp = { id: newId('stomp'), tick };
         if (t.pedal.mode === 'advanced') {
           // default to the "other" tone than the one currently active
-          const cur = pedalSegments(t.pedal, songEnd(st.song)).find((sg) => sg.start <= tick && sg.end > tick)?.toneId;
+          const cur = pedalSegments(t.pedal, songEnd(st.song)).find(
+            (sg) => sg.start <= tick && sg.end > tick,
+          )?.toneId;
           stomp.toneId = t.tones.find((x) => x.id !== cur)?.id ?? t.tones[0].id;
         }
         st.exec(addStomp(t.id, stomp));
@@ -395,7 +432,10 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
         if (Math.abs(lx - drag.x0) > 3) drag.moved = true;
         if (!drag.moved) return;
         const a = axis();
-        const tick = Math.max(st.snap, Math.min(songEnd(st.song) - st.snap, snapTick(xToTick(a, lx), st.snap)));
+        const tick = Math.max(
+          st.snap,
+          Math.min(songEnd(st.song) - st.snap, snapTick(xToTick(a, lx), st.snap)),
+        );
         if (!t.pedal.stomps.some((s) => s.tick === tick && s.id !== (drag as { id: string }).id))
           st.exec(updateStomp(t.id, drag.id, { tick }));
       }
@@ -472,7 +512,9 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
               key={tone.id}
               role="menuitem"
               onClick={() => {
-                useStore.getState().exec(updateStomp(track.id, menu.stompId, { toneId: tone.id }, 'Stomp tone'));
+                useStore
+                  .getState()
+                  .exec(updateStomp(track.id, menu.stompId, { toneId: tone.id }, 'Stomp tone'));
                 setMenu(null);
               }}
             >

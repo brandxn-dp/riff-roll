@@ -35,7 +35,8 @@ const CACHE_NAME = 'riffroll-instruments-v1';
 export async function defaultFetch(url: string): Promise<ArrayBuffer> {
   let cache: Cache | undefined;
   try {
-    if (typeof caches !== 'undefined' && /^https?:$/.test(location.protocol)) cache = await caches.open(CACHE_NAME);
+    if (typeof caches !== 'undefined' && /^https?:$/.test(location.protocol))
+      cache = await caches.open(CACHE_NAME);
   } catch {
     cache = undefined;
   }
@@ -50,7 +51,15 @@ export async function defaultFetch(url: string): Promise<ArrayBuffer> {
 /** Encode each path segment (sample packs use spaces and '+' in folder names). */
 export function joinUrl(base: string, rel: string): string {
   const b = base.endsWith('/') ? base : base + '/';
-  return b + rel.split('/').map(encodeURIComponent).join('/');
+  // encodeURI keeps sub-delimiters like '+' literal: static servers that decode with decodeURI (e.g. send /
+  // @fastify/static) would otherwise look for a file literally named '%2B'. '#' and '?' still need escaping.
+  return (
+    b +
+    rel
+      .split('/')
+      .map((seg) => encodeURI(seg).replace(/[?#]/g, encodeURIComponent))
+      .join('/')
+  );
 }
 
 export interface PlayOptions {
@@ -146,7 +155,8 @@ export class Sampler {
   /** Release voices choked by a newly triggered region group (e.g. closed hi-hat chokes open hi-hat). */
   private choke(group: number, when: number) {
     if (!group) return;
-    for (const v of this.active) if (v.region.offBy === group && v.end > when) v.stop(when, v.region.offMode === 'fast');
+    for (const v of this.active)
+      if (v.region.offBy === group && v.end > when) v.stop(when, v.region.offMode === 'fast');
   }
 
   /** Start a note. Returns the voices started (several if regions layer), or [] if samples aren't loaded yet. */
@@ -223,7 +233,7 @@ export class Sampler {
     }
     node.connect(env);
     let out: AudioNode = env;
-    const pan = (r.pan / 100) + (o.pan ?? 0);
+    const pan = r.pan / 100 + (o.pan ?? 0);
     if (pan && ctx.createStereoPanner) {
       const p = ctx.createStereoPanner();
       p.pan.value = Math.max(-1, Math.min(1, pan));

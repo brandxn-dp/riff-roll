@@ -28,7 +28,16 @@ import {
   rr,
   snapTick,
 } from '../canvas';
-import { drawGrid, drawPlayhead, drawToneWash, isCleanTone, tickToX, toneOf, xToTick, type TimeAxis } from './timeline';
+import {
+  drawGrid,
+  drawPlayhead,
+  drawToneWash,
+  isCleanTone,
+  tickToX,
+  toneOf,
+  xToTick,
+  type TimeAxis,
+} from './timeline';
 import { pedalSegments } from '@riffroll/core';
 import { preview } from '../audio-bridge';
 import { seek } from '../transport';
@@ -51,7 +60,14 @@ export function pitchRange(t: Track): { lo: number; hi: number } {
 }
 
 type Drag =
-  | { mode: 'move'; ids: string[]; startTick: number; startPitch: number; orig: Map<string, Note>; moved: boolean }
+  | {
+      mode: 'move';
+      ids: string[];
+      startTick: number;
+      startPitch: number;
+      orig: Map<string, Note>;
+      moved: boolean;
+    }
   | { mode: 'resize'; ids: string[]; orig: Map<string, Note>; anchorTick: number; fresh: boolean }
   | { mode: 'box'; x0: number; y0: number; x1: number; y1: number; additive: boolean; base: Set<string> }
   | { mode: 'erase' }
@@ -90,7 +106,10 @@ export function PianoRoll() {
         lastTrackId = t.id;
         range = nr;
         // scroll so the low strings are visible at the bottom, like the prototype
-        sc.scrollTop = Math.max(0, (nr.hi - (t.tuning.strings[0] ?? 40) + 1) * RH + RULER_H - sc.clientHeight + 4);
+        sc.scrollTop = Math.max(
+          0,
+          (nr.hi - (t.tuning.strings[0] ?? 40) + 1) * RH + RULER_H - sc.clientHeight + 4,
+        );
       } else if (nr.lo !== range.lo || nr.hi !== range.hi) {
         const dy = (nr.hi - range.hi) * RH;
         range = nr;
@@ -349,7 +368,13 @@ export function PianoRoll() {
       if (start >= end) return null;
       const pitch = pitchAt(gy);
       if (pitch < range.lo || pitch > range.hi) return null;
-      const n: Note = { id: newId('n'), pitch, start, duration: Math.min(st.noteLen, end - start), velocity: 100 };
+      const n: Note = {
+        id: newId('n'),
+        pitch,
+        start,
+        duration: Math.min(st.noteLen, end - start),
+        velocity: 100,
+      };
       st.exec(addNotes(t.id, [n]));
       st.select([n.id]);
       preview(t, n.pitch, n.start, n.duration);
@@ -369,7 +394,14 @@ export function PianoRoll() {
       if (!t) return;
       const p = pt(e);
       if (e.pointerType === 'touch') {
-        tapStart = { x: e.clientX, y: e.clientY, t: Date.now(), sl: sc.scrollLeft, st: sc.scrollTop, id: e.pointerId };
+        tapStart = {
+          x: e.clientX,
+          y: e.clientY,
+          t: Date.now(),
+          sl: sc.scrollLeft,
+          st: sc.scrollTop,
+          id: e.pointerId,
+        };
         return;
       }
       if (p.ly < RULER_H && p.lx >= KEYS_W) {
@@ -421,20 +453,49 @@ export function PianoRoll() {
             st.exec(addNotes(t.id, copies, 'Duplicate notes'));
             const corig = new Map(copies.map((n) => [n.id, n]));
             st.select(corig.keys(), null);
-            drag = { mode: 'move', ids: [...corig.keys()], startTick: tickAt(p.gx), startPitch: hit.pitch, orig: corig, moved: false };
+            drag = {
+              mode: 'move',
+              ids: [...corig.keys()],
+              startTick: tickAt(p.gx),
+              startPitch: hit.pitch,
+              orig: corig,
+              moved: false,
+            };
           } else {
-            drag = { mode: 'move', ids: [...sel], startTick: tickAt(p.gx), startPitch: hit.pitch, orig, moved: false };
+            drag = {
+              mode: 'move',
+              ids: [...sel],
+              startTick: tickAt(p.gx),
+              startPitch: hit.pitch,
+              orig,
+              moved: false,
+            };
           }
           preview(t, hit.pitch, hit.start, hit.duration);
         }
       } else if (e.shiftKey || e.ctrlKey || e.metaKey) {
         const x = p.lx + sc.scrollLeft,
           y = p.ly + sc.scrollTop;
-        drag = { mode: 'box', x0: x, y0: y, x1: x, y1: y, additive: e.shiftKey, base: new Set(e.shiftKey ? st.selection : []) };
+        drag = {
+          mode: 'box',
+          x0: x,
+          y0: y,
+          x1: x,
+          y1: y,
+          additive: e.shiftKey,
+          base: new Set(e.shiftKey ? st.selection : []),
+        };
       } else {
         st.begin('Add note');
         const n = addAt(t, p.gx, p.gy);
-        if (n) drag = { mode: 'resize', ids: [n.id], orig: new Map([[n.id, n]]), anchorTick: n.start + n.duration, fresh: true };
+        if (n)
+          drag = {
+            mode: 'resize',
+            ids: [n.id],
+            orig: new Map([[n.id, n]]),
+            anchorTick: n.start + n.duration,
+            fresh: true,
+          };
         else st.commit();
       }
       requestDraw();
@@ -448,7 +509,13 @@ export function PianoRoll() {
       const p = pt(e);
       if (!drag) {
         const hit = inGrid(p) ? noteAt(t, p.gx, p.gy) : null;
-        sc.style.cursor = hit ? (nearEdge(hit, p.gx) ? 'ew-resize' : 'grab') : inGrid(p) ? 'crosshair' : 'default';
+        sc.style.cursor = hit
+          ? nearEdge(hit, p.gx)
+            ? 'ew-resize'
+            : 'grab'
+          : inGrid(p)
+            ? 'crosshair'
+            : 'default';
         return;
       }
       const end = songEnd(st.song);
@@ -490,7 +557,8 @@ export function PianoRoll() {
           changes[id] = { start: n.start + dt, pitch: n.pitch + dp, ...(dp ? { pinnedString: null } : {}) };
         const first = drag.orig.values().next().value!;
         const cur = t.notes.find((n) => n.id === first.id);
-        if (dp && cur && cur.pitch !== first.pitch + dp) preview(t, first.pitch + dp, first.start + dt, first.duration);
+        if (dp && cur && cur.pitch !== first.pitch + dp)
+          preview(t, first.pitch + dp, first.start + dt, first.duration);
         drag.moved = drag.moved || dt !== 0 || dp !== 0;
         st.exec(updateNotes(t.id, changes, 'Move notes'));
       } else if (drag.mode === 'box') {
@@ -571,7 +639,12 @@ export function PianoRoll() {
     sc.addEventListener('scroll', onScroll, { passive: true });
 
     const unsub = useStore.subscribe((s, prev) => {
-      if (s.song !== prev.song || s.zoom !== prev.zoom || s.trackId !== prev.trackId || s.scrollX !== prev.scrollX)
+      if (
+        s.song !== prev.song ||
+        s.zoom !== prev.zoom ||
+        s.trackId !== prev.trackId ||
+        s.scrollX !== prev.scrollX
+      )
         layout();
       requestDraw();
     });

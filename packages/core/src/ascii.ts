@@ -41,7 +41,8 @@ export function asciiTab(song: Song, track: Track, opts: AsciiOptions): string {
     if (t.vibrato) txt += '~';
     const line = rows[n - 1 - p.string];
     for (let i = 0; i < txt.length && col + i < line.length; i++) line[col + i] = txt[i];
-    if (t.palmMute) for (let i = 0; i < cw && col + i < markers.length; i++) markers[col + i] = i === 0 ? 'P' : 'M';
+    if (t.palmMute)
+      for (let i = 0; i < cw && col + i < markers.length; i++) markers[col + i] = i === 0 ? 'P' : 'M';
   }
   // bar lines
   const barCols = new Set<number>();

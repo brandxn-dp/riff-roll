@@ -45,11 +45,13 @@ export function installFileActions(): () => void {
     }),
   );
 
-  const d = window.riffroll as undefined | {
-    onMenuCommand(fn: (c: string) => void): () => void;
-    onOpenPath(fn: (p: string) => void): () => void;
-    readPath(p: string): Promise<{ name: string; data: Uint8Array }>;
-  };
+  const d = window.riffroll as
+    | undefined
+    | {
+        onMenuCommand(fn: (c: string) => void): () => void;
+        onOpenPath(fn: (p: string) => void): () => void;
+        readPath(p: string): Promise<{ name: string; data: Uint8Array }>;
+      };
   if (d) {
     offs.push(
       d.onMenuCommand((cmd) => {
@@ -71,10 +73,14 @@ export function installFileActions(): () => void {
         if (map[cmd]) run(map[cmd]);
       }),
     );
-    offs.push(d.onOpenPath((p) => run(async () => {
-      const f = await d.readPath(p);
-      await importBytes(f.name, f.data);
-    })));
+    offs.push(
+      d.onOpenPath((p) =>
+        run(async () => {
+          const f = await d.readPath(p);
+          await importBytes(f.name, f.data);
+        }),
+      ),
+    );
   }
   return () => offs.forEach((f) => f());
 }

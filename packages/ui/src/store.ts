@@ -72,7 +72,9 @@ function initialSong(): Song {
   return {
     ...s,
     bars: 4,
-    tracks: s.tracks.map((t, i) => (i === 0 ? exampleBeat(t) : i === 1 ? exampleRiff(t) : i === 3 ? exampleBass(t) : t)),
+    tracks: s.tracks.map((t, i) =>
+      i === 0 ? exampleBeat(t) : i === 1 ? exampleRiff(t) : i === 3 ? exampleBass(t) : t,
+    ),
   };
 }
 
@@ -118,12 +120,22 @@ export const useStore = create<UiState>((set, get) => {
     loadSong: (s) => {
       get().history.reset(s);
       const t = s.tracks.find((x) => x.type !== 'drums') ?? s.tracks[0];
-      set({ trackId: t?.id ?? '', selection: new Set(), focusId: null, cursor: 0, scrollX: 0, tabCursor: null });
+      set({
+        trackId: t?.id ?? '',
+        selection: new Set(),
+        focusId: null,
+        cursor: 0,
+        scrollX: 0,
+        tabCursor: null,
+      });
     },
     set: (p) => set(p),
     select: (ids, focus) => {
       const selection = new Set(ids);
-      set({ selection, focusId: focus !== undefined ? focus : selection.size === 1 ? [...selection][0] : null });
+      set({
+        selection,
+        focusId: focus !== undefined ? focus : selection.size === 1 ? [...selection][0] : null,
+      });
     },
   };
 });

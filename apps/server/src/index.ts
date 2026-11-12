@@ -31,7 +31,10 @@ await app.listen({ port, host });
 // First start without bundled instruments: download the default packs into the volume in the background.
 if (process.env.RIFFROLL_AUTO_FETCH !== '0' && existsSync(manifestPath)) {
   const manifest = await readManifest(manifestPath);
-  const have = new Set([...(await installedIds(instrumentsDir)), ...(bundledDir ? await installedIds(bundledDir) : [])]);
+  const have = new Set([
+    ...(await installedIds(instrumentsDir)),
+    ...(bundledDir ? await installedIds(bundledDir) : []),
+  ]);
   const missing = manifest.instruments.filter((i) => i.default !== false && !have.has(i.id)).map((i) => i.id);
   if (missing.length && (bundledDir || process.env.RIFFROLL_AUTO_FETCH === '1')) {
     app.log.info(`downloading instruments into ${instrumentsDir}: ${missing.join(', ')}`);

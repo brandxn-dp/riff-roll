@@ -2,7 +2,16 @@ import { PPQ, SCHEMA_VERSION, newId, type Note, type Song, type Track, type Trac
 import { BASS_PRESETS, GUITAR_PRESETS, makeTone } from './tones';
 import { tuningByName } from './tunings';
 
-export const TRACK_COLORS = ['#e8365d', '#47bfee', '#f3cf48', '#5fd17c', '#ff9a3c', '#b38bff', '#ff6fb5', '#8aa4c8'];
+export const TRACK_COLORS = [
+  '#e8365d',
+  '#47bfee',
+  '#f3cf48',
+  '#5fd17c',
+  '#ff9a3c',
+  '#b38bff',
+  '#ff6fb5',
+  '#8aa4c8',
+];
 
 export function makeTrack(type: TrackType, name: string, color: string, opts: Partial<Track> = {}): Track {
   const tones =
@@ -31,7 +40,8 @@ export function makeTrack(type: TrackType, name: string, color: string, opts: Pa
     pan: 0,
     mute: false,
     solo: false,
-    instrument: type === 'guitar' ? 'guitar-fsbs-direct' : type === 'bass' ? 'bass-yr-picked' : 'drums-big-rusty',
+    instrument:
+      type === 'guitar' ? 'guitar-fsbs-direct' : type === 'bass' ? 'bass-yr-picked' : 'drums-big-rusty',
     tones,
     pedal: { mode: 'simple', startTone: toneA, toggle: [toneA, toneB], stomps: [] },
     notes: [],
@@ -70,8 +80,12 @@ export function newSong(title = 'Untitled'): Song {
 export function exampleBeat(track: Track, bars = 4): Track {
   const E = PPQ / 2;
   const hits: Track['hits'] = [];
-  const add = (piece: Track['hits'][number]['piece'], articulation: string, start: number, velocity: number) =>
-    hits.push({ id: newId('h'), start, piece, articulation, velocity });
+  const add = (
+    piece: Track['hits'][number]['piece'],
+    articulation: string,
+    start: number,
+    velocity: number,
+  ) => hits.push({ id: newId('h'), start, piece, articulation, velocity });
   for (let b = 0; b < bars; b++) {
     const bar = b * PPQ * 4;
     for (let k = 0; k < 8; k++) {
@@ -97,7 +111,8 @@ export function exampleBeat(track: Track, bars = 4): Track {
 export function exampleBass(track: Track): Track {
   const E = PPQ / 2;
   const notes: Note[] = [];
-  const add = (p: number, s: number, l = E, v = 100) => notes.push({ id: newId('n'), pitch: p, start: s, duration: l, velocity: v });
+  const add = (p: number, s: number, l = E, v = 100) =>
+    notes.push({ id: newId('n'), pitch: p, start: s, duration: l, velocity: v });
   for (let k = 0; k < 8; k++) add(28, k * E, E, k % 2 ? 88 : 104); // E1
   for (let k = 0; k < 8; k++) add(36, PPQ * 4 + k * E, E, k % 2 ? 88 : 104); // C2
   const roots = [28, 28, 31, 28, 33, 33, 31, 31, 36, 36, 35, 35, 28, 28, 28, 28];
@@ -111,8 +126,28 @@ export function exampleRiff(track: Track): Track {
   const notes: Note[] = [];
   const add = (p: number, s: number, l: number) =>
     notes.push({ id: newId('n'), pitch: p, start: s * S, duration: l * S, velocity: 100 });
-  for (const [p, s] of [[40, 0], [47, 2], [52, 4], [55, 6], [59, 8], [55, 10], [52, 12], [47, 14]]) add(p, s, 2);
-  for (const [p, s] of [[48, 16], [55, 18], [60, 20], [64, 22], [60, 24], [55, 26], [50, 28], [47, 30]]) add(p, s, 2);
+  for (const [p, s] of [
+    [40, 0],
+    [47, 2],
+    [52, 4],
+    [55, 6],
+    [59, 8],
+    [55, 10],
+    [52, 12],
+    [47, 14],
+  ])
+    add(p, s, 2);
+  for (const [p, s] of [
+    [48, 16],
+    [55, 18],
+    [60, 20],
+    [64, 22],
+    [60, 24],
+    [55, 26],
+    [50, 28],
+    [47, 30],
+  ])
+    add(p, s, 2);
   const pc = (r: number, s: number, l: number) => {
     add(r, s, l);
     add(r + 7, s, l);

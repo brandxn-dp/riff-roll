@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # ---------- build stage ----------
-FROM node:22-alpine AS build
+# Debian (glibc) for the build: the bundled 7-Zip binary used to unpack instruments needs it.
+FROM node:22-bookworm-slim AS build
 ARG INCLUDE_INSTRUMENTS=true
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true ELECTRON_SKIP_BINARY_DOWNLOAD=1
 RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
@@ -15,13 +16,17 @@ COPY apps/desktop/package.json apps/desktop/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter '!@riffroll/desktop...'
 
+# instruments first, so code changes don't re-download ~160 MB of samples (layer is cached)
+COPY instruments/manifest.json instruments/
+COPY scripts/fetch-instruments.ts scripts/gen-notices.ts scripts/
+COPY apps/server/src/instruments apps/server/src/instruments
+RUN mkdir -p /out/instruments packages/ui/src && \
+    if [ "$INCLUDE_INSTRUMENTS" = "true" ]; then \
+      pnpm fetch-instruments --out /out/instruments && rm -rf /out/instruments/.cache; \
+    fi
+
 COPY . .
 RUN pnpm --filter @riffroll/ui build && pnpm --filter @riffroll/server build
-# instruments: downloaded at build time, or on first start into the volume when INCLUDE_INSTRUMENTS=false
-RUN mkdir -p /out/instruments && \
-    if [ "$INCLUDE_INSTRUMENTS" = "true" ]; then \
-      pnpm fetch-instruments --out /out/instruments; \
-    fi
 RUN pnpm --filter @riffroll/server deploy --prod --legacy /out/server
 
 # ---------- runtime stage ----------

@@ -6,3 +6,6 @@ instruments/packs
 pnpm-lock.yaml
 riff-roll-prototype.html
 *.md
+apps/desktop/release
+docs/screenshots
+packages/ui/public

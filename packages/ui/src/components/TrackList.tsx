@@ -22,14 +22,27 @@ export function TrackList() {
       {song.tracks.map((t) => (
         <div
           key={t.id}
-          className={'trk' + (t.id === trackId ? ' on' : '') + (t.mute || (anySolo && !t.solo) ? ' muted' : '')}
+          className={
+            'trk' + (t.id === trackId ? ' on' : '') + (t.mute || (anySolo && !t.solo) ? ' muted' : '')
+          }
           style={{ ['--tc' as string]: t.color }}
           onClick={() => {
-            if (t.id !== trackId) st.set({ trackId: t.id, selection: new Set(), focusId: null, view: t.type === 'drums' ? 'drums' : st.view === 'drums' ? 'split' : st.view });
+            if (t.id !== trackId)
+              st.set({
+                trackId: t.id,
+                selection: new Set(),
+                focusId: null,
+                view: t.type === 'drums' ? 'drums' : st.view === 'drums' ? 'split' : st.view,
+              });
           }}
         >
           <label className="tcolor" title="Track colour" onClick={(e) => e.stopPropagation()}>
-            <input type="color" value={t.color} onChange={(e) => st.exec(updateTrack(t.id, { color: e.target.value }, 'Track colour'))} aria-label="Track colour" />
+            <input
+              type="color"
+              value={t.color}
+              onChange={(e) => st.exec(updateTrack(t.id, { color: e.target.value }, 'Track colour'))}
+              aria-label="Track colour"
+            />
             <span className="tkind">{ICON[t.type]}</span>
           </label>
           <input
