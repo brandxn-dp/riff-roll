@@ -14,3 +14,7 @@ export * from './schema';
 export * from './rhythm';
 export * from './repeats';
 export * from './alphatex';
+export * from './riff';
+export * from './midi';
+export * from './musicxml';
+export * from './ascii';

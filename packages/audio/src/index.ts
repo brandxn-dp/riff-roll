@@ -8,3 +8,4 @@ export * from './perform';
 export * from './engine';
 export * from './wav';
 export * from './worklet-url';
+export * from './offline';

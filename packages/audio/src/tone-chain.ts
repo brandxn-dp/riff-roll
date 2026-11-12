@@ -53,6 +53,8 @@ export class ToneChainNode {
   readonly send: GainNode;
   private n: Record<string, any> = {};
   private irId = '';
+  /** resolves when the current cabinet IR is in place */
+  ready: Promise<void> = Promise.resolve();
   private disposed = false;
 
   constructor(
@@ -277,7 +279,7 @@ export class ToneChainNode {
     if (ir && ir !== this.irId) {
       this.irId = ir;
       if (ir.startsWith('builtin:'))
-        cabIR(ir, this.ctx.sampleRate).then((buf) => {
+        this.ready = cabIR(ir, this.ctx.sampleRate).then((buf) => {
           if (!this.disposed && this.irId === ir) n.cab.buffer = buf;
         });
     }

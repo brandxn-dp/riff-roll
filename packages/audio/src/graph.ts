@@ -12,6 +12,8 @@ export class MasterBus {
   readonly reverbIn: GainNode;
   readonly metronome: GainNode;
   private reverb: ConvolverNode;
+  /** resolves once the reverb IR is loaded (offline renders wait for it) */
+  readonly ready: Promise<void>;
   constructor(ctx: BaseAudioContext, dest: AudioNode) {
     this.input = ctx.createGain();
     this.input.gain.value = 0.8;
@@ -34,7 +36,9 @@ export class MasterBus {
     const ret = ctx.createGain();
     ret.gain.value = 0.9;
     this.reverbIn.connect(this.reverb).connect(ret).connect(this.input);
-    reverbIR(ctx.sampleRate).then((b) => (this.reverb.buffer = b));
+    this.ready = reverbIR(ctx.sampleRate).then((b) => {
+      this.reverb.buffer = b;
+    });
     this.metronome = ctx.createGain();
     this.metronome.connect(dest);
   }
@@ -167,6 +171,11 @@ export class TrackGraph {
         }
       }
     }
+  }
+
+  /** resolves once every amp chain has its cabinet IR */
+  ready(): Promise<void> {
+    return Promise.all([...this.chains.values()].map((c) => c.node.ready)).then(() => {});
   }
 
   dispose() {

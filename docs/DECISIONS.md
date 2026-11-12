@@ -119,3 +119,26 @@ Non-obvious choices and why. Newest at the bottom of each section.
   letter keys toggle techniques. Entering a fret pins the note to that string.
 - **Repeats** are expanded into a playback order of tick segments (`repeats.ts`) that the scheduler walks, including
   alternate endings; the loop region overrides it.
+
+## Files
+
+- **`.riff`** = zip (fflate) with `song.json` (+ a `mimetype` entry and `assets/`). `song.json` is validated with
+  zod and migrated by `schemaVersion` on load; a bad file gives a readable error instead of a broken session.
+- **Autosave = crash recovery.** Every edit is saved to the active storage adapter 1.5 s after you stop editing,
+  under the song's id. On startup the most recently edited song is reopened, so a crash or closed tab loses at most
+  ~1.5 s. "Save" (Ctrl+S) just saves immediately; "Download .riff" / desktop "Save As…" writes a file elsewhere.
+- **Imports**: Guitar Pro 3/4/5/GPX/GP7/GP8 and MusicXML go through alphaTab's `ScoreLoader` and are mapped to our
+  model (strings pinned as in the file, techniques, tempo/time-signature/sections/repeats/alternate endings).
+  GP instrument automations between clean (24–28) and overdrive/distortion (29–31, bass 34) programs become pedal
+  stomps. MIDI import/export is our own SMF code (alphaTab has no MIDI importer); channel 10 → drum lanes.
+  When a file has no tab tuning (common in MusicXML), a standard tuning that reaches every note is chosen.
+- **Exports**: MIDI (stomps → program change + CC 80), MusicXML 4.0 (notation + TAB staff, technical marks,
+  stomps as words), **Guitar Pro 7** via AlphaTex → alphaTab `Gp7Exporter` (stomps become instrument automations,
+  so they round-trip), WAV mix and per-track stems (24-bit, offline render through the live graph; stems zipped).
+- **No MP3 export**: every maintained MP3 encoder for the browser is LAME-based (LGPL) and none is permissively
+  licensed, which is the spec's condition. WAV is lossless; users can convert.
+- **PDF / print** renders every track (notation + tab, light theme) into a print-only container and opens the
+  system print dialog; "Save as PDF" there produces the PDF on all OSes and in Electron (window.open-based
+  `api.print()` is blocked by the desktop app's window-open policy, so it isn't used).
+- **ASCII tab** (Ctrl+Shift+C) copies the selected bars (or 4 bars from the cursor) on a 1/16 grid with simple
+  technique marks (h, /, b, ~, <harm>, (ghost), PM).

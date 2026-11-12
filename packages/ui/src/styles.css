@@ -832,3 +832,123 @@ button:disabled {
   border-radius: 5px;
   touch-action: none;
 }
+
+/* ---- file menu ---- */
+.filemenu {
+  position: relative;
+}
+.filemenu .menu {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  z-index: 40;
+  min-width: 240px;
+  background: var(--panel);
+  border: 1px solid var(--line-hi);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+.filemenu .menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 5px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+.filemenu .menu button:hover,
+.filemenu .menu button:focus-visible {
+  background: var(--raise);
+}
+.filemenu hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+.songtitle {
+  height: 32px;
+  width: 170px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: 600;
+  padding: 0 6px;
+}
+.songtitle:hover,
+.songtitle:focus {
+  border-color: var(--line);
+  background: var(--raise);
+}
+.projects {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.projects li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.projects .pname {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--raise);
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+}
+.projects .pname small {
+  color: var(--mute);
+  font-weight: 400;
+}
+
+/* ---- print ---- */
+#print-root {
+  display: none;
+}
+@media print {
+  body.printing {
+    overflow: visible;
+    background: #fff;
+  }
+  body.printing #root {
+    display: none;
+  }
+  body.printing #print-root {
+    display: block;
+    background: #fff;
+  }
+}
+.h3 {
+  font-family: var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+  font-size: 15px;
+  margin: 14px 0 6px;
+}
+.credits {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.credits a {
+  color: var(--clean);
+}

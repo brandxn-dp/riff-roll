@@ -11,6 +11,9 @@ import { DrumGrid } from './views/DrumGrid';
 import { NotationView } from './views/NotationView';
 import { Mixer } from './components/Mixer';
 import { SongBar } from './components/SongBar';
+import { FileMenu, ProjectsDialog, SongTitle } from './components/FileMenu';
+import { About } from './components/About';
+import { installFileActions } from './files/wire';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
 
@@ -24,7 +27,12 @@ export function App() {
   useEffect(() => {
     detectStorage().then(setStorage);
     installAudio();
-    return installShortcuts();
+    const offFiles = installFileActions();
+    const offKeys = installShortcuts();
+    return () => {
+      offFiles();
+      offKeys();
+    };
   }, []);
 
   const showRoll = view === 'split' || view === 'roll';
@@ -32,7 +40,7 @@ export function App() {
 
   return (
     <div className="app">
-      <Toolbar />
+      <Toolbar left={<><FileMenu /><SongTitle /></>} />
       <div className="body">
         <TrackList />
         <main className="main">
@@ -57,6 +65,8 @@ export function App() {
       </footer>
       {modal === 'shortcuts' && <ShortcutSheet />}
       {modal === 'mixer' && <Mixer />}
+      {modal === 'files' && <ProjectsDialog />}
+      {modal === 'about' && <About />}
     </div>
   );
 }

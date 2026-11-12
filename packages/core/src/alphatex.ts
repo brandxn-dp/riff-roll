@@ -43,6 +43,13 @@ function bendTex(curve: { pos: number; value: number }[]): string {
 
 const GM_PROGRAM: Record<Track['type'], number> = { guitar: 27, bass: 33, drums: 0 };
 
+/** GM program that stands for a tone (clean 27 / crunch 29 / distortion 30; bass 33 / 34). */
+export function toneProgram(track: Track, toneId: string): number {
+  const ch = track.tones.find((t) => t.id === toneId)?.chain.amp.character ?? 'clean';
+  if (track.type === 'bass') return ch === 'clean' ? 33 : 34;
+  return ch === 'clean' ? 27 : ch === 'crunch' ? 29 : 30;
+}
+
 /** Notes that start a hammer-on/pull-off (alphaTex marks the origin note; our model marks the destination). */
 function hammerOrigins(track: Track, fing: Map<string, Position | null>): Set<string> {
   const origins = new Set<string>();
@@ -85,7 +92,7 @@ function noteEffects(n: Note, origins: Set<string>, tied: boolean): string[] {
   return fx;
 }
 
-function beatEffects(b: RBeat<Note>, stompText?: string): string[] {
+function beatEffects(b: RBeat<Note>, stompText?: string, stompProgram?: number): string[] {
   const fx: string[] = [];
   const first = b.notes.find((n) => !n.tied)?.event;
   const t = first?.tech;
@@ -95,6 +102,8 @@ function beatEffects(b: RBeat<Note>, stompText?: string): string[] {
   if (t?.pick === 'up') fx.push('spu');
   if (t?.pick === 'down') fx.push('spd');
   if (t?.whammy?.length) fx.push(`tb (${bendTex(t.whammy)})`);
+  // stomps: text for the player + an instrument automation so Guitar Pro files switch sound there
+  if (stompProgram != null) fx.push(`instrument ${stompProgram}`);
   if (stompText) fx.push(`txt ${q(stompText)}`);
   return fx;
 }
@@ -126,7 +135,8 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
       lines.push('\\staff {score tabs}');
       lines.push(`\\tuning ${[...track.tuning.strings].reverse().map(texPitch).join(' ')}`);
       if (track.capo) lines.push(`\\capo ${track.capo}`);
-      lines.push(`\\instrument ${GM_PROGRAM[track.type]}`);
+      // the track's initial program follows its starting tone
+      lines.push(`\\instrument ${track.tones.length ? toneProgram(track, track.pedal.startTone) : GM_PROGRAM[track.type]}`);
     }
     const fing = track.type === 'drums' ? new Map() : trackFingering(track);
     const nStr = track.tuning.strings.length;
@@ -168,8 +178,10 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
       const parts: string[] = [];
       bar.beats.forEach((b, bi) => {
         let stomp: string | undefined;
+        let stompProgram: number | undefined;
         while (si < stomps.length && stomps[si].start <= b.start + b.duration - 1 && !b.rest) {
           stomp = toneName(stomps[si].toneId);
+          stompProgram = toneProgram(track, stomps[si].toneId);
           si++;
         }
         const dur = durTex(b);
@@ -208,7 +220,7 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
           // percussion: a bare number is an articulation, so the duration goes in front (":8 (36 42)")
           const m = /^\.(\d+)(?: \{(.*)\})?$/.exec(dur)!;
           parts.push(`:${m[1]} ${head}${m[2] ? ` {${m[2]}}` : ''}`);
-        } else parts.push(head + withEffects(dur, beatEffects(b, stomp)));
+        } else parts.push(head + withEffects(dur, beatEffects(b, stomp, stompProgram)));
         beats.push({ trackIndex: ti, bar: bar.index, beat: bi, start: b.start, noteIds: b.notes.map((n) => n.event.id) });
       });
       barTex.push([...meta, parts.join(' ')].join(' '));

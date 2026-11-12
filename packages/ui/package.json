@@ -16,6 +16,7 @@
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@riffroll/audio": "workspace:*",
     "@riffroll/core": "workspace:*",
+    "fflate": "^0.8.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zustand": "^5.1.0"

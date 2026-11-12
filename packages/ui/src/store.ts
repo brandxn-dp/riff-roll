@@ -51,6 +51,8 @@ export interface UiState {
   /** keyboard tab-entry cursor (Guitar Pro style); null = not in tab entry */
   tabCursor: { tick: number; string: number } | null;
   status: string;
+  /** unsaved changes since the last (auto)save */
+  dirty: boolean;
   modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files';
 
   exec(cmd: Command): void;
@@ -96,6 +98,7 @@ export const useStore = create<UiState>((set, get) => {
     speed: 1,
     tabCursor: null,
     status: '',
+    dirty: false,
     modal: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),

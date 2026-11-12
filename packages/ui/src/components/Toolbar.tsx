@@ -10,7 +10,7 @@ const LENS = [
   { label: '1/2', ticks: PPQ * 2 },
 ];
 
-export function Toolbar({ right }: { right?: React.ReactNode }) {
+export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React.ReactNode }) {
   const song = useStore((s) => s.song);
   const track = useStore((s) => currentTrack(s));
   const playing = useStore((s) => s.playing);
@@ -36,6 +36,7 @@ export function Toolbar({ right }: { right?: React.ReactNode }) {
   return (
     <header className="topbar">
       <div className="brand">Riff Roll</div>
+      {left}
       <button className={'btn play' + (playing ? ' on' : '')} onClick={togglePlay} title="Play / stop (Space)">
         {playing ? '■ Stop' : '▶ Play'}
       </button>
