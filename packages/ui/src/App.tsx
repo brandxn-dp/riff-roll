@@ -20,6 +20,7 @@ import { AccountDialog } from './components/AccountDialog';
 import { VelocityDialog } from './components/VelocityDialog';
 import { DocBanner } from './components/DocBanner';
 import { goHome } from './files/actions';
+import { GlobalView } from './components/GlobalView';
 import { About } from './components/About';
 import { ToneEditor } from './components/ToneEditor';
 import { Instruments } from './components/Instruments';
@@ -121,6 +122,7 @@ export function App() {
           )}
         </main>
       </div>
+      <GlobalView />
       <footer className="statusbar">
         <span role="status" aria-live="polite">
           {status}

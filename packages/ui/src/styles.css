@@ -1895,3 +1895,168 @@ button:disabled {
 .vel-num input[type='range'] {
   width: 100%;
 }
+
+/* ---- global view (Guitar Pro style: tracks × bars) ---- */
+.gv {
+  flex: 0 0 auto;
+  display: flex;
+  border-top: 1px solid var(--line-hi);
+  background: var(--bg);
+}
+.gv-left {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+}
+.gv.closed .gv-left {
+  flex-basis: 100%;
+}
+.gv-head {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.gv-title {
+  font-weight: 600;
+}
+.gv-cols {
+  flex: 1;
+  text-align: right;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.gv-toggle,
+.gv-add > button {
+  height: 18px;
+  min-width: 20px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.gv-toggle:hover,
+.gv-add > button:hover {
+  background: var(--raise);
+}
+.gv-add {
+  position: relative;
+}
+.gv-addmenu {
+  position: absolute;
+  bottom: 22px;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line-hi);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.gv-addmenu button {
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  text-align: left;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.gv-addmenu button:hover {
+  background: var(--raise);
+}
+.gv-rows {
+  flex: 1 1 auto;
+  overflow: hidden;
+  max-height: 218px;
+}
+.gv-row {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 0;
+  border-left: 3px solid var(--tc);
+  font-size: 12px;
+}
+.gv-row.on {
+  background: #1d212a;
+}
+.gv-row.muted .gv-name {
+  opacity: 0.5;
+}
+.gv-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  font-weight: 600;
+}
+.gv-num {
+  color: var(--mute);
+  font-weight: 400;
+}
+.gv-ms {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--raise);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.gv-ms.on {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #15171c;
+}
+.gv-ms.solo.on {
+  background: #5fd17c;
+  border-color: #5fd17c;
+}
+.gv-vol {
+  width: 70px;
+}
+.gv-pan {
+  width: 38px;
+}
+.gv-tone {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+}
+.gv-tone:hover {
+  color: var(--ink);
+}
+.gv-grid {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gv-menu kbd {
+  margin-left: auto;
+}
+.gv-menu button:disabled {
+  opacity: 0.4;
+}

@@ -98,6 +98,9 @@ export interface UiState {
     blocked: null | 'readonly' | 'conflict';
     conflictBy?: string;
   };
+  /** global view: shown, and the bars selected in it (track rows t0..t1, bars b0..b1) */
+  globalView: boolean;
+  barSel: { t0: number; t1: number; b0: number; b1: number } | null;
   /** song the share dialog is for */
   shareTarget: { id: string; title: string } | null;
 
@@ -160,6 +163,8 @@ export const useStore = create<UiState>((set, get) => {
     user: null,
     doc: { access: 'owner', blocked: null },
     shareTarget: null,
+    globalView: true,
+    barSel: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),
     commit: () => {

@@ -289,3 +289,20 @@ clearly use). Strums are lined up on their first note, blips become dead notes w
 - **Drum grid selection**: Shift-drag now box-selects (adding to the selection) and Ctrl-drag starts a new
   selection, matching the piano roll; painting across lanes moved from Shift-drag to Alt-drag. Shift+click a drum
   name (or a piano-roll key) selects every hit (note) of it; Ctrl+click adds.
+
+## Global view
+
+A Guitar Pro style panel under the editor: one row per track (mute, solo, volume, pan, tone) next to a grid of bar
+cells, filled where a bar has notes or hits. Selection is a rectangle of track rows × bars (stored as indices in
+the UI store, not in the song). Bar operations live in core (`bars.ts`) as pure commands, so they're one undo step
+each and tested without the UI:
+
+- copy keeps positions relative to the range and the time signature of each copied bar; paste maps clip track i to
+  the i-th row from the paste point, never mixes drum and pitched parts, carries pedal stomps between guitar/bass
+  tracks (dropping advanced-mode tone ids the target doesn't have), and grows the song if it runs past the end;
+- overwrite-paste clears the target bars first; insert-paste makes room in every track with the clip's own time
+  signatures (GP behaviour);
+- insert/delete bars move everything positional: notes, hits, stomps, sections, tempo points, time signatures,
+  repeats/endings and the loop. Deleting bars keeps the tempo that was in effect at their end, never deletes the
+  last bar, and shortens notes that ring into the deleted range;
+- the global view is desktop-only for now (a phone screen has no room for it); it can be collapsed.

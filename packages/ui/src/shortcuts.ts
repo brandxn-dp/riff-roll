@@ -66,6 +66,20 @@ export const SHORTCUTS: Shortcut[] = [
   { group: 'Techniques', keys: 'I N K O', what: 'Let ring, harmonic, tap, staccato' },
   { group: 'Techniques', keys: 'U D F M', what: 'Pick up/down, fade in, tremolo picking' },
   { group: 'Song', keys: 'Section chips', what: 'Jump to a section (double-click to rename)' },
+  {
+    group: 'Global view',
+    keys: 'Click / drag / Shift+click',
+    what: 'Go to a bar / select bars across tracks / extend',
+  },
+  { group: 'Global view', keys: 'Click a section name', what: 'Select that section in every track' },
+  {
+    group: 'Global view',
+    keys: 'Ctrl+C / Ctrl+X / Ctrl+V',
+    what: 'Copy / cut / paste bars (Ctrl+Shift+V pastes and inserts)',
+  },
+  { group: 'Global view', keys: 'Delete / Ctrl+Delete', what: 'Clear the bars / delete them from the song' },
+  { group: 'Global view', keys: 'Insert / Ctrl+D', what: 'Insert a bar / duplicate the selected bars' },
+  { group: 'Global view', keys: 'Double-click a bar', what: 'Open that track at that bar' },
   { group: 'Help', keys: '?', what: 'This cheat sheet' },
 ];
 

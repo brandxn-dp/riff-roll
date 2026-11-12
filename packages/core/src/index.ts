@@ -20,3 +20,4 @@ export * from './musicxml';
 export * from './ascii';
 export * from './recorder';
 export * from './velocity';
+export * from './bars';

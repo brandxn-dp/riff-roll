@@ -45,6 +45,9 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Phones**: a dedicated touch layout is picked automatically on phones (tap to add notes, an on-screen fret
   pad for tab, bottom navigation, full controls in the ☰ sheet). Tablets keep the full layout with larger touch
   targets. Override it under File → Phone layout or ☰ → App → Layout.
+- **Global view** (Guitar Pro style, under the editor): every track as a row of bars with mute, solo, volume
+  and pan. Drag to select bars across tracks, click a section name to select the section, then copy, cut, paste
+  (overwrite or insert), clear, duplicate, insert or delete bars; right-click for the menu.
 - **Other instruments**: add an **Other** track for piano, synth, strings and so on, and give it any SFZ
   instrument you upload with the *Other* role (File → Instruments…). Piano roll and notation, no tab or amp.
 - **Editing helpers**: bulk velocity (set, scale, add, ramp, humanize) for selected notes or drum hits, Alt+drag to
