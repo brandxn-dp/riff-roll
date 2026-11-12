@@ -1,0 +1,95 @@
+import { PPQ, SCHEMA_VERSION, newId, type Note, type Song, type Track, type TrackType } from './model';
+import { BASS_PRESETS, GUITAR_PRESETS, makeTone } from './tones';
+import { tuningByName } from './tunings';
+
+export const TRACK_COLORS = ['#e8365d', '#47bfee', '#f3cf48', '#5fd17c', '#ff9a3c', '#b38bff', '#ff6fb5', '#8aa4c8'];
+
+export function makeTrack(type: TrackType, name: string, color: string, opts: Partial<Track> = {}): Track {
+  const tones =
+    type === 'guitar'
+      ? [makeTone(GUITAR_PRESETS.clean), makeTone(GUITAR_PRESETS.dist)]
+      : type === 'bass'
+        ? [makeTone(BASS_PRESETS.clean), makeTone(BASS_PRESETS.driven)]
+        : [];
+  const tuning =
+    type === 'guitar'
+      ? tuningByName('Standard E')!
+      : type === 'bass'
+        ? tuningByName('Bass Standard E')!
+        : { name: 'Drums', strings: [] };
+  const toneA = tones[0]?.id ?? '';
+  const toneB = tones[1]?.id ?? toneA;
+  return {
+    id: newId('trk'),
+    name,
+    type,
+    color,
+    tuning,
+    capo: 0,
+    maxFret: type === 'bass' ? 21 : 24,
+    volume: 0.8,
+    pan: 0,
+    mute: false,
+    solo: false,
+    instrument: type === 'guitar' ? 'guitar-fsbs-direct' : type === 'bass' ? 'bass-yr-picked' : 'drums-big-rusty',
+    tones,
+    pedal: { mode: 'simple', startTone: toneA, toggle: [toneA, toneB], stomps: [] },
+    notes: [],
+    hits: [],
+    ...opts,
+  };
+}
+
+/** New-song template: Drums, Guitar 1, Guitar 2, Bass. Each guitar does clean + distorted through its pedal lane. */
+export function newSong(title = 'Untitled'): Song {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    id: newId('song'),
+    title,
+    artist: '',
+    ppq: PPQ,
+    bars: 8,
+    tempos: [{ tick: 0, bpm: 120 }],
+    timeSigs: [{ bar: 0, num: 4, den: 4 }],
+    keySig: { fifths: 0, minor: true },
+    sections: [],
+    repeats: [],
+    loop: null,
+    metronome: { on: false, countIn: 0, volume: 0.6 },
+    humanize: { timingMs: 3, velocity: 6 },
+    tracks: [
+      makeTrack('drums', 'Drums', TRACK_COLORS[2]),
+      makeTrack('guitar', 'Guitar 1', TRACK_COLORS[0], { pan: -0.35 }),
+      makeTrack('guitar', 'Guitar 2', TRACK_COLORS[1], { pan: 0.35 }),
+      makeTrack('bass', 'Bass', TRACK_COLORS[3]),
+    ],
+  };
+}
+
+/** The prototype's example riff: clean Em/C arpeggios, then a distorted power-chord riff with a stomp at bar 3. */
+export function exampleRiff(track: Track): Track {
+  const S = PPQ / 4; // one 1/16 step
+  const notes: Note[] = [];
+  const add = (p: number, s: number, l: number) =>
+    notes.push({ id: newId('n'), pitch: p, start: s * S, duration: l * S, velocity: 100 });
+  for (const [p, s] of [[40, 0], [47, 2], [52, 4], [55, 6], [59, 8], [55, 10], [52, 12], [47, 14]]) add(p, s, 2);
+  for (const [p, s] of [[48, 16], [55, 18], [60, 20], [64, 22], [60, 24], [55, 26], [50, 28], [47, 30]]) add(p, s, 2);
+  const pc = (r: number, s: number, l: number) => {
+    add(r, s, l);
+    add(r + 7, s, l);
+  };
+  pc(40, 32, 2);
+  add(40, 34, 1);
+  add(40, 35, 1);
+  pc(43, 36, 2);
+  add(40, 38, 1);
+  add(40, 39, 1);
+  pc(45, 40, 4);
+  add(40, 44, 1);
+  add(40, 45, 1);
+  pc(43, 46, 2);
+  pc(48, 48, 4);
+  pc(47, 52, 4);
+  pc(40, 56, 8);
+  return { ...track, notes, pedal: { ...track.pedal, stomps: [{ id: newId('stomp'), tick: 32 * S }] } };
+}
