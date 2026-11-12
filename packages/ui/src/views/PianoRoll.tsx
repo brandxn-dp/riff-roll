@@ -1,0 +1,578 @@
+import { useEffect, useRef } from 'react';
+import {
+  addNotes,
+  newId,
+  pitchClassName,
+  pitchName,
+  removeNotes,
+  stringColor,
+  trackFingering,
+  updateNotes,
+  type Note,
+  type Track,
+} from '@riffroll/core';
+import { barMap, currentTrack, songEnd, useStore } from '../store';
+import {
+  BODY,
+  COL,
+  DISP,
+  KEYS_W,
+  MONO,
+  RULER_H,
+  fit,
+  floorTick,
+  frameScheduler,
+  lowerBound,
+  pxPerTick,
+  rr,
+  snapTick,
+} from '../canvas';
+import { drawGrid, drawPlayhead, drawToneWash, isCleanTone, tickToX, toneOf, xToTick, type TimeAxis } from './timeline';
+import { pedalSegments } from '@riffroll/core';
+import { preview } from '../audio-bridge';
+
+const RH = 18; // row height
+const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+const EDGE = 7; // px: grab zone for resizing at a note's right edge
+
+/** Pitch range shown for a track: the whole playable range plus any out-of-range notes. */
+export function pitchRange(t: Track): { lo: number; hi: number } {
+  const s = t.tuning.strings;
+  let lo = (s[0] ?? 40) + t.capo;
+  let hi = (s[s.length - 1] ?? 64) + t.maxFret;
+  for (const n of t.notes) {
+    if (n.pitch < lo) lo = n.pitch;
+    if (n.pitch > hi) hi = n.pitch;
+  }
+  return { lo, hi };
+}
+
+type Drag =
+  | { mode: 'move'; ids: string[]; startTick: number; startPitch: number; orig: Map<string, Note>; moved: boolean }
+  | { mode: 'resize'; ids: string[]; orig: Map<string, Note>; anchorTick: number; fresh: boolean }
+  | { mode: 'box'; x0: number; y0: number; x1: number; y1: number; additive: boolean; base: Set<string> }
+  | { mode: 'erase' };
+
+export function PianoRoll() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const cvRef = useRef<HTMLCanvasElement>(null);
+  const scRef = useRef<HTMLDivElement>(null);
+  const sizerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const wrap = wrapRef.current!,
+      cv = cvRef.current!,
+      sc = scRef.current!,
+      sizer = sizerRef.current!;
+    let range = { lo: 40, hi: 88 };
+    let drag: Drag | null = null;
+    let lastTrackId = '';
+    let tapStart: { x: number; y: number; t: number; sl: number; st: number; id: number } | null = null;
+
+    const axis = (): TimeAxis => {
+      const st = useStore.getState();
+      return { ppt: pxPerTick(st.zoom), scrollX: sc.scrollLeft, width: sc.clientWidth };
+    };
+
+    function layout() {
+      const st = useStore.getState();
+      const t = currentTrack(st);
+      if (!t) return;
+      const nr = pitchRange(t);
+      const w = KEYS_W + songEnd(st.song) * pxPerTick(st.zoom) + 40;
+      sizer.style.width = w + 'px';
+      sizer.style.height = RULER_H + (nr.hi - nr.lo + 1) * RH + 'px';
+      if (t.id !== lastTrackId) {
+        lastTrackId = t.id;
+        range = nr;
+        // scroll so the low strings are visible at the bottom, like the prototype
+        sc.scrollTop = Math.max(0, (nr.hi - (t.tuning.strings[0] ?? 40) + 1) * RH + RULER_H - sc.clientHeight + 4);
+      } else if (nr.lo !== range.lo || nr.hi !== range.hi) {
+        const dy = (nr.hi - range.hi) * RH;
+        range = nr;
+        sc.scrollTop += dy;
+      }
+      if (Math.abs(sc.scrollLeft - st.scrollX) > 1) sc.scrollLeft = st.scrollX;
+    }
+
+    function draw() {
+      const st = useStore.getState();
+      const t = currentTrack(st);
+      const w = sc.clientWidth,
+        h = sc.clientHeight;
+      if (!w || !h || !t) return;
+      const c = fit(cv, w, h);
+      const a = axis();
+      const sy = sc.scrollTop;
+      const rows = range.hi - range.lo + 1;
+      const gy0 = RULER_H - sy;
+      const end = songEnd(st.song);
+      const gridW = end * a.ppt;
+      const gx0 = tickToX(a, 0);
+      const fing = trackFingering(t);
+      const nStr = t.tuning.strings.length;
+
+      c.fillStyle = COL.bg;
+      c.fillRect(0, 0, w, h);
+      c.save();
+      c.beginPath();
+      c.rect(KEYS_W, RULER_H, w - KEYS_W, h - RULER_H);
+      c.clip();
+      const r0 = Math.max(0, Math.floor(sy / RH)),
+        r1 = Math.min(rows - 1, Math.ceil((sy + h) / RH));
+      for (let r = r0; r <= r1; r++) {
+        const p = range.hi - r,
+          y = gy0 + r * RH;
+        c.fillStyle = BLACK[p % 12] ? COL.rowB : COL.rowW;
+        c.fillRect(gx0, y, gridW, RH);
+        c.fillStyle = p % 12 === 0 ? COL.cLine : COL.rowLine;
+        c.fillRect(gx0, y + RH - 1, gridW, 1);
+      }
+      drawToneWash(c, st.song, t, a, gy0, rows * RH);
+      drawGrid(c, st.song, a, st.snap, gy0, rows * RH);
+
+      // notes (sorted by start; scan from a little before the visible window to catch long notes)
+      c.textBaseline = 'middle';
+      const tA = xToTick(a, KEYS_W),
+        tB = xToTick(a, w);
+      let maxDur = 0;
+      for (const n of t.notes) if (n.duration > maxDur) maxDur = n.duration;
+      for (let i = lowerBound(t.notes, tA - maxDur); i < t.notes.length; i++) {
+        const n = t.notes[i];
+        if (n.start > tB) break;
+        if (n.start + n.duration < tA) continue;
+        const x = tickToX(a, n.start) + 1,
+          y = gy0 + (range.hi - n.pitch) * RH + 1,
+          nw = Math.max(3, n.duration * a.ppt - 2),
+          nh = RH - 2;
+        if (y > h || y + nh < RULER_H) continue;
+        const pos = fing.get(n.id);
+        const col = pos ? stringColor(t.type, nStr, pos.string) : COL.unplayable;
+        c.globalAlpha = 0.55 + (0.45 * n.velocity) / 127;
+        c.fillStyle = col;
+        rr(c, x, y, nw, nh, 3);
+        c.fill();
+        c.globalAlpha = 1;
+        c.strokeStyle = 'rgba(0,0,0,0.35)';
+        c.lineWidth = 1;
+        rr(c, x + 0.5, y + 0.5, nw - 1, nh - 1, 3);
+        c.stroke();
+        if (n.pinnedString != null && pos) {
+          // small pin mark: the user chose this string
+          c.fillStyle = 'rgba(21,23,28,0.75)';
+          c.beginPath();
+          c.moveTo(x + nw - 7, y);
+          c.lineTo(x + nw, y);
+          c.lineTo(x + nw, y + 7);
+          c.fill();
+        }
+        if (st.selection.has(n.id)) {
+          c.strokeStyle = COL.head;
+          c.lineWidth = 2;
+          rr(c, x - 1, y - 1, nw + 2, nh + 2, 4);
+          c.stroke();
+        }
+        // fret number + note name, shrinking gracefully for short notes
+        const txt = pos ? String(pos.fret) : '✕';
+        c.font = '600 11px ' + MONO;
+        let tw = c.measureText(txt).width;
+        if (tw > nw - 4) {
+          c.font = '600 9px ' + MONO;
+          tw = c.measureText(txt).width;
+        }
+        if (tw <= nw - 3) {
+          c.fillStyle = pos ? '#15171c' : '#c9ccd4';
+          c.fillText(txt, x + (nw < 16 ? (nw - tw) / 2 : 4), y + nh / 2 + 0.5);
+          if (pos) {
+            const nm = pitchClassName(n.pitch);
+            c.font = '500 10px ' + BODY;
+            const nmw = c.measureText(nm).width;
+            if (4 + tw + 3 + nmw <= nw - 3) {
+              c.fillStyle = 'rgba(21,23,28,0.68)';
+              c.fillText(nm, x + 4 + tw + 3, y + nh / 2 + 0.5);
+            }
+          }
+        }
+      }
+      if (drag?.mode === 'box') {
+        const bx = Math.min(drag.x0, drag.x1) - sc.scrollLeft,
+          by = Math.min(drag.y0, drag.y1) - sy;
+        c.fillStyle = COL.select;
+        c.fillRect(bx, by, Math.abs(drag.x1 - drag.x0), Math.abs(drag.y1 - drag.y0));
+        c.strokeStyle = COL.selectLine;
+        c.lineWidth = 1;
+        c.strokeRect(bx + 0.5, by + 0.5, Math.abs(drag.x1 - drag.x0), Math.abs(drag.y1 - drag.y0));
+      }
+      drawPlayhead(c, a, st.playhead, gy0, rows * RH);
+      c.restore();
+
+      // ruler: bar numbers, section names, pedal strip, cursor
+      c.fillStyle = COL.panel;
+      c.fillRect(0, 0, w, RULER_H);
+      c.save();
+      c.beginPath();
+      c.rect(KEYS_W, 0, w - KEYS_W, RULER_H);
+      c.clip();
+      const bm = barMap(st.song);
+      c.textBaseline = 'middle';
+      for (let b = bm.barAtTick(Math.max(0, tA)).index; b <= st.song.bars; b++) {
+        const s = bm.barStart(b);
+        if (s > tB) break;
+        const x = tickToX(a, s);
+        c.fillStyle = COL.bar;
+        c.fillRect(x, 0, 1, RULER_H);
+        if (b < st.song.bars) {
+          c.fillStyle = COL.ink;
+          c.font = '600 13px ' + DISP;
+          c.fillText(String(b + 1), x + 6, RULER_H / 2 - 1);
+        }
+      }
+      for (const sec of st.song.sections) {
+        const x = tickToX(a, sec.tick);
+        if (x > w || x < KEYS_W - 200) continue;
+        c.font = '700 12px ' + DISP;
+        const lw = c.measureText(sec.name.toUpperCase()).width;
+        c.fillStyle = '#3b4250';
+        rr(c, x + 22, 3, lw + 10, RULER_H - 9, 3);
+        c.fill();
+        c.fillStyle = COL.ink;
+        c.fillText(sec.name.toUpperCase(), x + 27, RULER_H / 2 - 1);
+      }
+      if (t.type !== 'drums') {
+        for (const sg of pedalSegments(t.pedal, end)) {
+          const tone = toneOf(t, sg.toneId);
+          c.fillStyle = tone?.color ?? COL.clean;
+          c.globalAlpha = isCleanTone(tone) ? 0.55 : 1;
+          c.fillRect(tickToX(a, sg.start), RULER_H - 3, (sg.end - sg.start) * a.ppt, 3);
+        }
+        c.globalAlpha = 1;
+      }
+      if (st.song.loop?.on) {
+        const lx0 = tickToX(a, st.song.loop.start),
+          lx1 = tickToX(a, st.song.loop.end);
+        c.fillStyle = 'rgba(95,209,124,0.22)';
+        c.fillRect(lx0, 0, lx1 - lx0, RULER_H - 3);
+        c.fillStyle = '#5fd17c';
+        c.fillRect(lx0, 0, 2, RULER_H - 3);
+        c.fillRect(lx1 - 2, 0, 2, RULER_H - 3);
+      }
+      const mx = tickToX(a, st.cursor);
+      c.fillStyle = COL.ink;
+      c.beginPath();
+      c.moveTo(mx, RULER_H - 4);
+      c.lineTo(mx - 5, RULER_H - 12);
+      c.lineTo(mx + 5, RULER_H - 12);
+      c.closePath();
+      c.fill();
+      drawPlayhead(c, a, st.playhead, 0, RULER_H);
+      c.restore();
+
+      // keys column, open strings marked in their string colour
+      c.save();
+      c.beginPath();
+      c.rect(0, RULER_H, KEYS_W, h - RULER_H);
+      c.clip();
+      const open = t.tuning.strings.map((p) => p + t.capo);
+      for (let r = r0; r <= r1; r++) {
+        const p = range.hi - r,
+          y = gy0 + r * RH,
+          bk = BLACK[p % 12];
+        c.fillStyle = bk ? '#14161b' : '#262a33';
+        c.fillRect(0, y, KEYS_W - 1, RH - 1);
+        c.font = (p % 12 === 0 ? '600 ' : '500 ') + '10px ' + MONO;
+        c.fillStyle = bk ? COL.mute : p % 12 === 0 ? COL.ink : '#b9bfcb';
+        c.fillText(pitchName(p), 5, y + RH / 2);
+        for (let s = 0; s < open.length; s++)
+          if (open[s] === p) {
+            c.fillStyle = stringColor(t.type, nStr, s);
+            c.fillRect(KEYS_W - 7, y + 3, 4, RH - 7);
+          }
+      }
+      c.restore();
+      c.fillStyle = COL.panel;
+      c.fillRect(0, 0, KEYS_W, RULER_H);
+      c.fillStyle = COL.mute;
+      c.font = '600 11px ' + DISP;
+      c.textBaseline = 'middle';
+      c.fillText('BAR', 8, RULER_H / 2);
+      c.fillStyle = COL.line;
+      c.fillRect(KEYS_W - 1, 0, 1, h);
+      c.fillRect(0, RULER_H - 1, w, 1);
+    }
+
+    const requestDraw = frameScheduler(draw);
+
+    // ---------------- hit testing ----------------
+    const pt = (e: { clientX: number; clientY: number }) => {
+      const r = sc.getBoundingClientRect();
+      const lx = e.clientX - r.left,
+        ly = e.clientY - r.top;
+      return { lx, ly, gx: lx - KEYS_W + sc.scrollLeft, gy: ly - RULER_H + sc.scrollTop };
+    };
+    const inGrid = (p: ReturnType<typeof pt>) =>
+      p.lx >= KEYS_W && p.ly >= RULER_H && p.lx < sc.clientWidth && p.ly < sc.clientHeight;
+    const pitchAt = (gy: number) => range.hi - Math.floor(gy / RH);
+    const tickAt = (gx: number) => gx / pxPerTick(useStore.getState().zoom);
+    function noteAt(t: Track, gx: number, gy: number): Note | null {
+      const p = pitchAt(gy),
+        tick = tickAt(gx);
+      for (let i = t.notes.length - 1; i >= 0; i--) {
+        const n = t.notes[i];
+        if (n.pitch === p && tick >= n.start && tick < n.start + n.duration) return n;
+      }
+      return null;
+    }
+    const nearEdge = (n: Note, gx: number) => {
+      const ppt = pxPerTick(useStore.getState().zoom);
+      return (n.start + n.duration) * ppt - gx < EDGE && n.duration * ppt > EDGE * 2;
+    };
+
+    function addAt(t: Track, gx: number, gy: number): Note | null {
+      const st = useStore.getState();
+      const end = songEnd(st.song);
+      const start = Math.max(0, floorTick(tickAt(gx), st.snap));
+      if (start >= end) return null;
+      const pitch = pitchAt(gy);
+      if (pitch < range.lo || pitch > range.hi) return null;
+      const n: Note = { id: newId('n'), pitch, start, duration: Math.min(st.noteLen, end - start), velocity: 100 };
+      st.exec(addNotes(t.id, [n]));
+      st.select([n.id]);
+      preview(t, n.pitch, n.start, n.duration);
+      return n;
+    }
+
+    function rulerClick(p: ReturnType<typeof pt>) {
+      const st = useStore.getState();
+      const tick = Math.max(0, Math.min(songEnd(st.song) - 1, floorTick(tickAt(p.gx), st.snap)));
+      st.set({ cursor: tick });
+    }
+
+    // ---------------- pointer: mouse/pen get the FL-style editor, touch gets the prototype's tap model ----------
+    const onDown = (e: PointerEvent) => {
+      const st = useStore.getState();
+      const t = currentTrack(st);
+      if (!t) return;
+      const p = pt(e);
+      if (e.pointerType === 'touch') {
+        tapStart = { x: e.clientX, y: e.clientY, t: Date.now(), sl: sc.scrollLeft, st: sc.scrollTop, id: e.pointerId };
+        return;
+      }
+      if (p.ly < RULER_H && p.lx >= KEYS_W) {
+        if (e.button === 0) rulerClick(p);
+        return;
+      }
+      if (p.lx < KEYS_W && p.ly >= RULER_H) {
+        preview(t, pitchAt(p.gy), st.cursor, st.noteLen);
+        return;
+      }
+      if (!inGrid(p)) return;
+      const hit = noteAt(t, p.gx, p.gy);
+      if (e.button === 2) {
+        st.begin('Delete notes');
+        if (hit) st.exec(removeNotes(t.id, [hit.id]));
+        drag = { mode: 'erase' };
+        sc.setPointerCapture(e.pointerId);
+        return;
+      }
+      if (e.button !== 0) return;
+      sc.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      if (hit) {
+        let sel = new Set(st.selection);
+        if (e.ctrlKey || e.metaKey) {
+          if (sel.has(hit.id)) sel.delete(hit.id);
+          else sel.add(hit.id);
+          st.select(sel, hit.id);
+          return;
+        }
+        if (!sel.has(hit.id)) sel = new Set([hit.id]);
+        st.select(sel, hit.id);
+        const orig = new Map(t.notes.filter((n) => sel.has(n.id)).map((n) => [n.id, n]));
+        if (nearEdge(hit, p.gx)) {
+          st.begin('Resize notes');
+          drag = { mode: 'resize', ids: [...sel], orig, anchorTick: hit.start + hit.duration, fresh: false };
+        } else {
+          st.begin('Move notes');
+          if (e.altKey) {
+            // Alt-drag duplicates, then moves the copies
+            const copies = [...orig.values()].map((n) => ({ ...n, id: newId('n') }));
+            st.exec(addNotes(t.id, copies, 'Duplicate notes'));
+            const corig = new Map(copies.map((n) => [n.id, n]));
+            st.select(corig.keys(), null);
+            drag = { mode: 'move', ids: [...corig.keys()], startTick: tickAt(p.gx), startPitch: hit.pitch, orig: corig, moved: false };
+          } else {
+            drag = { mode: 'move', ids: [...sel], startTick: tickAt(p.gx), startPitch: hit.pitch, orig, moved: false };
+          }
+          preview(t, hit.pitch, hit.start, hit.duration);
+        }
+      } else if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        const x = p.lx + sc.scrollLeft,
+          y = p.ly + sc.scrollTop;
+        drag = { mode: 'box', x0: x, y0: y, x1: x, y1: y, additive: e.shiftKey, base: new Set(e.shiftKey ? st.selection : []) };
+      } else {
+        st.begin('Add note');
+        const n = addAt(t, p.gx, p.gy);
+        if (n) drag = { mode: 'resize', ids: [n.id], orig: new Map([[n.id, n]]), anchorTick: n.start + n.duration, fresh: true };
+        else st.commit();
+      }
+      requestDraw();
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      const st = useStore.getState();
+      const t = currentTrack(st);
+      if (!t) return;
+      const p = pt(e);
+      if (!drag) {
+        const hit = inGrid(p) ? noteAt(t, p.gx, p.gy) : null;
+        sc.style.cursor = hit ? (nearEdge(hit, p.gx) ? 'ew-resize' : 'grab') : inGrid(p) ? 'crosshair' : 'default';
+        return;
+      }
+      const end = songEnd(st.song);
+      if (drag.mode === 'erase') {
+        const hit = noteAt(t, p.gx, p.gy);
+        if (hit) st.exec(removeNotes(t.id, [hit.id]));
+      } else if (drag.mode === 'resize') {
+        const tick = tickAt(p.gx);
+        const changes: Record<string, Partial<Note>> = {};
+        const dt = snapTick(tick - drag.anchorTick, st.snap);
+        for (const [id, n] of drag.orig) {
+          const dur = Math.max(Math.min(st.snap, n.duration), n.duration + dt);
+          changes[id] = { duration: Math.min(dur, end - n.start) };
+        }
+        st.exec(updateNotes(t.id, changes, 'Resize notes'));
+      } else if (drag.mode === 'move') {
+        const dTick = snapTick(tickAt(p.gx) - drag.startTick, st.snap);
+        const dPitch = pitchAt(p.gy) - drag.startPitch;
+        let minStart = Infinity,
+          maxEnd = 0,
+          minP = 127,
+          maxP = 0;
+        for (const n of drag.orig.values()) {
+          minStart = Math.min(minStart, n.start);
+          maxEnd = Math.max(maxEnd, n.start + n.duration);
+          minP = Math.min(minP, n.pitch);
+          maxP = Math.max(maxP, n.pitch);
+        }
+        const dt = Math.max(-minStart, Math.min(end - maxEnd, dTick));
+        const dp = Math.max(range.lo - minP, Math.min(range.hi - maxP, dPitch));
+        const changes: Record<string, Partial<Note>> = {};
+        for (const [id, n] of drag.orig)
+          changes[id] = { start: n.start + dt, pitch: n.pitch + dp, ...(dp ? { pinnedString: null } : {}) };
+        const first = drag.orig.values().next().value!;
+        const cur = t.notes.find((n) => n.id === first.id);
+        if (dp && cur && cur.pitch !== first.pitch + dp) preview(t, first.pitch + dp, first.start + dt, first.duration);
+        drag.moved = drag.moved || dt !== 0 || dp !== 0;
+        st.exec(updateNotes(t.id, changes, 'Move notes'));
+      } else if (drag.mode === 'box') {
+        drag.x1 = p.lx + sc.scrollLeft;
+        drag.y1 = p.ly + sc.scrollTop;
+        const ppt = pxPerTick(st.zoom);
+        const t0 = (Math.min(drag.x0, drag.x1) - KEYS_W) / ppt,
+          t1 = (Math.max(drag.x0, drag.x1) - KEYS_W) / ppt;
+        const pHi = pitchAt(Math.min(drag.y0, drag.y1) - RULER_H),
+          pLo = pitchAt(Math.max(drag.y0, drag.y1) - RULER_H);
+        const sel = new Set(drag.base);
+        for (const n of t.notes)
+          if (n.pitch >= pLo && n.pitch <= pHi && n.start < t1 && n.start + n.duration > t0) sel.add(n.id);
+        st.select(sel, null);
+        requestDraw();
+      }
+    };
+
+    const onUp = (e: PointerEvent) => {
+      const st = useStore.getState();
+      if (e.pointerType === 'touch') {
+        const t = currentTrack(st);
+        if (tapStart && tapStart.id === e.pointerId && t) {
+          const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y);
+          const scrolled = Math.abs(sc.scrollLeft - tapStart.sl) + Math.abs(sc.scrollTop - tapStart.st);
+          if (moved < 10 && scrolled < 4 && Date.now() - tapStart.t < 600) {
+            const p = pt(e);
+            if (p.ly < RULER_H) rulerClick(p);
+            else if (inGrid(p)) {
+              const hit = noteAt(t, p.gx, p.gy);
+              if (hit) {
+                st.select([hit.id]);
+                preview(t, hit.pitch, hit.start, hit.duration);
+              } else addAt(t, p.gx, p.gy);
+            }
+          }
+        }
+        tapStart = null;
+        return;
+      }
+      if (drag && drag.mode !== 'box') {
+        if (drag.mode === 'resize' && drag.fresh) {
+          const t = currentTrack(st);
+          const id = drag.ids[0];
+          const n = t?.notes.find((x) => x.id === id);
+          if (n && n.duration !== st.noteLen) st.set({ noteLen: n.duration });
+        }
+        st.commit();
+      }
+      drag = null;
+      requestDraw();
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const st = useStore.getState();
+      const z = Math.max(0, Math.min(7, st.zoom + (e.deltaY < 0 ? 1 : -1)));
+      if (z === st.zoom) return;
+      const p = pt(e);
+      const tick = tickAt(p.gx);
+      st.set({ zoom: z });
+      layout();
+      sc.scrollLeft = Math.max(0, tick * pxPerTick(z) - (p.lx - KEYS_W));
+    };
+
+    const onScroll = () => {
+      useStore.getState().set({ scrollX: sc.scrollLeft });
+      requestDraw();
+    };
+
+    sc.addEventListener('pointerdown', onDown);
+    sc.addEventListener('pointermove', onMove);
+    sc.addEventListener('pointerup', onUp);
+    sc.addEventListener('pointercancel', onUp);
+    sc.addEventListener('contextmenu', (e) => e.preventDefault());
+    sc.addEventListener('wheel', onWheel, { passive: false });
+    sc.addEventListener('scroll', onScroll, { passive: true });
+
+    const unsub = useStore.subscribe((s, prev) => {
+      if (s.song !== prev.song || s.zoom !== prev.zoom || s.trackId !== prev.trackId || s.scrollX !== prev.scrollX)
+        layout();
+      requestDraw();
+    });
+    const ro = new ResizeObserver(() => {
+      layout();
+      requestDraw();
+    });
+    ro.observe(wrap);
+    layout();
+    requestDraw();
+    document.fonts?.ready.then(requestDraw);
+    return () => {
+      unsub();
+      ro.disconnect();
+      sc.removeEventListener('pointerdown', onDown);
+      sc.removeEventListener('pointermove', onMove);
+      sc.removeEventListener('pointerup', onUp);
+      sc.removeEventListener('pointercancel', onUp);
+      sc.removeEventListener('wheel', onWheel);
+      sc.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="cvwrap roll" aria-label="Piano roll">
+      <canvas ref={cvRef} />
+      <div ref={scRef} className="scroller">
+        <div ref={sizerRef} className="sizer" />
+      </div>
+    </div>
+  );
+}

@@ -1,17 +1,52 @@
 import { useEffect, useState } from 'react';
 import { detectStorage, type StorageAdapter } from './storage';
+import { currentTrack, useStore } from './store';
+import { Toolbar } from './components/Toolbar';
+import { TrackList } from './components/TrackList';
+import { Inspector } from './components/Inspector';
+import { ShortcutSheet } from './components/ShortcutSheet';
+import { PianoRoll } from './views/PianoRoll';
+import { LowerPanel } from './views/LowerPanel';
+import { installShortcuts } from './shortcuts';
 
 export function App() {
   const [storage, setStorage] = useState<StorageAdapter | null>(null);
+  const view = useStore((s) => s.view);
+  const modal = useStore((s) => s.modal);
+  const status = useStore((s) => s.status);
+  const trackType = useStore((s) => currentTrack(s)?.type);
+
   useEffect(() => {
     detectStorage().then(setStorage);
+    return installShortcuts();
   }, []);
+
+  const showRoll = view === 'split' || view === 'roll';
+  const showTab = view === 'split' || view === 'tab';
+
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">Riff Roll</div>
+      <Toolbar />
+      <div className="body">
+        <TrackList />
+        <main className="main">
+          {trackType === 'drums' ? (
+            <div className="placeholder">The drum grid arrives in milestone 5.</div>
+          ) : (
+            <>
+              {showRoll && <PianoRoll />}
+              <LowerPanel showVelocity={showRoll} showTab={showTab} />
+              {view === 'tab' && <div className="fill" />}
+              <Inspector />
+            </>
+          )}
+        </main>
+      </div>
+      <footer className="statusbar">
+        <span>{status}</span>
         <span className="mute">storage: {storage?.kind ?? '…'}</span>
-      </header>
+      </footer>
+      {modal === 'shortcuts' && <ShortcutSheet />}
     </div>
   );
 }
