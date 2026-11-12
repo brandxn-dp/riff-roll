@@ -44,7 +44,7 @@ export class MasterBus {
   }
 }
 
-export const DI_TRIM: Record<Track['type'], number> = { guitar: 0.35, bass: 0.6, drums: 0.8 };
+export const DI_TRIM: Record<Track['type'], number> = { guitar: 0.35, bass: 0.6, drums: 0.8, other: 0.7 };
 
 export class TrackGraph {
   readonly input: GainNode; // DI signal from the sampler
@@ -92,6 +92,10 @@ export class TrackGraph {
       this.input.connect(this.sum);
       this.input.connect(this.kitComp).connect(this.kitWet).connect(this.sum);
       this.input.connect(this.sendSum);
+    } else if (track.type === 'other') {
+      // piano, synth…: no amp, straight to the mixer with a little reverb
+      this.input.connect(this.sum);
+      this.input.connect(this.sendSum);
     }
     this.update(track, true);
   }
@@ -106,6 +110,10 @@ export class TrackGraph {
     if (track.type === 'drums') {
       this.kitWet?.gain.setTargetAtTime((track.drumComp ?? 0.35) * 1.8, t, 0.02);
       this.sendSum.gain.setTargetAtTime(0.12, t, 0.02); // a little room on the kit
+      return;
+    }
+    if (track.type === 'other') {
+      this.sendSum.gain.setTargetAtTime(0.18, t, 0.02);
       return;
     }
     const seen = new Set<string>();

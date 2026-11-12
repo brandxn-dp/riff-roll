@@ -100,6 +100,35 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
           }
     return { ...t, hits: hits.sort((a, b) => a.start - b.start) };
   }
+  // keyboards, strings, winds, synths… (no tab tuning, not a guitar or bass program): an "other" track
+  const prog = at.playbackInfo.program;
+  if (!staff.tuning.length && (prog < 24 || prog > 39) && !/guitar|bass/i.test(at.name)) {
+    const t = makeTrack('other', at.name || 'Keys', color);
+    const notes: Note[] = [];
+    const sounding = new Map<number, Note>();
+    for (const sf of at.staves)
+      // both hands of a grand staff
+      for (const bar of sf.bars)
+        for (const v of bar.voices)
+          for (const b of v.beats)
+            for (const n of b.notes) {
+              const prev = sounding.get(n.realValue);
+              if (n.isTieDestination && prev) {
+                prev.duration = b.absolutePlaybackStart + b.playbackDuration - prev.start;
+                continue;
+              }
+              const note: Note = {
+                id: newId('n'),
+                pitch: n.realValue,
+                start: b.absolutePlaybackStart,
+                duration: Math.max(1, b.playbackDuration),
+                velocity: velocityOf(n),
+              };
+              sounding.set(n.realValue, note);
+              notes.push(note);
+            }
+    return { ...t, notes: notes.sort((a, b) => a.start - b.start || a.pitch - b.pitch) };
+  }
   let strings = [...staff.tuning].reverse();
   let lowest = 127;
   for (const bar of staff.bars)

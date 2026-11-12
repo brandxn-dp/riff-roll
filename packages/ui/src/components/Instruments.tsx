@@ -52,7 +52,7 @@ export function Instruments() {
   const [canAdd, setCanAdd] = useState<boolean | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'guitar' | 'bass' | 'drums'>('guitar');
+  const [role, setRole] = useState<'guitar' | 'bass' | 'drums' | 'other'>('guitar');
   const [sfz, setSfz] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -128,10 +128,11 @@ export function Instruments() {
     await refresh();
   };
 
-  const roles: ['guitar' | 'bass' | 'drums', string][] = [
+  const roles: ['guitar' | 'bass' | 'drums' | 'other', string][] = [
     ['guitar', 'Guitar'],
     ['bass', 'Bass'],
     ['drums', 'Drums'],
+    ['other', 'Other (piano, synth, strings…)'],
   ];
   return (
     <Modal title="Instruments" wide>

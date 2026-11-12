@@ -8,7 +8,11 @@ export const PPQ = 960; // ticks per quarter note
 export const SCHEMA_VERSION = 1;
 
 export type Id = string;
-export type TrackType = 'guitar' | 'bass' | 'drums';
+/** 'other': any pitched instrument without strings (piano, synth, strings…): piano roll and score, no tab or amp. */
+export type TrackType = 'guitar' | 'bass' | 'drums' | 'other';
+
+/** Guitar and bass: strings, tab, fingering, amp, pedal. */
+export const isFretted = (type: TrackType) => type === 'guitar' || type === 'bass';
 
 /** A point on a bend / whammy curve. `pos` 0..1 across the note, `value` in semitones (negative = dip). */
 export interface CurvePoint {

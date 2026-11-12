@@ -17,6 +17,7 @@ import {
   type Note,
   type Techniques,
   type Track,
+  isFretted,
 } from '@riffroll/core';
 import { trackFingering } from '@riffroll/core';
 import { barMap, currentTrack, songEnd, useStore } from './store';
@@ -117,7 +118,7 @@ export function handleTabKey(e: KeyboardEvent): boolean {
   const st = useStore.getState();
   const c = st.tabCursor;
   const t = currentTrack(st);
-  if (!c || !t || t.type === 'drums' || (st.view !== 'split' && st.view !== 'tab')) return false;
+  if (!c || !t || !isFretted(t.type) || (st.view !== 'split' && st.view !== 'tab')) return false;
   if (e.altKey) return false;
   const mod = e.ctrlKey || e.metaKey;
   const here = noteOnString(t, c.tick, c.string);

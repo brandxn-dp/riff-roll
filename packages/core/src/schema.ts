@@ -84,7 +84,7 @@ const toneChain = z.object({
 const track = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(['guitar', 'bass', 'drums']),
+  type: z.enum(['guitar', 'bass', 'drums', 'other']),
   color: z.string(),
   tuning: z.object({ name: z.string(), strings: z.array(z.number().int()).max(8) }),
   capo: z.number().int().min(0).max(24),

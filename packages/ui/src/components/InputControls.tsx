@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isFretted } from '@riffroll/core';
 import { currentTrack, useStore } from '../store';
 import { enableMidi, selectMidiInput } from '../midiInput';
 import { ensureEngine } from '../audio-setup';
@@ -15,7 +16,7 @@ export function InputControls() {
 
   // live input follows the selected track
   useEffect(() => {
-    if (!live || !track || track.type === 'drums') return;
+    if (!live || !track || !isFretted(track.type)) return;
     let cancelled = false;
     void ensureEngine().then(async (e) => {
       if (cancelled || e.liveInputTrack === track.id) return;
@@ -81,7 +82,7 @@ export function InputControls() {
           MIDI
         </button>
       )}
-      {track && track.type !== 'drums' && (
+      {track && isFretted(track.type) && (
         <button
           aria-pressed={live}
           title="Play your guitar/bass (audio interface) through this track's amp and pedal"

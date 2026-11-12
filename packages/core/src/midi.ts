@@ -97,11 +97,14 @@ export function songToMidi(song: Song): Uint8Array {
         evs.push({ tick: (h.start + song.ppq / 8) * scale, order: 3, data: [0x80 | channel, key, 0] });
       }
     } else {
-      for (const c of toneChanges(t.pedal)) {
-        const { program, driven } = toneProgram(t, c.toneId);
-        evs.push({ tick: c.tick * scale, order: 1, data: [0xc0 | channel, program] });
-        evs.push({ tick: c.tick * scale, order: 2, data: [0xb0 | channel, 80, driven ? 127 : 0] });
-      }
+      if (t.type === 'other')
+        evs.push({ tick: 0, order: 1, data: [0xc0 | channel, 0] }); // piano
+      else
+        for (const c of toneChanges(t.pedal)) {
+          const { program, driven } = toneProgram(t, c.toneId);
+          evs.push({ tick: c.tick * scale, order: 1, data: [0xc0 | channel, program] });
+          evs.push({ tick: c.tick * scale, order: 2, data: [0xb0 | channel, 80, driven ? 127 : 0] });
+        }
       for (const n of t.notes) {
         evs.push({ tick: n.start * scale, order: 4, data: [0x90 | channel, n.pitch, n.velocity] });
         evs.push({ tick: (n.start + n.duration) * scale, order: 3, data: [0x80 | channel, n.pitch, 0] });
@@ -469,8 +472,15 @@ export function midiToSong(bytes: Uint8Array, title = 'Imported MIDI'): Song {
     const guitarProgram = program !== undefined && program >= 24 && program <= 31;
     const isBass =
       (program !== undefined && program >= 32 && program <= 39) || (!guitarProgram && lowest < 35);
-    const type = isBass ? 'bass' : 'guitar';
+    // a known non-guitar, non-bass program (piano, organ, strings, synth…) without string channels: "other"
+    const isOther = !perString && program !== undefined && (program < 24 || program > 39);
+    const type = isOther ? 'other' : isBass ? 'bass' : 'guitar';
     const t = makeTrack(type, own || `Track ${song.tracks.length + 1}`, color);
+    if (type === 'other') {
+      plans.push({ track: t, list, perString: false, options: [t.tuning] });
+      song.tracks.push(t);
+      continue;
+    }
     // overdriven / distortion / harmonics guitar programs start on the driven tone
     if (program !== undefined && program >= 29 && program <= 31) t.pedal.startTone = t.pedal.toggle[1];
     let options: Tuning[] = [];

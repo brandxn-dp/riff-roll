@@ -11,7 +11,7 @@ import {
   type DrumPiece,
   type Track,
 } from '@riffroll/core';
-import { barMap, currentTrack, songEnd, useStore } from '../store';
+import { ZOOMS_Y, barMap, currentTrack, songEnd, useStore } from '../store';
 import {
   COL,
   DISP,
@@ -54,6 +54,8 @@ const hitLane = (h: DrumHit) => `${h.piece}:${h.articulation}`;
 type Drag =
   | { mode: 'paint'; add: boolean; lane: number | null; done: Set<string> }
   | { mode: 'vel'; ids: string[] }
+  /** box select: ticks and grid-y of both corners; `base` = what was selected before (Shift adds to it) */
+  | { mode: 'box'; t0: number; g0: number; t1: number; g1: number; base: string[] }
   | { mode: 'loop'; from: number };
 
 export function DrumGrid() {
@@ -69,8 +71,9 @@ export function DrumGrid() {
   velRef.current = vel;
 
   const mobile = useStore((s) => s.layout === 'mobile');
+  const zoomY = useStore((s) => s.zoomY);
   LW = mobile ? 96 : 132;
-  RH = mobile ? 28 : 20;
+  RH = Math.max(10, Math.round((mobile ? 28 : 20) * ZOOMS_Y[zoomY]));
   useEffect(() => {
     const cv = cvRef.current!,
       sc = scRef.current!,
@@ -157,6 +160,17 @@ export function DrumGrid() {
       if (st.playhead != null) {
         c.fillStyle = COL.head;
         c.fillRect(xOf(st.playhead), gy0, 1.5, gridH);
+      }
+      if (drag?.mode === 'box') {
+        const x0 = xOf(Math.min(drag.t0, drag.t1)),
+          x1 = xOf(Math.max(drag.t0, drag.t1));
+        const y0 = gy0 + Math.min(drag.g0, drag.g1),
+          y1 = gy0 + Math.max(drag.g0, drag.g1);
+        c.fillStyle = 'rgba(230,232,238,0.08)';
+        c.fillRect(x0, y0, x1 - x0, y1 - y0);
+        c.strokeStyle = 'rgba(230,232,238,0.7)';
+        c.lineWidth = 1;
+        c.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0, y1 - y0);
       }
       // velocity strip for the selected lane
       const vy = gy0 + gridH + 8;
@@ -324,6 +338,19 @@ export function DrumGrid() {
       }
       if (p.lx < LW) {
         const li = laneAt(p.gy);
+        if (li != null && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+          // Shift+click a lane name: select every hit on it (Ctrl/Cmd as well: add to the selection)
+          const ids = t.hits.filter((h) => hitLane(h) === DRUM_LANES[li].id).map((h) => h.id);
+          const keep = e.ctrlKey || e.metaKey ? [...st.selection] : [];
+          st.select([...keep, ...ids], null);
+          st.set({
+            status: `${ids.length} ${DRUM_LANES[li].label} hit${ids.length === 1 ? '' : 's'} selected`,
+          });
+          setLane(li);
+          laneRef.current = li;
+          requestDraw();
+          return;
+        }
         if (li != null) {
           setLane(li);
           laneRef.current = li;
@@ -338,7 +365,10 @@ export function DrumGrid() {
         const near = t.hits.filter((h) => hitLane(h) === l.id && Math.abs(h.start - tick) * ppt() < 8);
         if (near.length) {
           st.begin('Drum velocity');
-          drag = { mode: 'vel', ids: near.map((h) => h.id) };
+          const ids = near.some((h) => st.selection.has(h.id))
+            ? t.hits.filter((h) => st.selection.has(h.id)).map((h) => h.id)
+            : near.map((h) => h.id);
+          drag = { mode: 'vel', ids };
           sc.setPointerCapture(e.pointerId);
           setVelAt(t, p.ly, drag.ids);
         }
@@ -347,6 +377,21 @@ export function DrumGrid() {
       const li = laneAt(p.gy);
       if (li == null) return;
       const tick = tickOf(p.lx);
+      if (e.button === 0 && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+        // box select, like the piano roll: Shift adds to the selection, Ctrl/Cmd starts a new one
+        drag = {
+          mode: 'box',
+          t0: tick,
+          g0: p.gy,
+          t1: tick,
+          g1: p.gy,
+          base: e.shiftKey ? [...st.selection] : [],
+        };
+        if (!e.shiftKey) st.select([], null);
+        sc.setPointerCapture(e.pointerId);
+        requestDraw();
+        return;
+      }
       const cell = floorTick(tick, st.snap);
       const has = t.hits.some(
         (h) => hitLane(h) === DRUM_LANES[li].id && h.start >= cell && h.start < cell + st.snap,
@@ -356,7 +401,7 @@ export function DrumGrid() {
       st.begin(add ? 'Paint drums' : 'Erase drums');
       setLane(li);
       laneRef.current = li;
-      drag = { mode: 'paint', add, lane: e.shiftKey ? null : li, done: new Set() };
+      drag = { mode: 'paint', add, lane: e.altKey ? null : li, done: new Set() };
       sc.setPointerCapture(e.pointerId);
       paintAt(t, li, tick, drag);
     };
@@ -367,6 +412,20 @@ export function DrumGrid() {
       if (!t) return;
       const p = pt(e);
       if (drag.mode === 'vel') return setVelAt(t, p.ly, drag.ids);
+      if (drag.mode === 'box') {
+        drag.t1 = tickOf(p.lx);
+        drag.g1 = p.gy;
+        const [ta, tb] = [Math.min(drag.t0, drag.t1), Math.max(drag.t0, drag.t1)];
+        const la = Math.max(0, Math.floor(Math.min(drag.g0, drag.g1) / RH));
+        const lb = Math.min(DRUM_LANES.length - 1, Math.floor(Math.max(drag.g0, drag.g1) / RH));
+        const lanes = new Set(DRUM_LANES.slice(la, lb + 1).map((l) => l.id));
+        const hit = t.hits
+          .filter((h) => lanes.has(hitLane(h)) && h.start + st.snap > ta && h.start <= tb)
+          .map((h) => h.id);
+        st.select([...drag.base, ...hit], null);
+        requestDraw();
+        return;
+      }
       if (drag.mode === 'loop') {
         const to = Math.max(0, Math.min(songEnd(st.song), snapTick(tickOf(p.lx), st.snap)));
         const [a, b] = drag.from < to ? [drag.from, to] : [to, drag.from];
@@ -403,8 +462,16 @@ export function DrumGrid() {
         paintAt(t, li, tickOf(p.lx), { mode: 'paint', add: !has, lane: li, done: new Set() });
         return;
       }
-      if (drag) useStore.getState().commit();
+      if (drag && drag.mode !== 'box') useStore.getState().commit();
+      const wasBox = drag?.mode === 'box';
       drag = null;
+      if (wasBox) {
+        const n = useStore.getState().selection.size;
+        useStore
+          .getState()
+          .set({ status: n ? `${n} hit${n === 1 ? '' : 's'} selected (Delete removes, Ctrl+C copies)` : '' });
+        requestDraw();
+      }
     };
     const onScroll = () => {
       useStore.getState().set({ scrollX: sc.scrollLeft });
@@ -416,6 +483,16 @@ export function DrumGrid() {
     sc.addEventListener('pointercancel', onUp);
     sc.addEventListener('contextmenu', (e) => e.preventDefault());
     sc.addEventListener('scroll', onScroll, { passive: true });
+    // Ctrl+wheel: horizontal zoom; Alt+wheel: vertical zoom (lane height)
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.altKey || e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const st = useStore.getState();
+      const d = (e.deltaY || e.deltaX) < 0 ? 1 : -1;
+      if (e.altKey) st.set({ zoomY: Math.max(0, Math.min(ZOOMS_Y.length - 1, st.zoomY + d)) });
+      else st.set({ zoom: Math.max(0, Math.min(7, st.zoom + d)) });
+    };
+    sc.addEventListener('wheel', onWheel, { passive: false });
     const unsub = useStore.subscribe((s, prev) => {
       if (s.song !== prev.song || s.zoom !== prev.zoom || s.scrollX !== prev.scrollX) layout();
       requestDraw();
@@ -437,7 +514,7 @@ export function DrumGrid() {
       sc.removeEventListener('pointercancel', onUp);
       sc.removeEventListener('scroll', onScroll);
     };
-  }, [mobile]);
+  }, [mobile, zoomY]);
 
   useEffect(() => {
     // redraw when the selected lane changes
@@ -538,6 +615,9 @@ function PatternTools({ lane, vel, setVel }: { lane: DrumLane; vel: number; setV
       <button className="ib danger" onClick={clearBar}>
         Clear bar
       </button>
+      <button className="ib" onClick={() => useStore.getState().set({ modal: 'velocity' })}>
+        Velocity…
+      </button>
       <span className="sep" />
       <label className="field">
         Velocity
@@ -545,8 +625,8 @@ function PatternTools({ lane, vel, setVel }: { lane: DrumLane; vel: number; setV
         <output>{vel}</output>
       </label>
       <span className="mute">
-        Click/drag to paint, right-drag to erase, Shift-drag paints across lanes. Click the ruler to pick the
-        bar.
+        Click/drag to paint, right-drag to erase, Alt-drag paints across lanes. Shift-drag selects hits;
+        Shift-click a drum name selects all of it. Click the ruler to pick the bar.
       </span>
     </div>
   );

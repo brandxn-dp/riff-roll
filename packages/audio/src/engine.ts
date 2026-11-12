@@ -1,5 +1,6 @@
 import {
   BarMap,
+  isFretted,
   TempoMap,
   laneById,
   laneForGm,
@@ -209,7 +210,7 @@ export class AudioEngine {
     await this.resume();
     this.stopAudition();
     const g = this.graphs.get(track.id);
-    if (!g || track.type === 'drums') return;
+    if (!g || !isFretted(track.type)) return;
     const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
     const bass = track.type === 'bass';
     const o = bass ? -12 : 0;
@@ -279,7 +280,7 @@ export class AudioEngine {
     this.stopLiveInput();
     await this.resume();
     const g = this.graphs.get(track.id);
-    if (!g || track.type === 'drums') throw new Error('Pick a guitar or bass track for live input.');
+    if (!g || !isFretted(track.type)) throw new Error('Pick a guitar or bass track for live input.');
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         deviceId: deviceId ? { exact: deviceId } : undefined,

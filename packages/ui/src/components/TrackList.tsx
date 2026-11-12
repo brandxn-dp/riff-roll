@@ -1,7 +1,8 @@
 import { TRACK_COLORS, addTrack, makeTrack, removeTrack, updateTrack, type TrackType } from '@riffroll/core';
 import { useStore } from '../store';
 
-const ICON: Record<TrackType, string> = { guitar: 'GTR', bass: 'BASS', drums: 'DRM' };
+const ICON: Record<TrackType, string> = { guitar: 'GTR', bass: 'BASS', drums: 'DRM', other: 'OTH' };
+const NAME: Record<TrackType, string> = { guitar: 'Guitar', bass: 'Bass', drums: 'Drums', other: 'Other' };
 
 export function TrackList() {
   const song = useStore((s) => s.song);
@@ -11,7 +12,7 @@ export function TrackList() {
 
   const add = (type: TrackType) => {
     const count = song.tracks.filter((t) => t.type === type).length + 1;
-    const name = type === 'drums' ? 'Drums' : `${type === 'guitar' ? 'Guitar' : 'Bass'} ${count}`;
+    const name = type === 'drums' ? 'Drums' : `${NAME[type]} ${count}`;
     const t = makeTrack(type, name, TRACK_COLORS[song.tracks.length % TRACK_COLORS.length]);
     st.exec(addTrack(t));
     st.set({ trackId: t.id, selection: new Set() });
@@ -85,7 +86,11 @@ export function TrackList() {
             </button>
           </div>
           <div className="tsub">
-            {t.type === 'drums' ? `${t.hits.length} hits` : `${t.tuning.name} · ${t.notes.length} notes`}
+            {t.type === 'drums'
+              ? `${t.hits.length} hits`
+              : t.type === 'other'
+                ? `${t.notes.length} notes`
+                : `${t.tuning.name} · ${t.notes.length} notes`}
           </div>
           {song.tracks.length > 1 && t.id === trackId && (
             <button
@@ -109,6 +114,12 @@ export function TrackList() {
         <button onClick={() => add('guitar')}>Guitar</button>
         <button onClick={() => add('bass')}>Bass</button>
         <button onClick={() => add('drums')}>Drums</button>
+        <button
+          onClick={() => add('other')}
+          title="Piano, synth, strings… (any instrument you add under Instruments)"
+        >
+          Other
+        </button>
       </div>
     </nav>
   );

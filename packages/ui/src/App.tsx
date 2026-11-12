@@ -17,6 +17,7 @@ import { Home } from './components/Home';
 import { ShareDialog } from './components/ShareDialog';
 import { UsersDialog } from './components/UsersDialog';
 import { AccountDialog } from './components/AccountDialog';
+import { VelocityDialog } from './components/VelocityDialog';
 import { DocBanner } from './components/DocBanner';
 import { goHome } from './files/actions';
 import { About } from './components/About';
@@ -62,6 +63,7 @@ export function App() {
       {modal === 'share' && <ShareDialog />}
       {modal === 'users' && <UsersDialog />}
       {modal === 'account' && <AccountDialog />}
+      {modal === 'velocity' && <VelocityDialog />}
       {modal === 'about' && <About />}
       {modal === 'tone' && <ToneEditor />}
       {modal === 'instruments' && <Instruments />}

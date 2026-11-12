@@ -10,6 +10,7 @@ import {
   type Tone,
   type ToneChain,
   type Track,
+  isFretted,
 } from '@riffroll/core';
 import { CABS } from '@riffroll/audio';
 import { currentTrack, useStore } from '../store';
@@ -269,10 +270,12 @@ export function ToneEditor() {
   const [sel, setSel] = useState<string | null>(null);
   const [abWith, setAbWith] = useState<string>('');
   const st = useStore.getState();
-  if (!track || track.type === 'drums')
+  if (!track || !isFretted(track.type))
     return (
       <Modal title="Tones">
-        <p className="mute">Select a guitar or bass track to edit its tones.</p>
+        <p className="mute">
+          Tones (amp, pedals, cab) are for guitar and bass tracks. Select one to edit its tones.
+        </p>
       </Modal>
     );
   const tone = track.tones.find((t) => t.id === sel) ?? track.tones[0];

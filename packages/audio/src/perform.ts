@@ -1,9 +1,11 @@
 import {
   BarMap,
+  isFretted,
   laneById,
   toneChanges,
   trackFingering,
   type Note,
+  type Position,
   type Song,
   type Track,
 } from '@riffroll/core';
@@ -64,13 +66,14 @@ export function scheduleTrack(
   st: TrackPerfState,
   human: Humanize,
 ) {
-  if (track.type !== 'drums') {
+  if (isFretted(track.type)) {
     for (const ch of toneChanges(track.pedal))
       if (ch.tick > 0 && ch.tick >= t0 && ch.tick < t1) graph.setTone(ch.toneId, timeOf(ch.tick));
   }
   if (!sampler) return;
   if (track.type === 'drums') return scheduleDrums(ctx, track, sampler, graph, t0, t1, timeOf, st, human);
-  const fing = trackFingering(track);
+  // strings matter for guitar and bass only (a new note on a string cuts the last one)
+  const fing = isFretted(track.type) ? trackFingering(track) : new Map<string, Position | null>();
   const notes = track.notes;
   for (let i = lb(notes, t0); i < notes.length && notes[i].start < t1; i++) {
     const n = notes[i];

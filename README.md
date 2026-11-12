@@ -45,6 +45,11 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Phones**: a dedicated touch layout is picked automatically on phones (tap to add notes, an on-screen fret
   pad for tab, bottom navigation, full controls in the ☰ sheet). Tablets keep the full layout with larger touch
   targets. Override it under File → Phone layout or ☰ → App → Layout.
+- **Other instruments**: add an **Other** track for piano, synth, strings and so on, and give it any SFZ
+  instrument you upload with the *Other* role (File → Instruments…). Piano roll and notation, no tab or amp.
+- **Editing helpers**: bulk velocity (set, scale, add, ramp, humanize) for selected notes or drum hits, Alt+drag to
+  draw velocities, separate horizontal and vertical zoom, Shift-drag box select and Shift+click a drum or key to
+  select all of it.
 - **Accounts and sharing** (Docker / Unraid server): everyone signs in and sees only their own songs plus songs
   shared with them. Share a song **view only** (they can open, play and save their own copy) or **can edit**
   (their changes save into your song; if two people save over each other, the second one is asked to reload or

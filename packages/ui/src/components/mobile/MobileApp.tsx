@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { TRACK_COLORS, addTrack, makeTrack, type TrackType } from '@riffroll/core';
+import { TRACK_COLORS, addTrack, isFretted, makeTrack, type TrackType } from '@riffroll/core';
 import { currentTrack, useStore, type MainView } from '../../store';
 import { togglePlay } from '../../transport';
 import { PianoRoll } from '../../views/PianoRoll';
@@ -79,7 +79,8 @@ function TrackChips() {
   }, [trackId]);
   const add = (type: TrackType) => {
     const count = tracks.filter((t) => t.type === type).length + 1;
-    const name = type === 'drums' ? 'Drums' : `${type === 'guitar' ? 'Guitar' : 'Bass'} ${count}`;
+    const label = { guitar: 'Guitar', bass: 'Bass', drums: 'Drums', other: 'Other' }[type];
+    const name = type === 'drums' ? 'Drums' : `${label} ${count}`;
     const t = makeTrack(type, name, TRACK_COLORS[tracks.length % TRACK_COLORS.length]);
     st.exec(addTrack(t));
     st.set({ trackId: t.id, selection: new Set(), tabCursor: null });
@@ -115,6 +116,7 @@ function TrackChips() {
         <option value="guitar">Guitar</option>
         <option value="bass">Bass</option>
         <option value="drums">Drums</option>
+        <option value="other">Other (piano, synth…)</option>
       </select>
     </nav>
   );
@@ -123,12 +125,13 @@ function TrackChips() {
 function BottomNav() {
   const view = useStore((s) => s.view);
   const type = useStore((s) => currentTrack(s)?.type);
+  const fretted = !!type && isFretted(type);
   const st = useStore.getState();
   const items: { label: string; view?: MainView; action?: () => void; icon: string }[] = [
     { label: type === 'drums' ? 'Drums' : 'Edit', view: type === 'drums' ? 'drums' : 'split', icon: '▤' },
-    ...(type === 'drums' ? [] : [{ label: 'Tab', view: 'tab' as MainView, icon: '≡' }]),
+    ...(fretted ? [{ label: 'Tab', view: 'tab' as MainView, icon: '≡' }] : []),
     { label: 'Score', view: 'notation', icon: '♪' },
-    ...(type === 'drums' ? [] : [{ label: 'Tones', action: () => st.set({ modal: 'tone' }), icon: '◉' }]),
+    ...(fretted ? [{ label: 'Tones', action: () => st.set({ modal: 'tone' }), icon: '◉' }] : []),
     { label: 'Mixer', action: () => st.set({ modal: 'mixer' }), icon: '⫶' },
   ];
   return (
@@ -259,7 +262,7 @@ export function MobileApp({ modals }: { modals: ReactNode }) {
   const view = useStore((s) => s.view);
   const type = useStore((s) => currentTrack(s)?.type);
   const tabCursor = useStore((s) => s.tabCursor);
-  const editingTab = !!tabCursor && type !== 'drums' && (view === 'split' || view === 'tab');
+  const editingTab = !!tabCursor && !!type && isFretted(type) && (view === 'split' || view === 'tab');
   return (
     <div className="app mobile">
       <TopBar />

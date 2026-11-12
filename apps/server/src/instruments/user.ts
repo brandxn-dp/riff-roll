@@ -11,7 +11,7 @@ const ALLOWED = /\.(sfz|wav|flac|ogg|txt|md)$/i;
 
 export interface UserInstrumentInfo {
   name: string;
-  role: 'guitar' | 'bass' | 'drums';
+  role: 'guitar' | 'bass' | 'drums' | 'other';
   /** main SFZ path relative to the instrument folder */
   sfz: string;
   author?: string;
@@ -39,7 +39,7 @@ export async function putUserFile(root: string, id: string, rel: string, data: U
 export async function finalizeUserInstrument(root: string, id: string, info: UserInstrumentInfo) {
   const sfzFile = userFilePath(root, id, info.sfz);
   if (!existsSync(sfzFile)) throw new Error(`missing ${info.sfz}`);
-  if (!['guitar', 'bass', 'drums'].includes(info.role)) throw new Error('bad role');
+  if (!['guitar', 'bass', 'drums', 'other'].includes(info.role)) throw new Error('bad role');
   const descriptor = {
     id,
     name: String(info.name || id).slice(0, 80),

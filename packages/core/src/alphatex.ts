@@ -7,7 +7,7 @@ import { trackFingering } from './derived';
 import { DRUM_LANES, laneById } from './drums';
 import { pedalSegments } from './pedal';
 import { rhythmize, type RBar, type RBeat } from './rhythm';
-import { pitchName, type Note, type Song, type Track } from './model';
+import { isFretted, pitchName, type Note, type Song, type Track } from './model';
 import { BarMap } from './timesig';
 
 const q = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -41,7 +41,7 @@ function bendTex(curve: { pos: number; value: number }[]): string {
   return curve.map((p) => Math.round(p.value * 2)).join(' ');
 }
 
-const GM_PROGRAM: Record<Track['type'], number> = { guitar: 27, bass: 33, drums: 0 };
+const GM_PROGRAM: Record<Track['type'], number> = { guitar: 27, bass: 33, drums: 0, other: 0 };
 
 /** GM program that stands for a tone (clean 27 / crunch 29 / distortion 30; bass 33 / 34). */
 export function toneProgram(track: Track, toneId: string): number {
@@ -128,7 +128,14 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
 
   tracks.forEach((track, ti) => {
     lines.push(`\\track ${q(track.name)}`);
-    if (track.type === 'drums') {
+    if (track.type === 'other') {
+      // no strings: a plain staff with note names, bass clef when the part sits low
+      lines.push('\\staff {score}');
+      lines.push('\\tuning piano');
+      lines.push(`\\instrument ${GM_PROGRAM.other}`);
+      const ps = track.notes.map((n) => n.pitch).sort((a, b) => a - b);
+      if (ps.length && ps[ps.length >> 1] < 57) lines.push('\\clef F4');
+    } else if (track.type === 'drums') {
       lines.push('\\staff {score}');
       lines.push('\\instrument percussion');
       lines.push('\\articulation defaults');
@@ -141,13 +148,12 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
         `\\instrument ${track.tones.length ? toneProgram(track, track.pedal.startTone) : GM_PROGRAM[track.type]}`,
       );
     }
-    const fing = track.type === 'drums' ? new Map() : trackFingering(track);
+    const fing = isFretted(track.type) ? trackFingering(track) : new Map();
     const nStr = track.tuning.strings.length;
     // stomp markers: text on the first beat at or after each stomp
-    const stomps =
-      track.type === 'drums'
-        ? []
-        : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
+    const stomps = !isFretted(track.type)
+      ? []
+      : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
     const toneName = (id: string) => track.tones.find((t) => t.id === id)?.name ?? '';
     let si = 0;
 
@@ -167,13 +173,15 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
         } as unknown as Note;
       });
       bars = rhythmize(events, song);
+    } else if (track.type === 'other') {
+      bars = rhythmize(track.notes, song);
     } else {
       bars = rhythmize(
         track.notes.filter((n) => fing.get(n.id)),
         song,
       );
     }
-    const origins = track.type === 'drums' ? new Set<string>() : hammerOrigins(track, fing);
+    const origins = isFretted(track.type) ? hammerOrigins(track, fing) : new Set<string>();
     let prevSig = '';
     const barTex: string[] = [];
     for (const bar of bars) {
@@ -226,6 +234,12 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
                 }),
             ),
           ];
+        } else if (track.type === 'other') {
+          notesTex = b.notes.map(({ event, tied }) => {
+            const fx = noteEffects(event, origins, tied);
+            if (tied) fx.push('t');
+            return `${pitchName(event.pitch)}${fx.length ? `{${fx.join(' ')}}` : ''}`;
+          });
         } else {
           notesTex = b.notes.map(({ event, tied }) => {
             const p = fing.get(event.id)!;

@@ -3,7 +3,7 @@
  * step per take). When stopped, playing a key enters a note at the cursor and advances by the note length (step
  * entry; keys held together form a chord). Notes are always heard through the track's current tone.
  */
-import { NoteRecorder, addHits, addNotes, laneForGm, newId, type DrumHit } from '@riffroll/core';
+import { NoteRecorder, addHits, addNotes, isFretted, laneForGm, newId, type DrumHit } from '@riffroll/core';
 import { currentTrack, useStore } from './store';
 import { ensureEngine, getEngine } from './audio-setup';
 
@@ -86,7 +86,7 @@ function noteOn(pitch: number, velocity: number, channel: number) {
       recording = true;
       recorder = new NoteRecorder({
         quantize: st.midi.quantize ? st.snap : 0,
-        stringCount: st.midi.guitarChannels && t.type !== 'drums' ? t.tuning.strings.length : undefined,
+        stringCount: st.midi.guitarChannels && isFretted(t.type) ? t.tuning.strings.length : undefined,
       });
       st.begin('Record take');
     }

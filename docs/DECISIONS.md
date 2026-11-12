@@ -269,3 +269,23 @@ clearly use). Strums are lined up on their first note, blips become dead notes w
   collision on save still falls back to a new id).
 - **Opening a song** doesn't count as an edit (no save, no version bump); "recently opened" is recorded by the
   server when a song is loaded, or in localStorage in single-user mode.
+
+## "Other" instrument tracks, bulk velocity, vertical zoom, drum selection
+
+- **Other tracks** (`type: 'other'`) are for anything pitched without strings: piano, synth, strings, organ. They
+  have no tuning, tab, fingering, amp or pedal: piano roll + velocity lane, a score-only staff (alphaTex
+  `\tuning piano` with note names, bass clef when the part sits low), one MusicXML staff, GM program 0 in MIDI.
+  Audio goes straight to the mixer with a little reverb. The sound is any instrument uploaded with the new
+  "Other" role; with none installed a synthesised electric-piano tone plays so the track is never silent. MIDI
+  files with a non-guitar, non-bass program (and no string-per-channel layout) and Guitar Pro tracks without a
+  tab tuning and a non-guitar program now import as Other tracks instead of being forced onto a guitar.
+- **Bulk velocity**: one pure function (`editVelocities`: set / scale / add / ramp / humanize, chords share a
+  ramp value) behind a dialog that works on the selection, or the whole track when nothing is selected, as one
+  undo step. Alt+drag in the velocity lane draws a line through the stems. In the drum grid, dragging a selected
+  hit's stem moves every selected hit.
+- **Zoom**: horizontal zoom already existed; vertical zoom (row/lane height ×0.6–×2.5) is separate state shared
+  by the piano roll and drum grid, keeping the middle pitch in view. Ctrl+wheel = horizontal, Alt+wheel =
+  vertical (Shift+wheel is horizontal scrolling in browsers, so it can't be used).
+- **Drum grid selection**: Shift-drag now box-selects (adding to the selection) and Ctrl-drag starts a new
+  selection, matching the piano roll; painting across lanes moved from Shift-drag to Alt-drag. Shift+click a drum
+  name (or a piano-roll key) selects every hit (note) of it; Ctrl+click adds.

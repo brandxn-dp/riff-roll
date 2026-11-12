@@ -6,13 +6,14 @@ import {
   pitchName,
   removeNotes,
   setLoop,
+  isFretted,
   stringColor,
   trackFingering,
   updateNotes,
   type Note,
   type Track,
 } from '@riffroll/core';
-import { barMap, currentTrack, songEnd, useStore } from '../store';
+import { ZOOMS_Y, barMap, currentTrack, songEnd, useStore } from '../store';
 import {
   BODY,
   COL,
@@ -50,8 +51,9 @@ const EDGE = 7; // px: grab zone for resizing at a note's right edge
 /** Pitch range shown for a track: the whole playable range plus any out-of-range notes. */
 export function pitchRange(t: Track): { lo: number; hi: number } {
   const s = t.tuning.strings;
-  let lo = (s[0] ?? 40) + t.capo;
-  let hi = (s[s.length - 1] ?? 64) + t.maxFret;
+  // guitar/bass: the instrument's range; other (piano, synth…): C2–C7 plus whatever the notes need
+  let lo = s.length ? s[0] + t.capo : 36;
+  let hi = s.length ? s[s.length - 1] + t.maxFret : 96;
   for (const n of t.notes) {
     if (n.pitch < lo) lo = n.pitch;
     if (n.pitch > hi) hi = n.pitch;
@@ -80,7 +82,11 @@ export function PianoRoll() {
   const sizerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    RH = useStore.getState().layout === 'mobile' ? 24 : 18;
+    const rowH = () => {
+      const st = useStore.getState();
+      return Math.max(8, Math.round((st.layout === 'mobile' ? 24 : 18) * ZOOMS_Y[st.zoomY]));
+    };
+    RH = rowH();
     const wrap = wrapRef.current!,
       cv = cvRef.current!,
       sc = scRef.current!,
@@ -100,6 +106,12 @@ export function PianoRoll() {
       const t = currentTrack(st);
       if (!t) return;
       const nr = pitchRange(t);
+      // vertical zoom: keep the pitch in the middle of the view where it was
+      const newRH = rowH();
+      const viewH = sc.clientHeight - RULER_H;
+      const midPitch = range.hi - (sc.scrollTop + viewH / 2) / RH;
+      const zoomedY = newRH !== RH;
+      RH = newRH;
       const w = KEYS_W + songEnd(st.song) * pxPerTick(st.zoom) + 40;
       sizer.style.width = w + 'px';
       sizer.style.height = RULER_H + (nr.hi - nr.lo + 1) * RH + 'px';
@@ -109,8 +121,11 @@ export function PianoRoll() {
         // scroll so the low strings are visible at the bottom, like the prototype
         sc.scrollTop = Math.max(
           0,
-          (nr.hi - (t.tuning.strings[0] ?? 40) + 1) * RH + RULER_H - sc.clientHeight + 4,
+          (nr.hi - (t.tuning.strings[0] ?? 48) + 1) * RH + RULER_H - sc.clientHeight + 4,
         );
+      } else if (zoomedY) {
+        range = nr;
+        sc.scrollTop = Math.max(0, (range.hi - midPitch) * RH - viewH / 2);
       } else if (nr.lo !== range.lo || nr.hi !== range.hi) {
         const dy = (nr.hi - range.hi) * RH;
         range = nr;
@@ -133,7 +148,8 @@ export function PianoRoll() {
       const end = songEnd(st.song);
       const gridW = end * a.ppt;
       const gx0 = tickToX(a, 0);
-      const fing = trackFingering(t);
+      const fretted = isFretted(t.type);
+      const fing = fretted ? trackFingering(t) : new Map<string, null>();
       const nStr = t.tuning.strings.length;
 
       c.fillStyle = COL.bg;
@@ -171,7 +187,8 @@ export function PianoRoll() {
           nh = RH - 2;
         if (y > h || y + nh < RULER_H) continue;
         const pos = fing.get(n.id);
-        const col = pos ? stringColor(t.type, nStr, pos.string) : COL.unplayable;
+        // guitar/bass notes take their string's colour; other instruments the track colour
+        const col = !fretted ? t.color : pos ? stringColor(t.type, nStr, pos.string) : COL.unplayable;
         c.globalAlpha = 0.55 + (0.45 * n.velocity) / 127;
         c.fillStyle = col;
         rr(c, x, y, nw, nh, 3);
@@ -208,7 +225,8 @@ export function PianoRoll() {
           c.stroke();
         }
         // fret number + note name, shrinking gracefully for short notes
-        const txt = pos ? String(pos.fret) : '✕';
+        // guitar/bass: fret number (✕ = no string reaches it); other instruments: the note name
+        const txt = !fretted ? pitchName(n.pitch) : pos ? String(pos.fret) : '✕';
         c.font = '600 11px ' + MONO;
         let tw = c.measureText(txt).width;
         if (tw > nw - 4) {
@@ -216,7 +234,7 @@ export function PianoRoll() {
           tw = c.measureText(txt).width;
         }
         if (tw <= nw - 3) {
-          c.fillStyle = pos ? '#15171c' : '#c9ccd4';
+          c.fillStyle = pos || !fretted ? '#15171c' : '#c9ccd4';
           c.fillText(txt, x + (nw < 16 ? (nw - tw) / 2 : 4), y + nh / 2 + 0.5);
           if (pos) {
             const nm = pitchClassName(n.pitch);
@@ -273,7 +291,7 @@ export function PianoRoll() {
         c.fillStyle = COL.ink;
         c.fillText(sec.name.toUpperCase(), x + 27, RULER_H / 2 - 1);
       }
-      if (t.type !== 'drums') {
+      if (isFretted(t.type)) {
         for (const sg of pedalSegments(t.pedal, end)) {
           const tone = toneOf(t, sg.toneId);
           c.fillStyle = tone?.color ?? COL.clean;
@@ -417,7 +435,17 @@ export function PianoRoll() {
         return;
       }
       if (p.lx < KEYS_W && p.ly >= RULER_H) {
-        preview(t, pitchAt(p.gy), st.cursor, st.noteLen);
+        const pitch = pitchAt(p.gy);
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+          // Shift+click a key: select every note of that pitch (Ctrl/Cmd as well: add to the selection)
+          const ids = t.notes.filter((n) => n.pitch === pitch).map((n) => n.id);
+          const keep = e.ctrlKey || e.metaKey ? [...st.selection] : [];
+          st.select([...keep, ...ids], null);
+          st.set({ status: `${ids.length} × ${pitchName(pitch)} selected` });
+          requestDraw();
+          return;
+        }
+        preview(t, pitch, st.cursor, st.noteLen);
         return;
       }
       if (!inGrid(p)) return;
@@ -614,6 +642,15 @@ export function PianoRoll() {
     };
 
     const onWheel = (e: WheelEvent) => {
+      if (e.altKey) {
+        // Alt+wheel: vertical zoom (taller / shorter rows)
+        e.preventDefault();
+        const st = useStore.getState();
+        const d = (e.deltaY || e.deltaX) < 0 ? 1 : -1;
+        const z = Math.max(0, Math.min(ZOOMS_Y.length - 1, st.zoomY + d));
+        if (z !== st.zoomY) st.set({ zoomY: z });
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
       const st = useStore.getState();
@@ -643,6 +680,7 @@ export function PianoRoll() {
       if (
         s.song !== prev.song ||
         s.zoom !== prev.zoom ||
+        s.zoomY !== prev.zoomY ||
         s.trackId !== prev.trackId ||
         s.scrollX !== prev.scrollX
       )

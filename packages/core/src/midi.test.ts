@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { midiToSong } from './midi';
+import { midiToSong, songToMidi } from './midi';
 import { trackFingering } from './derived';
 
 // --- a tiny MIDI writer for test files (960 PPQ) ---
@@ -186,5 +186,24 @@ describe('MIDI import: other files', () => {
     const song = midiToSong(midi([g]));
     expect(song.tracks[0].type).toBe('guitar');
     expect(song.tracks[0].tuning.name).toBe('Drop D');
+  });
+});
+
+describe('MIDI import: other instruments', () => {
+  it('a piano program becomes an "other" track with every note kept', () => {
+    const piano = [
+      [0, 0xc0, 0] as Ev,
+      ...note(0, 960, 0, 48),
+      ...note(0, 960, 0, 64),
+      ...note(960, 480, 0, 72),
+    ];
+    const song = midiToSong(midi([piano]));
+    const t = song.tracks[0];
+    expect(t.type).toBe('other');
+    expect(t.tones).toEqual([]);
+    expect(t.notes.map((n) => n.pitch)).toEqual([48, 64, 72]);
+    // and back out: it exports with a piano program, not a guitar one
+    const back = midiToSong(songToMidi(song));
+    expect(back.tracks[0].type).toBe('other');
   });
 });

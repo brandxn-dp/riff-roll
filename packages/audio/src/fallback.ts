@@ -7,6 +7,28 @@ import { encodeWav } from './wav';
 
 const SR = 44100;
 
+/** Fallback for "other" tracks when no instrument is installed: a soft electric-piano-like tone. */
+function keysTone(freq: number): Float32Array {
+  const seconds = 2.5;
+  const n = Math.floor(SR * seconds);
+  const out = new Float32Array(n);
+  const partials = [
+    [1, 1, 1.2],
+    [2, 0.35, 2.2],
+    [3, 0.12, 3.5],
+    [4, 0.06, 5],
+  ];
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let y = 0;
+    for (const [h, a, d] of partials)
+      if (freq * h < SR / 2) y += a * Math.sin(2 * Math.PI * freq * h * t) * Math.exp(-d * t);
+    const attack = Math.min(1, t / 0.004);
+    out[i] = 0.35 * y * attack;
+  }
+  return out;
+}
+
 function pluck(freq: number, seconds: number, bright: number, seed: number): Float32Array {
   const n = Math.floor(SR * seconds);
   const out = new Float32Array(n);
@@ -39,8 +61,8 @@ const keys = (lo: number, hi: number, step: number) => {
   return out;
 };
 
-export function fallbackSfz(kind: 'guitar' | 'bass'): string {
-  const ks = kind === 'bass' ? keys(23, 67, 4) : keys(34, 98, 4);
+export function fallbackSfz(kind: 'guitar' | 'bass' | 'keys'): string {
+  const ks = kind === 'bass' ? keys(23, 67, 4) : kind === 'keys' ? keys(21, 108, 3) : keys(34, 98, 4);
   return ks
     .map(
       (k) =>
@@ -55,10 +77,11 @@ export async function fallbackFetch(url: string): Promise<ArrayBuffer> {
     const [kind, p] = DRUM_KEYS[Number(d[1])] ?? ['snare', 0];
     return encodeWav([drumSample(kind, p)], SR, 16).buffer as ArrayBuffer;
   }
-  const m = /ks\/(guitar|bass)-(\d+)\.wav$/.exec(decodeURIComponent(url));
+  const m = /ks\/(guitar|bass|keys)-(\d+)\.wav$/.exec(decodeURIComponent(url));
   if (!m) throw new Error('not a fallback sample: ' + url);
   const key = Number(m[2]);
   const freq = 440 * Math.pow(2, (key - 69) / 12);
+  if (m[1] === 'keys') return encodeWav([keysTone(freq)], SR, 16).buffer as ArrayBuffer;
   const data = pluck(freq, m[1] === 'bass' ? 3 : 2.5, m[1] === 'bass' ? 0.35 : 0.6, key * 7919 + 17);
   return encodeWav([data], SR, 16).buffer as ArrayBuffer;
 }

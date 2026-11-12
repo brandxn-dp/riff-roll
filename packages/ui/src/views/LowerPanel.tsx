@@ -13,6 +13,7 @@ import {
   type Note,
   type Stomp,
   type Track,
+  isFretted,
 } from '@riffroll/core';
 import { currentTrack, songEnd, useStore } from '../store';
 import {
@@ -58,6 +59,8 @@ export function lowerPanelHeight(strings: number, showVelocity = true) {
 
 type Drag =
   | { mode: 'vel'; ids: string[]; y0: number }
+  /** Alt+drag in the velocity lane: draw a line; notes under it take its height */
+  | { mode: 'vline'; x0: number; y0: number; x1: number; y1: number }
   | { mode: 'stomp'; id: string; x0: number; moved: boolean; origTick: number };
 
 interface Menu {
@@ -136,7 +139,7 @@ export function LowerPanel({
       const end = songEnd(st.song);
       const gx0 = tickToX(a, 0);
       const n = t.tuning.strings.length;
-      const fing = trackFingering(t);
+      const fing = isFretted(t.type) ? trackFingering(t) : new Map<string, null>();
       c.fillStyle = COL.bg;
       c.fillRect(0, 0, w, h);
       c.save();
@@ -157,13 +160,25 @@ export function LowerPanel({
           const x = tickToX(a, nt.start) + 1;
           const vh = (nt.velocity / 127) * (VEL_H - 4);
           const pos = fing.get(nt.id);
-          const col = pos ? stringColor(t.type, n, pos.string) : COL.unplayable;
+          const col = !isFretted(t.type)
+            ? t.color
+            : pos
+              ? stringColor(t.type, n, pos.string)
+              : COL.unplayable;
           const sel = st.selection.has(nt.id);
           c.fillStyle = sel ? COL.head : col;
           c.globalAlpha = sel ? 1 : 0.8;
           c.fillRect(x, VEL_Y + VEL_H - vh, 2, vh);
           c.fillRect(x - 2, VEL_Y + VEL_H - vh, 6, 2);
           c.globalAlpha = 1;
+        }
+        if (drag?.mode === 'vline') {
+          c.strokeStyle = COL.head;
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(drag.x0, drag.y0);
+          c.lineTo(drag.x1, drag.y1);
+          c.stroke();
         }
       }
 
@@ -355,6 +370,13 @@ export function LowerPanel({
         return;
       }
       if (showVelocity && ly >= VEL_Y && ly <= VEL_Y + VEL_H && lx >= KEYS_W) {
+        if (e.altKey && e.button === 0) {
+          // Alt+drag: draw a velocity line (a ramp) across the notes under it
+          st.begin('Draw velocity');
+          drag = { mode: 'vline', x0: lx, y0: ly, x1: lx, y1: ly };
+          sc.setPointerCapture(e.pointerId);
+          return;
+        }
         // velocity: drag the stem nearest the pointer (or every selected note if it is selected)
         const a = axis();
         let best: Note | null = null,
@@ -377,6 +399,24 @@ export function LowerPanel({
       }
       if (showTab && ly >= tabY - 10 && lx >= KEYS_W) tabClick(t, lx, ly);
     };
+
+    /** Notes between the line's ends (only selected ones if there is a selection) take the line's height. */
+    function drawVelLine(t: Track, d: Extract<Drag, { mode: 'vline' }>) {
+      const st = useStore.getState();
+      const a = axis();
+      const [xa, ya, xb, yb] = d.x0 <= d.x1 ? [d.x0, d.y0, d.x1, d.y1] : [d.x1, d.y1, d.x0, d.y0];
+      const ch: Record<string, Partial<Note>> = {};
+      for (const nt of t.notes) {
+        if (st.selection.size && !st.selection.has(nt.id)) continue;
+        const x = tickToX(a, nt.start) + 2;
+        if (x < xa - 1 || x > xb + 1) continue;
+        const y = xb === xa ? yb : ya + ((x - xa) / (xb - xa)) * (yb - ya);
+        const v = Math.round(Math.max(1, Math.min(127, ((VEL_Y + VEL_H - y) / (VEL_H - 4)) * 127)));
+        if (v !== nt.velocity) ch[nt.id] = { velocity: v };
+      }
+      if (Object.keys(ch).length) st.exec(updateNotes(t.id, ch, 'Draw velocity'));
+      requestDraw();
+    }
 
     function setVel(t: Track, ids: string[], ly: number) {
       const v = Math.round(Math.max(1, Math.min(127, ((VEL_Y + VEL_H - ly) / (VEL_H - 4)) * 127)));
@@ -414,7 +454,7 @@ export function LowerPanel({
       const line = Math.max(0, Math.min(n - 1, Math.round((ly - tabY) / LS)));
       const s = n - 1 - line;
       const tick = xToTick(a, lx);
-      const fing = trackFingering(t);
+      const fing = isFretted(t.type) ? trackFingering(t) : new Map<string, null>();
       const hit = t.notes.find((nt) => {
         const p = fing.get(nt.id);
         return p && p.string === s && tick >= nt.start - 60 && tick < nt.start + nt.duration;
@@ -431,7 +471,11 @@ export function LowerPanel({
       if (!t) return;
       const { lx, ly } = local(e);
       if (drag.mode === 'vel') setVel(t, drag.ids, ly);
-      else {
+      else if (drag.mode === 'vline') {
+        drag.x1 = lx;
+        drag.y1 = Math.max(VEL_Y, Math.min(VEL_Y + VEL_H, ly));
+        drawVelLine(t, drag);
+      } else {
         if (Math.abs(lx - drag.x0) > 3) drag.moved = true;
         if (!drag.moved) return;
         const a = axis();
@@ -447,7 +491,7 @@ export function LowerPanel({
       const st = useStore.getState();
       const t = currentTrack(st);
       if (e.pointerType === 'touch') {
-        if (tap && tap.id === e.pointerId && t && t.type !== 'drums') {
+        if (tap && tap.id === e.pointerId && t && isFretted(t.type)) {
           const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y);
           if (moved < 10 && Math.abs(sc.scrollLeft - tap.sl) < 4) {
             const { lx, ly } = local(e);

@@ -49,13 +49,14 @@ export function Inspector() {
   const snap = useStore((s) => s.snap);
   if (!track || track.type === 'drums') return null;
   const st = useStore.getState();
-  const fing = trackFingering(track);
+  const other = track.type === 'other';
+  const fing = other ? new Map<string, null>() : trackFingering(track);
   const sel = track.notes.filter((n) => selection.has(n.id));
   const exec = st.exec;
   const end = songEnd(song);
 
   if (!sel.length) {
-    const bad = track.notes.filter((n) => !fing.get(n.id)).length;
+    const bad = other ? 0 : track.notes.filter((n) => !fing.get(n.id)).length;
     return (
       <div className="insp">
         <div className="hint">
@@ -65,7 +66,17 @@ export function Inspector() {
               {track.capo ? ` (capo ${track.capo})` : ''}
             </span>
           )}
-          {mobile ? (
+          {other ? (
+            <>
+              {mobile ? 'Tap' : 'Click'} the grid to add a note. Pick this track's sound in the Mixer; add
+              your own (piano, synth…) under Instruments as an “Other” instrument.{' '}
+              {!mobile && (
+                <>
+                  Shift+click a key to select every note of that pitch. Press <kbd>?</kbd> for shortcuts.
+                </>
+              )}
+            </>
+          ) : mobile ? (
             <>
               Tap the grid to add a note, tap a note to edit it. Tap the pedal lane for a stomp, tap a tab
               line to type frets.
@@ -78,7 +89,7 @@ export function Inspector() {
             </>
           )}
         </div>
-        <Legend t={track} />
+        {!other && <Legend t={track} />}
       </div>
     );
   }
@@ -146,11 +157,83 @@ export function Inspector() {
           >
             Delete
           </button>
+          <button className="ib" onClick={() => st.set({ modal: 'velocity' })}>
+            Velocity…
+          </button>
           <button className="ib" onClick={() => st.select([])}>
             Done
           </button>
         </div>
-        <Techs track={track} notes={sel} mobile={mobile} />
+        {track.type !== 'other' && <Techs track={track} notes={sel} mobile={mobile} />}
+      </div>
+    );
+  }
+
+  if (other) {
+    const n = sel[0];
+    const one = (ch: Partial<Note>, label: string) => exec(updateNotes(track.id, { [n.id]: ch }, label));
+    return (
+      <div className="insp">
+        <div className="selinfo">
+          <span className="sw" style={{ ['--c' as string]: track.color }} />
+          <strong>{pitchName(n.pitch)}</strong>
+          <span className="mute">vel {n.velocity}</span>
+        </div>
+        <div className="row">
+          <button
+            className="ib"
+            onClick={() => one({ start: Math.max(0, n.start - snap) }, 'Move note')}
+            aria-label="Move earlier"
+          >
+            ◀
+          </button>
+          <button
+            className="ib"
+            onClick={() => one({ start: Math.min(end - n.duration, n.start + snap) }, 'Move note')}
+            aria-label="Move later"
+          >
+            ▶
+          </button>
+          <span className="sep" />
+          <button
+            className="ib"
+            aria-label="Semitone down"
+            onClick={() => {
+              one({ pitch: n.pitch - 1 }, 'Transpose');
+              preview(track, n.pitch - 1, n.start, n.duration);
+            }}
+          >
+            ▼
+          </button>
+          <button
+            className="ib"
+            aria-label="Semitone up"
+            onClick={() => {
+              one({ pitch: n.pitch + 1 }, 'Transpose');
+              preview(track, n.pitch + 1, n.start, n.duration);
+            }}
+          >
+            ▲
+          </button>
+          <span className="sep" />
+          <label className="field">
+            Velocity
+            <input
+              type="range"
+              min={1}
+              max={127}
+              value={n.velocity}
+              onChange={(e) => one({ velocity: Number(e.target.value) }, 'Change velocity')}
+            />
+          </label>
+          <span className="sep" />
+          <button className="ib danger" onClick={() => exec(removeNotes(track.id, [n.id]))}>
+            Delete
+          </button>
+          <button className="ib" onClick={() => st.select([])}>
+            Done
+          </button>
+        </div>
       </div>
     );
   }

@@ -7,7 +7,7 @@ import { laneById } from './drums';
 import { pedalSegments } from './pedal';
 import { rhythmize, type RBeat } from './rhythm';
 import { BarMap } from './timesig';
-import type { Note, Song, Track } from './model';
+import { isFretted, type Note, type Song, type Track } from './model';
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -51,7 +51,9 @@ function beatTiming(b: RBeat) {
 
 function partXml(song: Song, track: Track, pid: string): string {
   const bm = new BarMap(song.timeSigs, song.ppq);
-  const fing = track.type === 'drums' ? null : trackFingering(track);
+  const fing = isFretted(track.type) ? trackFingering(track) : null;
+  // drums and other (piano, synth…) tracks get one staff; guitar and bass get notation + tab
+  const single = !isFretted(track.type);
   const n = track.tuning.strings.length;
   const events: (Note & { gm?: number })[] =
     track.type === 'drums'
@@ -69,10 +71,11 @@ function partXml(song: Song, track: Track, pid: string): string {
             };
           });
         })()
-      : track.notes.filter((x) => fing!.get(x.id));
+      : track.type === 'other'
+        ? track.notes
+        : track.notes.filter((x) => fing!.get(x.id));
   const bars = rhythmize(events, song);
-  const stomps =
-    track.type === 'drums' ? [] : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
+  const stomps = single ? [] : pedalSegments(track.pedal, bm.barStart(song.bars)).filter((s) => s.stompId);
   const toneName = (id: string) => track.tones.find((t) => t.id === id)?.name ?? '';
   const out: string[] = [`<part id="${pid}">`];
   let prevSig = '';
@@ -90,7 +93,14 @@ function partXml(song: Song, track: Track, pid: string): string {
       out.push(`<time><beats>${bar.num}</beats><beat-type>${bar.den}</beat-type></time>`);
       if (bar.index === 0) {
         if (track.type === 'drums') out.push('<clef><sign>percussion</sign></clef>');
-        else {
+        else if (track.type === 'other') {
+          const ps = track.notes.map((x) => x.pitch).sort((a, b) => a - b);
+          out.push(
+            ps.length && ps[ps.length >> 1] < 57
+              ? '<clef><sign>F</sign><line>4</line></clef>'
+              : '<clef><sign>G</sign><line>2</line></clef>',
+          );
+        } else {
           out.push('<staves>2</staves>');
           out.push(
             `<clef number="1"><sign>G</sign><line>2</line>${track.type === 'bass' ? '<clef-octave-change>-2</clef-octave-change>' : '<clef-octave-change>-1</clef-octave-change>'}</clef>`,
@@ -136,13 +146,13 @@ function partXml(song: Song, track: Track, pid: string): string {
           `<direction placement="above"><direction-type><words>${esc(toneName(s.toneId))}</words></direction-type><offset>${s.start - bar.start}</offset></direction>`,
         );
 
-    const staves = track.type === 'drums' ? [1] : [1, 2];
+    const staves = single ? [1] : [1, 2];
     staves.forEach((staff, si) => {
       if (si > 0) out.push(`<backup><duration>${bar.length}</duration></backup>`);
       for (const b of bar.beats) {
         if (b.rest || !b.notes.length) {
           out.push(
-            `<note><rest/><duration>${Math.round(b.duration)}</duration><voice>${staff}</voice>${beatTiming(b)}${track.type === 'drums' ? '' : `<staff>${staff}</staff>`}</note>`,
+            `<note><rest/><duration>${Math.round(b.duration)}</duration><voice>${staff}</voice>${beatTiming(b)}${single ? '' : `<staff>${staff}</staff>`}</note>`,
           );
           continue;
         }
@@ -165,7 +175,7 @@ function partXml(song: Song, track: Track, pid: string): string {
             parts.push(
               '<notehead>' + (((event as { gm?: number }).gm ?? 0) >= 42 ? 'x' : 'normal') + '</notehead>',
             );
-          else parts.push(`<staff>${staff}</staff>`);
+          else if (!single) parts.push(`<staff>${staff}</staff>`);
           const nots: string[] = [];
           if (tieStop) nots.push('<tied type="stop"/>');
           if (tieStart) nots.push('<tied type="start"/>');

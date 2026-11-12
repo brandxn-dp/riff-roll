@@ -7,6 +7,7 @@ import {
   updateTrack,
   type DrumPiece,
   type Track,
+  isFretted,
 } from '@riffroll/core';
 import { useStore } from '../store';
 import { Modal } from './Modal';
@@ -116,8 +117,8 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
           ))}
         </select>
       </label>
-      {t.type !== 'drums' && <TuningField t={t} />}
-      {t.type !== 'drums' && (
+      {isFretted(t.type) && <TuningField t={t} />}
+      {isFretted(t.type) && (
         <label className="slider">
           <span>Frets</span>
           <select value={t.maxFret} onChange={(e) => set({ maxFret: Number(e.target.value) }, 'Fret count')}>

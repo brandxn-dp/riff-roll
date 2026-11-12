@@ -1847,3 +1847,51 @@ button:disabled {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+/* ---- bulk velocity dialog ---- */
+.vel-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.vel-modes button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vel-modes button[aria-checked='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.vel-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+.vel-num {
+  display: grid;
+  grid-template-columns: 90px 72px auto 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.vel-num input[type='number'] {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  padding: 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.vel-num input[type='range'] {
+  width: 100%;
+}

@@ -25,7 +25,7 @@ export function makeTrack(type: TrackType, name: string, color: string, opts: Pa
       ? tuningByName('Standard E')!
       : type === 'bass'
         ? tuningByName('Bass Standard E')!
-        : { name: 'Drums', strings: [] };
+        : { name: type === 'drums' ? 'Drums' : 'None', strings: [] };
   const toneA = tones[0]?.id ?? '';
   const toneB = tones[1]?.id ?? toneA;
   return {
@@ -35,13 +35,19 @@ export function makeTrack(type: TrackType, name: string, color: string, opts: Pa
     color,
     tuning,
     capo: 0,
-    maxFret: type === 'bass' ? 21 : 24,
+    maxFret: type === 'bass' ? 21 : 24, // unused by drums and other tracks
     volume: 0.8,
     pan: 0,
     mute: false,
     solo: false,
     instrument:
-      type === 'guitar' ? 'guitar-fsbs-direct' : type === 'bass' ? 'bass-yr-picked' : 'drums-big-rusty',
+      type === 'guitar'
+        ? 'guitar-fsbs-direct'
+        : type === 'bass'
+          ? 'bass-yr-picked'
+          : type === 'drums'
+            ? 'drums-big-rusty'
+            : '', // other: the first installed instrument of that kind
     tones,
     pedal: { mode: 'simple', startTone: toneA, toggle: [toneA, toneB], stomps: [] },
     notes: [],

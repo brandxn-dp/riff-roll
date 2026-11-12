@@ -11,6 +11,7 @@ import {
   songToMusicXml,
   unpackRiff,
   type Song,
+  isFretted,
 } from '@riffroll/core';
 import { audioBufferToWav, gateWorkletUrl, renderSong } from '@riffroll/audio';
 import { barMap, currentTrack, initialSong, songEnd, useStore } from '../store';
@@ -319,7 +320,7 @@ export async function exportWav(stems = false) {
 export async function copyAsciiTab() {
   const st = useStore.getState();
   const t = currentTrack(st);
-  if (!t || t.type === 'drums') return status('ASCII tab works on guitar and bass tracks.');
+  if (!t || !isFretted(t.type)) return status('ASCII tab works on guitar and bass tracks.');
   const sel = t.notes.filter((n) => st.selection.has(n.id));
   const bm = barMap(st.song);
   let from: number, to: number;

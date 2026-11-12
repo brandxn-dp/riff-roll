@@ -9,8 +9,9 @@ import {
   tuningsFor,
   updateSong,
   updateTrack,
+  isFretted,
 } from '@riffroll/core';
-import { SNAPS, ZOOMS, barMap, currentTrack, useStore, type MainView } from '../store';
+import { SNAPS, ZOOMS, ZOOMS_Y, barMap, currentTrack, useStore, type MainView } from '../store';
 import { togglePlay } from '../transport';
 
 const LENS = [
@@ -23,6 +24,9 @@ const LENS = [
 export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React.ReactNode }) {
   const song = useStore((s) => s.song);
   const track = useStore((s) => currentTrack(s));
+  const fretted = !!track && isFretted(track.type);
+  const zoom = useStore((s) => s.zoom);
+  const zoomY = useStore((s) => s.zoomY);
   const playing = useStore((s) => s.playing);
   const snap = useStore((s) => s.snap);
   const noteLen = useStore((s) => s.noteLen);
@@ -136,7 +140,7 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           ))}
         </select>
       </label>
-      {track && track.type !== 'drums' && (
+      {track && isFretted(track.type) && (
         <label className="field">
           <span className="long">Tuning</span>
           <select
@@ -153,7 +157,7 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           </select>
         </label>
       )}
-      {track && track.type !== 'drums' && (
+      {track && isFretted(track.type) && (
         <label className="field">
           Capo
           <select
@@ -200,14 +204,36 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           +
         </button>
       </div>
-      <div className="group" role="group" aria-label="Zoom">
-        <span className="glabel">Zoom</span>
-        <button aria-label="Zoom out" onClick={() => st.set({ zoom: Math.max(0, st.zoom - 1) })}>
+      <div className="group" role="group" aria-label="Horizontal zoom" title="Horizontal zoom (Ctrl+wheel)">
+        <span className="glabel">Zoom ↔</span>
+        <button
+          aria-label="Zoom out horizontally"
+          disabled={zoom === 0}
+          onClick={() => st.set({ zoom: Math.max(0, st.zoom - 1) })}
+        >
           −
         </button>
         <button
-          aria-label="Zoom in"
+          aria-label="Zoom in horizontally"
+          disabled={zoom === ZOOMS.length - 1}
           onClick={() => st.set({ zoom: Math.min(ZOOMS.length - 1, st.zoom + 1) })}
+        >
+          +
+        </button>
+      </div>
+      <div className="group" role="group" aria-label="Vertical zoom" title="Vertical zoom (Alt+wheel)">
+        <span className="glabel">↕</span>
+        <button
+          aria-label="Zoom out vertically"
+          disabled={zoomY === 0}
+          onClick={() => st.set({ zoomY: Math.max(0, st.zoomY - 1) })}
+        >
+          −
+        </button>
+        <button
+          aria-label="Zoom in vertically"
+          disabled={zoomY === ZOOMS_Y.length - 1}
+          onClick={() => st.set({ zoomY: Math.min(ZOOMS_Y.length - 1, st.zoomY + 1) })}
         >
           +
         </button>
@@ -233,16 +259,16 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
       <label className="field">
         View
         <select value={view} onChange={(e) => st.set({ view: e.target.value as MainView })}>
-          <option value="split">Roll + Tab</option>
+          <option value="split">{fretted ? 'Roll + Tab' : 'Roll + Velocity'}</option>
           <option value="roll">Piano roll</option>
-          <option value="tab">Tab</option>
-          <option value="notation">Notation + Tab</option>
+          {fretted && <option value="tab">Tab</option>}
+          <option value="notation">{fretted ? 'Notation + Tab' : 'Notation'}</option>
           {track?.type === 'drums' && <option value="drums">Drum grid</option>}
         </select>
       </label>
       <div className="spacer" />
       {right}
-      {track && track.type !== 'drums' && (
+      {track && isFretted(track.type) && (
         <button
           className="btn"
           onClick={() => st.set({ modal: 'tone' })}

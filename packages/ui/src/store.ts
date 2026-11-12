@@ -31,6 +31,8 @@ export const SNAPS: { label: string; ticks: number }[] = [
 
 /** Horizontal zoom: pixels per 1/16 note. */
 export const ZOOMS = [8, 12, 18, 24, 32, 44, 56, 72];
+/** Vertical zoom: row height factor for the piano roll and the drum grid. */
+export const ZOOMS_Y = [0.6, 0.75, 1, 1.25, 1.5, 2, 2.5];
 
 export interface UiState {
   song: Song;
@@ -43,6 +45,8 @@ export interface UiState {
   focusId: Id | null;
   view: MainView;
   zoom: number;
+  /** index into ZOOMS_Y */
+  zoomY: number;
   snap: number; // ticks
   noteLen: number; // ticks, last-used length for new notes
   scrollX: number;
@@ -70,7 +74,17 @@ export interface UiState {
   };
   /** user files stored inside the .riff (impulse responses) */
   assets: Record<string, Uint8Array>;
-  modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'instruments' | 'share' | 'users' | 'account';
+  modal:
+    | null
+    | 'shortcuts'
+    | 'about'
+    | 'tone'
+    | 'mixer'
+    | 'instruments'
+    | 'share'
+    | 'users'
+    | 'account'
+    | 'velocity';
   /** sign-in screen, launch screen (recent + all songs), or the editor */
   screen: 'loading' | 'signin' | 'home' | 'editor';
   /** server accounts: whether the server has them, first-run setup, open sign-up */
@@ -124,6 +138,7 @@ export const useStore = create<UiState>((set, get) => {
     focusId: null,
     view: 'split',
     zoom: 4,
+    zoomY: 2,
     snap: PPQ / 4,
     noteLen: PPQ / 2,
     scrollX: 0,
