@@ -67,6 +67,7 @@ export class TrackGraph {
     track: Track,
     private master: MasterBus,
     private gateWorklet: boolean,
+    private userIR?: (name: string) => AudioBuffer | undefined,
   ) {
     this.input = ctx.createGain();
     // DI trim: the sample packs are recorded hot; this keeps chords out of the amp's clipping-by-accident zone
@@ -122,6 +123,7 @@ export class TrackGraph {
       const node = new ToneChainNode(this.ctx, tone.chain, {
         gateWorklet: this.gateWorklet,
         reverbInput: this.sendSum,
+        userIR: this.userIR,
       });
       const fade = this.ctx.createGain();
       fade.gain.value = 0;
@@ -177,6 +179,11 @@ export class TrackGraph {
         }
       }
     }
+  }
+
+  /** Re-apply chains (e.g. after a user IR finished decoding). */
+  refresh(track: Track) {
+    for (const tone of track.tones) this.chains.get(tone.id)?.node.update(tone.chain);
   }
 
   /** resolves once every amp chain has its cabinet IR */

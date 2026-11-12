@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { updateTrack, type DrumPiece, type Track } from '@riffroll/core';
+import {
+  parsePitch,
+  pitchName,
+  setTuning,
+  updateSong,
+  updateTrack,
+  type DrumPiece,
+  type Track,
+} from '@riffroll/core';
 import { useStore } from '../store';
 import { Modal } from './Modal';
 import { ensureEngine } from '../audio-setup';
@@ -108,6 +116,19 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
           ))}
         </select>
       </label>
+      {t.type !== 'drums' && <TuningField t={t} />}
+      {t.type !== 'drums' && (
+        <label className="slider">
+          <span>Frets</span>
+          <select value={t.maxFret} onChange={(e) => set({ maxFret: Number(e.target.value) }, 'Fret count')}>
+            {[12, 15, 17, 19, 20, 21, 22, 24, 27, 30].map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {t.type === 'drums' && (
         <>
           <h4>Kit</h4>
@@ -170,10 +191,72 @@ export function Mixer() {
           <Strip key={t.id} t={t} instruments={instruments} />
         ))}
       </div>
+      <Humanize />
       <p className="mute">
         Master: glue compressor → limiter. Output latency: {latency == null ? '…' : `${latency} ms`}{' '}
         (interactive latency hint).
       </p>
     </Modal>
+  );
+}
+
+/** Fully custom tuning: type the open strings low to high, e.g. "C2 G2 C3 F3 A3 D4". */
+function TuningField({ t }: { t: Track }) {
+  const text = t.tuning.strings.map(pitchName).join(' ');
+  const [err, setErr] = useState(false);
+  return (
+    <label className="slider" title="Open strings, lowest first (4–8 strings)">
+      <span>Tuning</span>
+      <input
+        key={text}
+        className={'tuningtext' + (err ? ' bad' : '')}
+        defaultValue={text}
+        aria-label={`Tuning of ${t.name}`}
+        onBlur={(e) => {
+          try {
+            const strings = e.target.value.trim().split(/s+/).map(parsePitch);
+            if (strings.length < 4 || strings.length > 8) throw new Error('4–8 strings');
+            setErr(false);
+            if (strings.join() !== t.tuning.strings.join())
+              useStore
+                .getState()
+                .exec(setTuning(t.id, { name: 'Custom: ' + strings.map(pitchName).join(' '), strings }));
+          } catch {
+            setErr(true);
+          }
+        }}
+        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+      />
+    </label>
+  );
+}
+
+/** Humanize: random timing (ms) and velocity spread applied at playback and export. */
+function Humanize() {
+  const h = useStore((s) => s.song.humanize);
+  const set = (patch: Partial<typeof h>) =>
+    useStore.getState().exec(updateSong({ humanize: { ...h, ...patch } }, 'Humanize'));
+  return (
+    <section className="humanize">
+      <h4>Humanize</h4>
+      <Slider
+        label="Timing"
+        value={h.timingMs}
+        min={0}
+        max={20}
+        step={1}
+        onChange={(v) => set({ timingMs: v })}
+        fmt={(v) => `±${v} ms`}
+      />
+      <Slider
+        label="Velocity"
+        value={h.velocity}
+        min={0}
+        max={30}
+        step={1}
+        onChange={(v) => set({ velocity: v })}
+        fmt={(v) => `±${v}`}
+      />
+    </section>
   );
 }

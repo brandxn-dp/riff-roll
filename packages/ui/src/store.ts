@@ -53,6 +53,8 @@ export interface UiState {
   status: string;
   /** unsaved changes since the last (auto)save */
   dirty: boolean;
+  /** user files stored inside the .riff (impulse responses) */
+  assets: Record<string, Uint8Array>;
   modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files';
 
   exec(cmd: Command): void;
@@ -61,7 +63,7 @@ export interface UiState {
   cancel(): void;
   undo(): void;
   redo(): void;
-  loadSong(song: Song): void;
+  loadSong(song: Song, assets?: Record<string, Uint8Array>): void;
   set(p: Partial<UiState>): void;
   select(ids: Iterable<Id>, focus?: Id | null): void;
 }
@@ -101,6 +103,7 @@ export const useStore = create<UiState>((set, get) => {
     tabCursor: null,
     status: '',
     dirty: false,
+    assets: {},
     modal: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),
@@ -117,7 +120,8 @@ export const useStore = create<UiState>((set, get) => {
       get().history.redo();
       pruneSelection();
     },
-    loadSong: (s) => {
+    loadSong: (s, assets = {}) => {
+      set({ assets });
       get().history.reset(s);
       const t = s.tracks.find((x) => x.type !== 'drums') ?? s.tracks[0];
       set({

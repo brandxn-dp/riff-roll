@@ -38,6 +38,9 @@ export class AudioEngine {
   private samplers = new Map<string, Sampler>();
   private samplerKeys = new Map<string, string>();
   private gate = false;
+  /** decoded user impulse responses by asset name */
+  readonly userIRs = new Map<string, AudioBuffer>();
+  private auditionVoices: { stop(t: number, fast?: boolean): void }[] = [];
   private song: Song | null = null;
   private st: PlayState | null = null;
   /** playback speed 0.5..1.5; pitch is unaffected because we schedule MIDI events, not audio */
@@ -95,7 +98,7 @@ export class AudioEngine {
       const g = this.graphs.get(t.id);
       if (g) g.update(t, audible.has(t.id));
       else {
-        const ng = new TrackGraph(this.ctx, t, this.master, this.gate);
+        const ng = new TrackGraph(this.ctx, t, this.master, this.gate, (name) => this.userIRs.get(name));
         ng.update(t, audible.has(t.id));
         this.graphs.set(t.id, ng);
       }
@@ -172,6 +175,73 @@ export class AudioEngine {
       when: this.ctx.currentTime + 0.005,
       duration: Math.min(1.2, Math.max(0.15, secs)),
     });
+  }
+
+  /** Decode user-loaded IR files (song assets) and apply them to the amp chains that use them. */
+  async setUserAssets(assets: Record<string, Uint8Array>) {
+    let changed = false;
+    for (const [name, data] of Object.entries(assets)) {
+      if (this.userIRs.has(name) || !/.wav$/i.test(name)) continue;
+      try {
+        this.userIRs.set(name, await this.ctx.decodeAudioData(data.slice().buffer));
+        changed = true;
+      } catch {
+        this.opts.onStatus?.(`Could not decode impulse response "${name}"`);
+      }
+    }
+    if (changed && this.song) for (const t of this.song.tracks) this.graphs.get(t.id)?.refresh(t);
+  }
+
+  /**
+   * Tone audition (the A/B page): play a short phrase through one tone, or alternate two tones phrase by phrase.
+   * Phrases: a palm-muted E5 chug, an open Em chord, and a pentatonic lick.
+   */
+  async audition(track: Track, phrase: 'chug' | 'chord' | 'lick', toneA: string, toneB?: string) {
+    await this.resume();
+    this.stopAudition();
+    const g = this.graphs.get(track.id);
+    if (!g || track.type === 'drums') return;
+    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
+    const bass = track.type === 'bass';
+    const o = bass ? -12 : 0;
+    const P: Record<string, { p: number[]; t: number; d: number; pm?: boolean; v?: number }[]> = {
+      chug: [0, 1, 2, 3, 4, 5, 6, 7].map((k) => ({
+        p: [40 + o, 47 + o],
+        t: k * 0.25,
+        d: 0.22,
+        pm: k !== 7,
+        v: k % 2 ? 96 : 112,
+      })),
+      chord: [{ p: bass ? [28, 40] : [40, 47, 52, 55, 59, 64], t: 0, d: 1.9, v: 100 }],
+      lick: [57, 60, 62, 64, 67, 69, 67, 64].map((p, k) => ({ p: [p + o], t: k * 0.18, d: 0.2, v: 104 })),
+    };
+    const notes = P[phrase];
+    const len = phrase === 'chord' ? 2.2 : 2.1;
+    await s.preload(notes.flatMap((n) => n.p));
+    const passes = toneB ? [toneA, toneB, toneA, toneB] : [toneA];
+    const t0 = this.ctx.currentTime + 0.05;
+    passes.forEach((tone, i) => {
+      const start = t0 + i * len;
+      g.setTone(tone, start, i ? 0.01 : 0);
+      for (const n of notes)
+        n.p.forEach((pitch, k) => {
+          const vs = s.play(this.ctx, g.input, {
+            pitch,
+            velocity: n.v ?? 100,
+            when: start + n.t + k * 0.012,
+            duration: n.d,
+            palmMute: n.pm,
+          });
+          this.auditionVoices.push(...vs);
+        });
+    });
+    return passes.length * len;
+  }
+
+  stopAudition() {
+    const now = this.ctx.currentTime;
+    for (const v of this.auditionVoices) v.stop(now, true);
+    this.auditionVoices = [];
   }
 
   /** Audition a drum lane (drum grid clicks). */

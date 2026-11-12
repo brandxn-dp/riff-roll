@@ -952,3 +952,117 @@ button:disabled {
 .credits a {
   color: var(--clean);
 }
+
+/* ---- tone editor ---- */
+.tones-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tonelist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.tonechip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tc);
+  background: var(--raise);
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tonechip[aria-selected='true'] {
+  background: var(--tc);
+  color: #15171c;
+}
+.tonelist select.mini,
+.pedalcfg select.mini,
+.audition select.mini {
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pedalcfg,
+.audition {
+  margin: 6px 0;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.pedal {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  opacity: 0.6;
+}
+.pedal.on {
+  opacity: 1;
+  border-color: var(--line-hi);
+}
+.pedal header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pedal input[type='range'] {
+  width: 100%;
+  min-width: 0;
+}
+
+.tuningtext {
+  grid-column: 2 / 4;
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 0 6px;
+  min-width: 0;
+}
+.tuningtext.bad {
+  border-color: var(--dist);
+}
+.humanize {
+  margin-top: 12px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.humanize h4 {
+  margin: 0;
+  font-family: var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

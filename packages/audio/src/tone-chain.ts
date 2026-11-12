@@ -44,6 +44,8 @@ const db = (d: number) => Math.pow(10, d / 20);
 export interface ToneChainDeps {
   gateWorklet: boolean;
   reverbInput: AudioNode;
+  /** user-loaded impulse responses (cab.ir = "user:<name>") */
+  userIR?: (name: string) => AudioBuffer | undefined;
 }
 
 export class ToneChainNode {
@@ -285,7 +287,19 @@ export class ToneChainNode {
 
     // cab
     const ir = ch.cab.on ? ch.cab.ir : '';
-    if (ir && ir !== this.irId) {
+    if (ir.startsWith('user:')) {
+      const buf = this.deps.userIR?.(ir.slice(5));
+      if (buf && (ir !== this.irId || n.cab.buffer !== buf)) {
+        this.irId = ir;
+        n.cab.buffer = buf;
+      } else if (!buf && ir !== this.irId) {
+        // not decoded yet: fall back to the default cab until it is
+        this.irId = '';
+        this.ready = cabIR('builtin:4x12-closed', this.ctx.sampleRate).then((b) => {
+          if (!this.disposed && !n.cab.buffer) n.cab.buffer = b;
+        });
+      }
+    } else if (ir && ir !== this.irId) {
       this.irId = ir;
       if (ir.startsWith('builtin:'))
         this.ready = cabIR(ir, this.ctx.sampleRate).then((buf) => {

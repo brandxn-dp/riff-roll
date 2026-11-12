@@ -12,6 +12,8 @@ export interface RenderOptions {
   sampleRate?: number;
   /** render only this track (stems); otherwise the normal mix with mute/solo */
   onlyTrack?: string;
+  /** decoded user IRs (cab.ir = "user:<name>") */
+  userIRs?: Map<string, AudioBuffer>;
   gateWorkletUrl?: string;
   tail?: number; // seconds of release/reverb after the last bar
   onProgress?: (fraction: number) => void;
@@ -48,7 +50,7 @@ export async function renderSong(
   const graphs = new Map<string, TrackGraph>();
   const samplers = new Map<string, Sampler>();
   for (const t of tracks) {
-    const g = new TrackGraph(ctx, t, master, gate);
+    const g = new TrackGraph(ctx, t, master, gate, (name) => o.userIRs?.get(name));
     g.update(t, true);
     graphs.set(t.id, g);
     const s = await lib.sampler(t.instrument, t.type);

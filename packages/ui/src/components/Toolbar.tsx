@@ -242,6 +242,15 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
       </label>
       <div className="spacer" />
       {right}
+      {track && track.type !== 'drums' && (
+        <button
+          className="btn"
+          onClick={() => st.set({ modal: 'tone' })}
+          title="Edit this track's tones (amp, pedals, cab)"
+        >
+          Tones
+        </button>
+      )}
       <button className="btn" onClick={() => st.set({ modal: 'mixer' })} title="Mixer">
         Mixer
       </button>

@@ -13,6 +13,7 @@ import { Mixer } from './components/Mixer';
 import { SongBar } from './components/SongBar';
 import { FileMenu, ProjectsDialog, SongTitle } from './components/FileMenu';
 import { About } from './components/About';
+import { ToneEditor } from './components/ToneEditor';
 import { installFileActions } from './files/wire';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
@@ -67,13 +68,16 @@ export function App() {
         </main>
       </div>
       <footer className="statusbar">
-        <span>{status}</span>
+        <span role="status" aria-live="polite">
+          {status}
+        </span>
         <span className="mute">storage: {storage?.kind ?? '…'}</span>
       </footer>
       {modal === 'shortcuts' && <ShortcutSheet />}
       {modal === 'mixer' && <Mixer />}
       {modal === 'files' && <ProjectsDialog />}
       {modal === 'about' && <About />}
+      {modal === 'tone' && <ToneEditor />}
     </div>
   );
 }

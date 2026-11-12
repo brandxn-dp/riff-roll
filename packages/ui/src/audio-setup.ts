@@ -28,8 +28,10 @@ export function ensureEngine(): Promise<AudioEngine> {
       if (import.meta.env.DEV) (globalThis as Record<string, unknown>).__engine = e;
       e.setSong(useStore.getState().song);
       e.speed = useStore.getState().speed;
+      void e.setUserAssets(useStore.getState().assets);
       useStore.subscribe((s, prev) => {
         if (s.song !== prev.song) e.setSong(s.song);
+        if (s.assets !== prev.assets) void e.setUserAssets(s.assets);
         if (s.speed !== prev.speed) {
           e.speed = s.speed;
           if (e.playing) {

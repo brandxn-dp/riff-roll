@@ -66,14 +66,14 @@ export async function saveFile(name: string, data: Uint8Array | string, mime: st
 // ---------------- projects ----------------
 export async function saveProject(song = useStore.getState().song) {
   const s = await getStorage();
-  await s.save(song.id.replace(/[^A-Za-z0-9_-]/g, '_'), packRiff(song));
+  await s.save(song.id.replace(/[^A-Za-z0-9_-]/g, '_'), packRiff(song, useStore.getState().assets));
   useStore.getState().set({ dirty: false, status: `Saved “${song.title}”` });
 }
 
 export async function openProject(id: string) {
   const s = await getStorage();
-  const { song } = unpackRiff(await s.load(id));
-  useStore.getState().loadSong(song);
+  const { song, assets } = unpackRiff(await s.load(id));
+  useStore.getState().loadSong(song, assets);
   status(`Opened “${song.title}”`);
 }
 
@@ -117,8 +117,11 @@ export async function importBytes(name: string, bytes: Uint8Array) {
   const lower = name.toLowerCase();
   let song: Song;
   let warnings: string[] = [];
+  let assets: Record<string, Uint8Array> = {};
   if (lower.endsWith('.riff')) {
-    song = unpackRiff(bytes).song;
+    const f = unpackRiff(bytes);
+    song = f.song;
+    assets = f.assets;
   } else if (/\.midi?$/.test(lower)) {
     song = midiToSong(bytes, name.replace(/\.midi?$/i, ''));
   } else {
@@ -126,7 +129,7 @@ export async function importBytes(name: string, bytes: Uint8Array) {
     ({ song, warnings } = importScoreBytes(bytes));
     if (!song.title || song.title === 'Imported') song.title = name.replace(/\.[^.]+$/, '');
   }
-  useStore.getState().loadSong(song);
+  useStore.getState().loadSong(song, assets);
   await saveProject(song);
   status(`Imported ${name}${warnings.length ? ` — ${warnings.join('; ')}` : ''}`);
 }
@@ -157,7 +160,11 @@ export async function openFromDisk() {
 const base = () => safeName(useStore.getState().song.title);
 
 export const exportRiff = () =>
-  saveFile(`${base()}.riff`, packRiff(useStore.getState().song), 'application/x-riffroll');
+  saveFile(
+    `${base()}.riff`,
+    packRiff(useStore.getState().song, useStore.getState().assets),
+    'application/x-riffroll',
+  );
 export const exportMidi = () => saveFile(`${base()}.mid`, songToMidi(useStore.getState().song), 'audio/midi');
 export const exportMusicXml = () =>
   saveFile(
@@ -175,7 +182,11 @@ export const exportGuitarPro = () =>
 export async function exportWav(stems = false) {
   const song = useStore.getState().song;
   const e = await ensureEngine();
-  const opts = { gateWorkletUrl, onProgress: (f: number) => status(`Rendering… ${Math.round(f * 100)}%`) };
+  const opts = {
+    gateWorkletUrl,
+    userIRs: e.userIRs,
+    onProgress: (f: number) => status(`Rendering… ${Math.round(f * 100)}%`),
+  };
   if (!stems) {
     const buf = await renderSong(song, e.lib, opts);
     await saveFile(`${base()}.wav`, audioBufferToWav(buf, 24), 'audio/wav');

@@ -234,30 +234,46 @@ function Minimap({ song }: { song: Song }) {
   const scrollX = useStore((s) => s.scrollX);
   const zoom = useStore((s) => s.zoom);
   const playhead = useStore((s) => s.playhead);
+  // the note layer only changes with the song: render it once into an offscreen canvas, then just blit it
+  const layer = useRef<{ song: Song; w: number; h: number; cv: HTMLCanvasElement } | null>(null);
   useEffect(() => {
     const cv = ref.current!;
     const w = cv.clientWidth,
       h = cv.clientHeight;
+    if (!w || !h) return;
     const d = devicePixelRatio || 1;
-    cv.width = w * d;
-    cv.height = h * d;
-    const c = cv.getContext('2d')!;
-    c.setTransform(d, 0, 0, d, 0, 0);
-    c.fillStyle = '#16181e';
-    c.fillRect(0, 0, w, h);
+    if (cv.width !== w * d || cv.height !== h * d) {
+      cv.width = w * d;
+      cv.height = h * d;
+    }
     const end = songEnd(song);
     const k = w / end;
-    const rows = song.tracks.length || 1;
-    const rh = h / rows;
-    song.tracks.forEach((t, i) => {
-      c.fillStyle = t.color;
-      c.globalAlpha = t.mute ? 0.25 : 0.8;
-      for (const n of t.notes) c.fillRect(n.start * k, i * rh + 1, Math.max(1, n.duration * k), rh - 2);
-      for (const hh of t.hits) c.fillRect(hh.start * k, i * rh + 1, 1, rh - 2);
-    });
-    c.globalAlpha = 1;
-    c.fillStyle = COL.ink;
-    for (const s of song.sections) c.fillRect(s.tick * k, 0, 1, h);
+    let L = layer.current;
+    if (!L || L.song !== song || L.w !== w || L.h !== h) {
+      const off = document.createElement('canvas');
+      off.width = w * d;
+      off.height = h * d;
+      const o = off.getContext('2d')!;
+      o.setTransform(d, 0, 0, d, 0, 0);
+      o.fillStyle = '#16181e';
+      o.fillRect(0, 0, w, h);
+      const rows = song.tracks.length || 1;
+      const rh = h / rows;
+      song.tracks.forEach((t, i) => {
+        o.fillStyle = t.color;
+        o.globalAlpha = t.mute ? 0.25 : 0.8;
+        for (const n of t.notes) o.fillRect(n.start * k, i * rh + 1, Math.max(1, n.duration * k), rh - 2);
+        for (const hh of t.hits) o.fillRect(hh.start * k, i * rh + 1, 1, rh - 2);
+      });
+      o.globalAlpha = 1;
+      o.fillStyle = COL.ink;
+      for (const sec of song.sections) o.fillRect(sec.tick * k, 0, 1, h);
+      L = layer.current = { song, w, h, cv: off };
+    }
+    const c = cv.getContext('2d')!;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(L.cv, 0, 0);
+    c.setTransform(d, 0, 0, d, 0, 0);
     const sc = document.querySelector<HTMLElement>('.cvwrap .scroller');
     const viewTicks = sc ? (sc.clientWidth - KEYS_W) / pxPerTick(zoom) : end;
     c.strokeStyle = COL.ink;

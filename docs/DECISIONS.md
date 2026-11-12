@@ -160,3 +160,12 @@ Non-obvious choices and why. Newest at the bottom of each section.
 - The app icon is generated from the same shapes as the SVG favicon by `scripts/gen-icon.mjs` (no image deps).
 - README screenshots are captured by the packaged app itself (`RIFFROLL_SCREENSHOT=<file>`), so they show the real
   build.
+
+## Polish (milestone 9, partial)
+
+- **Tone editor** (Tones button): pedalboard blocks in signal order with every chain parameter, tone list
+  (add from preset, rename, colour, delete), pedal mode/toggle pair/start tone, user IR loading (stored inside the
+  `.riff` as an asset), and an **A/B listening tool** (palm-muted chug, open chord, lick; A→B→A→B).
+- Humanize, custom tunings (type the open strings) and fret count are in the mixer.
+- Performance, measured in a visible Electron window on a 10-minute, 6-track, 14k-event song: scroll and playback
+  frames ~7 ms median, 8.2 ms max. The minimap's note layer is cached so playback doesn't redraw every note.

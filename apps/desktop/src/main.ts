@@ -153,7 +153,8 @@ async function createWindow(fileToOpen?: string) {
     setTimeout(
       async () => {
         const report = await win.webContents.executeJavaScript(
-          `(async () => JSON.stringify({
+          process.env.RIFFROLL_SMOKE_JS ??
+            `(async () => JSON.stringify({
           title: document.title,
           text: document.body.innerText.slice(0, 120),
           bridge: !!window.riffroll,
