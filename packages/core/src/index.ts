@@ -18,3 +18,4 @@ export * from './riff';
 export * from './midi';
 export * from './musicxml';
 export * from './ascii';
+export * from './recorder';

@@ -5,6 +5,13 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { loadWindowState, trackWindowState } from './window-state';
 import { buildMenu } from './menu';
+import {
+  finalizeUserInstrument,
+  mergedIndex,
+  putUserFile,
+  removeUserInstrument,
+  type UserInstrumentInfo,
+} from '../../server/src/instruments/user';
 
 // Dev: load the Vite dev server. RIFFROLL_USE_BUILD=1 loads the built UI through app:// like a packaged app.
 const DEV_URL =
@@ -28,6 +35,10 @@ function instrumentsDir(): string {
     ? path.join(process.resourcesPath, 'instruments')
     : path.resolve(__dirname, '../../../instruments/packs');
 }
+/** User-added instruments live in app data (the bundled ones are read-only). */
+function userInstrumentsDir(): string {
+  return path.join(app.getPath('userData'), 'instruments');
+}
 function projectsDir(): string {
   return path.join(app.getPath('userData'), 'projects');
 }
@@ -39,11 +50,17 @@ function inside(root: string, rel: string): string | null {
 }
 
 function registerAppProtocol() {
-  protocol.handle('app', (req) => {
+  protocol.handle('app', async (req) => {
     const url = new URL(req.url);
     let file: string | null;
+    if (url.pathname === '/instruments/index.json') {
+      const idx = await mergedIndex([userInstrumentsDir(), instrumentsDir()]);
+      return new Response(JSON.stringify(idx), { headers: { 'content-type': 'application/json' } });
+    }
     if (url.pathname.startsWith('/instruments/')) {
-      file = inside(instrumentsDir(), url.pathname.slice('/instruments/'.length));
+      const rel = url.pathname.slice('/instruments/'.length);
+      const user = inside(userInstrumentsDir(), rel);
+      file = user && existsSync(user) ? user : inside(instrumentsDir(), rel);
     } else {
       file = inside(uiDir(), url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       if (file && !existsSync(file)) file = path.join(uiDir(), 'index.html');
@@ -75,6 +92,13 @@ function registerIpc() {
     await rename(tmp, file(id));
   });
   ipcMain.handle('projects:remove', async (_e, id: string) => rm(file(id), { force: true }));
+  ipcMain.handle('instruments:put-file', (_e, id: string, rel: string, data: Uint8Array) =>
+    putUserFile(userInstrumentsDir(), id, rel, data),
+  );
+  ipcMain.handle('instruments:finalize', (_e, id: string, info: UserInstrumentInfo) =>
+    finalizeUserInstrument(userInstrumentsDir(), id, info),
+  );
+  ipcMain.handle('instruments:remove', (_e, id: string) => removeUserInstrument(userInstrumentsDir(), id));
   ipcMain.handle('dialog:open', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)!;
     const r = await dialog.showOpenDialog(win, {

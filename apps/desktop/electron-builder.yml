@@ -35,6 +35,10 @@ mac:
       arch: [universal]
   category: public.app-category.music
   hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: Riff Roll uses your audio input to play your guitar through its amp simulator.
 linux:
   target: [AppImage, deb]
   category: Audio

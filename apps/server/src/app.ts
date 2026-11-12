@@ -4,6 +4,13 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
+import {
+  finalizeUserInstrument,
+  mergedIndex,
+  putUserFile,
+  removeUserInstrument,
+  type UserInstrumentInfo,
+} from './instruments/user.js';
 
 export interface ServerOptions {
   uiDir: string;
@@ -92,19 +99,42 @@ export async function buildServer(opts: ServerOptions): Promise<FastifyInstance>
   });
 
   // merged index of every installed instrument across all instrument dirs
-  app.get('/instruments/index.json', async () => {
-    const seen = new Map<string, unknown>();
-    for (const dir of opts.instrumentsDirs) {
-      const f = path.join(dir, 'index.json');
-      if (!existsSync(f)) continue;
+  app.get('/instruments/index.json', async (_req, reply) => {
+    reply.header('cache-control', 'no-store');
+    return mergedIndex(opts.instrumentsDirs);
+  });
+
+  // user instruments: upload files one by one, then finalize (writes instrument.json + index)
+  const userRoot = opts.instrumentsDirs[0];
+  app.put<{ Params: { id: string; '*': string }; Body: Buffer }>(
+    '/api/instruments/:id/files/*',
+    async (req, reply) => {
+      if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ error: 'send application/octet-stream' });
       try {
-        for (const i of JSON.parse(await readFile(f, 'utf8')).instruments ?? [])
-          if (!seen.has(i.id)) seen.set(i.id, i);
-      } catch {
-        /* ignore broken index */
+        await putUserFile(userRoot, req.params.id, req.params['*'], req.body);
+        return { ok: true };
+      } catch (e) {
+        return reply.code(400).send({ error: (e as Error).message });
       }
+    },
+  );
+  app.put<{ Params: { id: string }; Body: UserInstrumentInfo }>(
+    '/api/instruments/:id',
+    async (req, reply) => {
+      try {
+        return await finalizeUserInstrument(userRoot, req.params.id, req.body);
+      } catch (e) {
+        return reply.code(400).send({ error: (e as Error).message });
+      }
+    },
+  );
+  app.delete<{ Params: { id: string } }>('/api/instruments/:id', async (req, reply) => {
+    try {
+      await removeUserInstrument(userRoot, req.params.id);
+      return { ok: true };
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
     }
-    return { instruments: [...seen.values()] };
   });
 
   await app.register(fastifyStatic, {

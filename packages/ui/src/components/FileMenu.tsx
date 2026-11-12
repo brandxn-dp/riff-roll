@@ -68,6 +68,7 @@ export function FileMenu() {
           {item('Print / PDF…', printScore, 'Ctrl+P')}
           {item('Copy as ASCII tab', copyAsciiTab, 'Ctrl+Shift+C')}
           <hr />
+          {item('Instruments…', () => st.set({ modal: 'instruments' }))}
           {item('About & credits', () => st.set({ modal: 'about' }))}
         </div>
       )}

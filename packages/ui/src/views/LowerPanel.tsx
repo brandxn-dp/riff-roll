@@ -502,7 +502,12 @@ export function LowerPanel({
   return (
     <div ref={wrapRef} className="cvwrap lower" style={{ height }} aria-label="Pedal lane and tab">
       <canvas ref={cvRef} />
-      <div ref={scRef} className="scroller xonly">
+      <div
+        ref={scRef}
+        className="scroller xonly"
+        tabIndex={0}
+        aria-label="Pedal lane and tab. Click a tab line for keyboard tab entry: arrows move, digits type frets, Escape leaves."
+      >
         <div ref={sizerRef} className="sizer" />
       </div>
       {menu && track && (

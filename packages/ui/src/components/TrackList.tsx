@@ -26,6 +26,16 @@ export function TrackList() {
             'trk' + (t.id === trackId ? ' on' : '') + (t.mute || (anySolo && !t.solo) ? ' muted' : '')
           }
           style={{ ['--tc' as string]: t.color }}
+          role="button"
+          tabIndex={0}
+          aria-current={t.id === trackId ? 'true' : undefined}
+          aria-label={`${t.name} (${t.type})${t.mute ? ', muted' : ''}${t.solo ? ', solo' : ''}`}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).click();
+            }
+          }}
           onClick={() => {
             if (t.id !== trackId)
               st.set({

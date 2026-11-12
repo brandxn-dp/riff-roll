@@ -169,3 +169,34 @@ Non-obvious choices and why. Newest at the bottom of each section.
 - Humanize, custom tunings (type the open strings) and fret count are in the mixer.
 - Performance, measured in a visible Electron window on a 10-minute, 6-track, 14k-event song: scroll and playback
   frames ~7 ms median, 8.2 ms max. The minimap's note layer is cached so playback doesn't redraw every note.
+- **Instruments panel** (File → Instruments…): lists installed packs by role and adds a user SFZ instrument from a
+  folder (the .sfz plus its WAV/FLAC/OGG samples). Docker uploads file by file to `PUT /api/instruments/:id/files/*`
+  in the writable volume; the desktop app copies into `<userData>/instruments` over IPC. Both then write an
+  `instrument.json` and a merged `index.json` (user packs first, bundled packs read-only). User ids are `user-…`,
+  paths are clamped inside the instrument folder, and only audio/SFZ/text file types are accepted. The plain-browser
+  (IndexedDB) mode can't host sample files, so the panel explains that instead. Samples referenced outside the
+  chosen folder (`../`) aren't supported. User drum kits should use General MIDI keys (Riff Roll's keymap is GM
+  except the half-open hat and the two choke lanes).
+- **SF2/SF3 still unsupported**: spessasynth_lib would add a second synth path with its own routing into the amp
+  chains; every default instrument is SFZ, so this was deprioritised. SF2 files can be converted to SFZ with
+  Polyphone.
+- **Accessibility pass**: track rows are buttons (Enter/Space), the roll/tab/drum canvases are focusable with
+  descriptive labels, dialogs trap focus and Escape closes them, the status bar is a polite live region, and tab
+  entry announces string/bar/beat/fret there. Colour is never the only cue (string letters and fret numbers are
+  always drawn). `prefers-reduced-motion` disables transitions.
+
+## Stretch (milestone 10)
+
+- **Web MIDI input**: while playing with Rec armed, notes are recorded at the playhead into the current track
+  (optionally quantized to the snap grid) and the whole take is one undo step; drum tracks record GM notes as hits.
+  When stopped, keys step-enter notes at the cursor (chords = keys held together) and advance by the note length.
+  "Ch=Str" mode treats MIDI-guitar channels 1–6 as strings and pins notes to them. Notes are monitored through the
+  track's current tone. Pairing/quantize logic is the pure, tested `NoteRecorder` in core.
+- **Live guitar input**: `getUserMedia` (no echo cancellation/noise suppression/AGC) → input gain → the selected
+  track's DI input, so its amp chain, pedal and stomps apply — including stomps during playback. macOS builds declare
+  `NSMicrophoneUsageDescription` and the audio-input entitlement. Latency is the browser's (~10–50 ms); the desktop
+  app shows its output latency in the mixer.
+- **Neural Amp Modeler: not done.** NAM's reference DSP is C++ (MIT) but there's no maintained, permissively licensed
+  WebAssembly build with an AudioWorklet wrapper to depend on, and compiling/maintaining one (plus measuring that a
+  .nam model runs in real time inside a 128-sample worklet quantum on typical laptops) is a project of its own. The
+  `ToneChain` model leaves room for it as another amp type.

@@ -671,7 +671,12 @@ export function PianoRoll() {
   return (
     <div ref={wrapRef} className="cvwrap roll" aria-label="Piano roll">
       <canvas ref={cvRef} />
-      <div ref={scRef} className="scroller">
+      <div
+        ref={scRef}
+        className="scroller"
+        tabIndex={0}
+        aria-label="Piano roll. Arrow keys move the selected notes, Delete removes them, Space plays. Press ? for all shortcuts."
+      >
         <div ref={sizerRef} className="sizer" />
       </div>
     </div>

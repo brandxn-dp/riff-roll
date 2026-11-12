@@ -53,9 +53,17 @@ export interface UiState {
   status: string;
   /** unsaved changes since the last (auto)save */
   dirty: boolean;
+  /** MIDI input state (Web MIDI) */
+  midi: {
+    inputs: { id: string; name: string }[];
+    inputId: string | null;
+    armed: boolean;
+    quantize: boolean;
+    guitarChannels: boolean;
+  };
   /** user files stored inside the .riff (impulse responses) */
   assets: Record<string, Uint8Array>;
-  modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files';
+  modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files' | 'instruments';
 
   exec(cmd: Command): void;
   begin(label: string): void;
@@ -104,6 +112,7 @@ export const useStore = create<UiState>((set, get) => {
     status: '',
     dirty: false,
     assets: {},
+    midi: { inputs: [], inputId: null, armed: false, quantize: true, guitarChannels: false },
     modal: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),

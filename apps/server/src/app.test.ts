@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
@@ -64,5 +65,37 @@ describe('server', () => {
     });
     expect(ok.statusCode).toBe(200);
     await a.close();
+  });
+});
+
+describe('user instruments', () => {
+  it('uploads an SFZ instrument, lists it in the merged index, and deletes it', async () => {
+    const put = (url: string, payload: Buffer | string, type = 'application/octet-stream') =>
+      app.inject({ method: 'PUT', url, payload, headers: { 'content-type': type } });
+    expect(
+      (await put('/api/instruments/user-test/files/My%20Kit/kit.sfz', Buffer.from('<region> sample=a.wav')))
+        .statusCode,
+    ).toBe(200);
+    expect(
+      (await put('/api/instruments/user-test/files/My%20Kit/a.wav', Buffer.from([1, 2]))).statusCode,
+    ).toBe(200);
+    // refuses traversal and odd file types
+    // traversal is clamped into the instrument's own folder
+    await put('/api/instruments/user-test/files/..%2F..%2Fevil.sfz', Buffer.from('x'));
+    expect(existsSync(path.join(dir, 'instruments', 'evil.sfz'))).toBe(false);
+    expect(existsSync(path.join(dir, 'evil.sfz'))).toBe(false);
+    expect((await put('/api/instruments/user-test/files/run.sh', Buffer.from('x'))).statusCode).toBe(400);
+    expect((await put('/api/instruments/not-user/files/a.sfz', Buffer.from('x'))).statusCode).toBe(400);
+    const fin = await put(
+      '/api/instruments/user-test',
+      JSON.stringify({ name: 'My Kit', role: 'drums', sfz: 'My Kit/kit.sfz' }),
+      'application/json',
+    );
+    expect(fin.json().sfz).toBe('user-test/My Kit/kit.sfz');
+    const idx = (await app.inject('/instruments/index.json')).json();
+    expect(idx.instruments.map((i: { id: string }) => i.id)).toContain('user-test');
+    expect((await app.inject('/instruments/user-test/My%20Kit/kit.sfz')).statusCode).toBe(200);
+    await app.inject({ method: 'DELETE', url: '/api/instruments/user-test' });
+    expect((await app.inject('/instruments/index.json')).json().instruments).toEqual([]);
   });
 });

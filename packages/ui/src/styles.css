@@ -1066,3 +1066,19 @@ button:disabled {
     transition: none !important;
   }
 }
+
+.addinst {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.addinst .field input {
+  width: 180px;
+}
+
+.scroller:focus-visible,
+.trk:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}

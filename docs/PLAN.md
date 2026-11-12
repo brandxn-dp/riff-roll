@@ -114,4 +114,5 @@ Dockerfile, docker-compose.yml, .github/workflows/{ci,release}.yml
 
 ## Status
 
-See the git log; each milestone ends with a commit `Mx: …` and a "how to try it" note in this file's history section.
+Milestones 1–9 are complete; milestone 10 has Web MIDI input and live guitar input; NAM model support is not done
+(see DECISIONS.md → Stretch). Each milestone ends with a commit `Mx: …`.

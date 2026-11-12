@@ -18,6 +18,25 @@ export function Modal({ title, children, wide }: { title: string; children: Reac
         aria-label={title}
         tabIndex={-1}
         ref={ref}
+        onKeyDown={(e) => {
+          if (e.key !== 'Tab') return;
+          // keep keyboard focus inside the dialog
+          const f = [
+            ...ref.current!.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+            ),
+          ].filter((x) => !x.hasAttribute('disabled'));
+          if (!f.length) return;
+          const first = f[0],
+            last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
         <div className="modal-head">
           <h2>{title}</h2>

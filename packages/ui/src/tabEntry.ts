@@ -19,7 +19,8 @@ import {
   type Track,
 } from '@riffroll/core';
 import { trackFingering } from '@riffroll/core';
-import { currentTrack, songEnd, useStore } from './store';
+import { barMap, currentTrack, songEnd, useStore } from './store';
+import { stringLabel } from '@riffroll/core';
 import { preview } from './audio-bridge';
 
 let digitBuf = '';
@@ -47,7 +48,13 @@ function setCursor(tick: number, string: number) {
     string: Math.max(0, Math.min(n - 1, string)),
   };
   const at = noteOnString(t, c.tick, c.string);
-  st.set({ tabCursor: c, cursor: c.tick });
+  const bar = barMap(st.song).barAtTick(c.tick);
+  const beat = (c.tick - bar.start) / ((st.song.ppq * 4) / bar.den) + 1;
+  st.set({
+    tabCursor: c,
+    cursor: c.tick,
+    status: `${stringLabel(t.tuning, c.string, t.type)} string, bar ${bar.index + 1} beat ${+beat.toFixed(2)}${at ? `, fret ${at.pitch - t.tuning.strings[c.string] - t.capo}` : ''}`,
+  });
   st.select(at ? [at.id] : [], at?.id ?? null);
 }
 

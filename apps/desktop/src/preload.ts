@@ -9,6 +9,12 @@ contextBridge.exposeInMainWorld('riffroll', {
     save: (id: string, data: Uint8Array) => ipcRenderer.invoke('projects:save', id, data),
     remove: (id: string) => ipcRenderer.invoke('projects:remove', id),
   },
+  instruments: {
+    putFile: (id: string, rel: string, data: Uint8Array) =>
+      ipcRenderer.invoke('instruments:put-file', id, rel, data),
+    finalize: (id: string, info: unknown) => ipcRenderer.invoke('instruments:finalize', id, info),
+    remove: (id: string) => ipcRenderer.invoke('instruments:remove', id),
+  },
   dialogs: {
     open: () => ipcRenderer.invoke('dialog:open'),
     save: (suggested: string, data: Uint8Array, ext: string) =>

@@ -36,6 +36,12 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
   - Export: MIDI, MusicXML, Guitar Pro 7, WAV (full mix or per-track stems), PDF/print, and ASCII tab copied to the
     clipboard.
 
+- **Tones**: a pedalboard-style editor for every amp-chain parameter, your own cabinet IRs (WAV), and an A/B
+  listening tool for tuning tones.
+- **Your own instruments**: **File → Instruments…** adds an SFZ instrument from a folder (Docker and desktop).
+- **Inputs**: record from a MIDI keyboard or MIDI guitar (step entry when stopped, string-per-channel mode for MIDI
+  guitars), or play a real guitar through a track's amp and pedal via your audio interface.
+
 Press **?** in the app for the keyboard cheat sheet.
 
 ## Run with Docker

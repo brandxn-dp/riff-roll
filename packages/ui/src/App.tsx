@@ -14,7 +14,10 @@ import { SongBar } from './components/SongBar';
 import { FileMenu, ProjectsDialog, SongTitle } from './components/FileMenu';
 import { About } from './components/About';
 import { ToneEditor } from './components/ToneEditor';
+import { Instruments } from './components/Instruments';
 import { installFileActions } from './files/wire';
+import { installMidi } from './midiInput';
+import { InputControls } from './components/InputControls';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
 
@@ -29,9 +32,11 @@ export function App() {
     detectStorage().then(setStorage);
     installAudio();
     const offFiles = installFileActions();
+    const offMidi = installMidi();
     const offKeys = installShortcuts();
     return () => {
       offFiles();
+      offMidi();
       offKeys();
     };
   }, []);
@@ -42,6 +47,7 @@ export function App() {
   return (
     <div className="app">
       <Toolbar
+        right={<InputControls />}
         left={
           <>
             <FileMenu />
@@ -78,6 +84,7 @@ export function App() {
       {modal === 'files' && <ProjectsDialog />}
       {modal === 'about' && <About />}
       {modal === 'tone' && <ToneEditor />}
+      {modal === 'instruments' && <Instruments />}
     </div>
   );
 }

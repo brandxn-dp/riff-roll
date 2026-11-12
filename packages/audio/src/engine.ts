@@ -1,4 +1,13 @@
-import { BarMap, TempoMap, laneById, playbackSegments, toneAt, type Song, type Track } from '@riffroll/core';
+import {
+  BarMap,
+  TempoMap,
+  laneById,
+  laneForGm,
+  playbackSegments,
+  toneAt,
+  type Song,
+  type Track,
+} from '@riffroll/core';
 import { InstrumentLibrary, isFallback } from './instruments';
 import { MasterBus, TrackGraph, audibleTracks } from './graph';
 import { newPerfState, playDrum, scheduleClicks, scheduleTrack, click, type TrackPerfState } from './perform';
@@ -236,6 +245,72 @@ export class AudioEngine {
         });
     });
     return passes.length * len;
+  }
+
+  /**
+   * Live note for MIDI input monitoring: starts sounding now through the track's current tone and returns a
+   * function that releases it (note-off).
+   */
+  async liveNote(track: Track, pitch: number, velocity: number): Promise<() => void> {
+    await this.resume();
+    const g = this.graphs.get(track.id);
+    if (!g) return () => {};
+    if (track.type === 'drums') {
+      const lane = laneForGm(pitch);
+      if (lane) void this.previewDrum(track, lane.id, velocity);
+      return () => {};
+    }
+    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
+    await s.preload([pitch]);
+    const voices = s.play(this.ctx, g.input, { pitch, velocity, when: this.ctx.currentTime });
+    return () => voices.forEach((v) => v.stop(this.ctx.currentTime));
+  }
+
+  // ---------------- live instrument input (guitar/bass into the amp sim) ----------------
+  private live: {
+    stream: MediaStream;
+    src: MediaStreamAudioSourceNode;
+    gain: GainNode;
+    trackId: string;
+  } | null = null;
+
+  /** Route an audio input (e.g. a guitar into an audio interface) through a track's amp chain and pedal. */
+  async startLiveInput(track: Track, deviceId?: string, inputGain = 2.5) {
+    this.stopLiveInput();
+    await this.resume();
+    const g = this.graphs.get(track.id);
+    if (!g || track.type === 'drums') throw new Error('Pick a guitar or bass track for live input.');
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+    });
+    const src = this.ctx.createMediaStreamSource(stream);
+    const gain = this.ctx.createGain();
+    gain.gain.value = inputGain;
+    src.connect(gain).connect(g.input);
+    if (!this.st) g.setTone(toneAt(track.pedal, 0), this.ctx.currentTime, 0);
+    this.live = { stream, src, gain, trackId: track.id };
+  }
+
+  setLiveInputGain(v: number) {
+    this.live?.gain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+  }
+
+  get liveInputTrack(): string | null {
+    return this.live?.trackId ?? null;
+  }
+
+  stopLiveInput() {
+    if (!this.live) return;
+    this.live.src.disconnect();
+    this.live.gain.disconnect();
+    this.live.stream.getTracks().forEach((t) => t.stop());
+    this.live = null;
   }
 
   stopAudition() {

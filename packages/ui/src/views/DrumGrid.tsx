@@ -415,7 +415,12 @@ export function DrumGrid() {
       <PatternTools lane={DRUM_LANES[lane]} vel={vel} setVel={setVel} />
       <div ref={wrapRef} className="cvwrap roll" aria-label="Drum grid">
         <canvas ref={cvRef} />
-        <div ref={scRef} className="scroller">
+        <div
+          ref={scRef}
+          className="scroller"
+          tabIndex={0}
+          aria-label="Drum grid. Click cells to add or remove hits; Space plays."
+        >
           <div ref={sizerRef} className="sizer" />
         </div>
       </div>
