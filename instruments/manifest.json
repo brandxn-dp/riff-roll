@@ -49,14 +49,15 @@
       "role": "drums",
       "url": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums/releases/download/v1.100/Big_Rusty_Drums_1100.zip",
       "sha256": null,
-      "format": "zip",
+      "format": "zip-range",
       "sfz": null,
       "license": "CC0-1.0",
       "author": "Karoryfer Samples",
       "homepage": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums",
       "attribution": "Big Rusty Drums by Karoryfer Samples, released under CC0 1.0 (public domain dedication).",
       "default": true,
-      "large": true
+      "generator": "big-rusty",
+      "roundRobins": 2
     }
   ]
 }

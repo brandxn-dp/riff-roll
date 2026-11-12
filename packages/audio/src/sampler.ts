@@ -67,6 +67,8 @@ export interface PlayOptions {
   /** Cent offsets over time: [{time (abs seconds), cents}] — bends, slides, vibrato, whammy */
   detune?: { time: number; cents: number; ramp?: boolean }[];
   harmonic?: boolean;
+  /** Extra per-region gain (drum mic balance). */
+  regionGain?: (r: SfzRegion) => number;
 }
 
 export interface Voice {
@@ -190,7 +192,7 @@ export class Sampler {
     // velocity curve: amp_veltrack 100% = (vel/127)^2 scaling of the sample layer
     const vt = r.ampVeltrack / 100;
     const velGain = 1 - vt + vt * Math.pow(vel / 127, 1.6);
-    const peak = Math.pow(10, r.volume / 20) * velGain * (o.gain ?? 1);
+    const peak = Math.pow(10, r.volume / 20) * velGain * (o.gain ?? 1) * (o.regionGain ? o.regionGain(r) : 1);
     const a = r.ampeg;
     const t0 = when + a.delay;
     const attack = Math.max(a.attack, o.fadeIn ?? 0, 0.0015);

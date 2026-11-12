@@ -143,6 +143,10 @@ export interface Track {
   hits: DrumHit[];
   /** Drum mixer: per-piece volume (linear). */
   drumMix?: Partial<Record<DrumPiece, number>>;
+  /** Drum mixer: mic balance (linear) for kits with several mic positions. */
+  drumMics?: { close: number; oh: number };
+  /** Drum mixer: kit-wide bus compressor amount 0..1. */
+  drumComp?: number;
 }
 
 export interface TempoPoint {

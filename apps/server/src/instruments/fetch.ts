@@ -13,6 +13,8 @@ import { spawn } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createRequire } from 'node:module';
+import { RemoteZip, pool } from './zipremote.js';
+import { BIG_RUSTY, kitSfz, selectKitFiles } from './drumkit.js';
 
 export interface ManifestEntry {
   id: string;
@@ -20,7 +22,12 @@ export interface ManifestEntry {
   role: 'guitar' | 'bass' | 'drums' | 'ir' | 'other';
   url: string;
   sha256: string | null;
-  format: '7z' | 'zip';
+  /** zip-range: read only the needed files out of a remote zip with HTTP range requests */
+  format: '7z' | 'zip' | 'zip-range';
+  /** zip-range: which normalised-kit generator to use */
+  generator?: 'big-rusty';
+  /** zip-range: round robins to keep */
+  roundRobins?: number;
   /** Main SFZ path inside the archive. null = auto-detect. */
   sfz: string | null;
   license: string;
@@ -173,6 +180,11 @@ export async function fetchInstruments(opts: FetchOptions): Promise<InstalledIns
         progress.done.push(inst.id);
         continue;
       }
+      if (inst.format === 'zip-range') {
+        await installFromRemoteZip(inst, outDir, progress, emit, log);
+        progress.done.push(inst.id);
+        continue;
+      }
       const archive = path.join(cache, `${inst.id}.${inst.format}`);
       if (!existsSync(archive)) {
         log(`↓ ${inst.name}  ${inst.url}`);
@@ -241,4 +253,65 @@ export async function fetchInstruments(opts: FetchOptions): Promise<InstalledIns
     emit();
     throw e;
   }
+}
+
+/** Install a trimmed subset of a huge zip (e.g. a 620 MB drum kit) without downloading the whole archive. */
+async function installFromRemoteZip(
+  inst: ManifestEntry,
+  outDir: string,
+  progress: FetchProgress,
+  emit: () => void,
+  log: (m: string) => void,
+) {
+  if (inst.generator !== 'big-rusty') throw new Error(`${inst.id}: unknown kit generator ${inst.generator}`);
+  log(`↓ ${inst.name} (selected files only)  ${inst.url}`);
+  const zip = new RemoteZip(inst.url);
+  const entries = await zip.open();
+  const rr = inst.roundRobins ?? 2;
+  const wanted = selectKitFiles(
+    entries.map((e) => e.name),
+    BIG_RUSTY,
+    rr,
+  );
+  const byName = new Map(entries.map((e) => [e.name, e]));
+  const total = wanted.reduce((a, n) => a + (byName.get(n)?.compressedSize ?? 0), 0);
+  log(`  ${wanted.length} files, ${(total / 1e6).toFixed(1)} MB (of ${entries.length} entries in the archive)`);
+  const target = path.join(outDir, inst.id);
+  const staging = target + '.staging';
+  await rm(staging, { recursive: true, force: true });
+  progress.state = 'downloading';
+  progress.instrument = inst.id;
+  progress.received = 0;
+  progress.total = total;
+  let last = 0;
+  await pool(wanted, 8, async (name) => {
+    const e = byName.get(name)!;
+    const data = await zip.read(e);
+    const file = path.join(staging, ...name.split('/'));
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, data);
+    progress.received = (progress.received ?? 0) + e.compressedSize;
+    if (Date.now() - last > 250) {
+      last = Date.now();
+      emit();
+    }
+  });
+  await writeFile(path.join(staging, 'riffroll-kit.sfz'), kitSfz(wanted, BIG_RUSTY, rr));
+  const descriptor: InstalledInstrument = {
+    id: inst.id,
+    name: inst.name,
+    role: inst.role,
+    license: inst.license,
+    author: inst.author,
+    homepage: inst.homepage,
+    attribution: inst.attribution,
+    sfz: `${inst.id}/riffroll-kit.sfz`,
+    sfzFiles: [`${inst.id}/riffroll-kit.sfz`],
+    meta: { ...inst.meta, keymap: 'riffroll-drums-v1' },
+  };
+  await writeFile(path.join(staging, DESCRIPTOR), JSON.stringify(descriptor, null, 2));
+  await rm(target, { recursive: true, force: true });
+  await rename(staging, target);
+  log(`✓ ${inst.id}`);
+  emit();
 }

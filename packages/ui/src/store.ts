@@ -3,6 +3,8 @@ import {
   BarMap,
   History,
   PPQ,
+  exampleBass,
+  exampleBeat,
   exampleRiff,
   newSong,
   type Command,
@@ -63,7 +65,11 @@ export interface UiState {
 function initialSong(): Song {
   const s = newSong('Untitled');
   // start with the prototype's example riff on Guitar 1 so the app is never empty on first launch
-  return { ...s, bars: 4, tracks: s.tracks.map((t, i) => (i === 1 ? exampleRiff(t) : t)) };
+  return {
+    ...s,
+    bars: 4,
+    tracks: s.tracks.map((t, i) => (i === 0 ? exampleBeat(t) : i === 1 ? exampleRiff(t) : i === 3 ? exampleBass(t) : t)),
+  };
 }
 
 export const useStore = create<UiState>((set, get) => {

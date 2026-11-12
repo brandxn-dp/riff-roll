@@ -51,6 +51,8 @@ export class TrackGraph {
   private sendVol: GainNode;
   private sendSum: GainNode;
   private sum: GainNode;
+  private kitComp?: DynamicsCompressorNode;
+  private kitWet?: GainNode;
   current = '';
 
   constructor(
@@ -70,7 +72,19 @@ export class TrackGraph {
     this.sendVol = ctx.createGain();
     this.sum.connect(this.vol).connect(this.pan).connect(this.mute).connect(master.input);
     this.sendSum.connect(this.sendVol).connect(master.reverbIn);
-    if (track.type === 'drums') this.input.connect(this.sum); // drums: no amp chain (kit bus added in M5)
+    if (track.type === 'drums') {
+      // kit bus: parallel ("New York") compression, amount set by the drum mixer
+      this.kitComp = ctx.createDynamicsCompressor();
+      this.kitComp.threshold.value = -24;
+      this.kitComp.ratio.value = 4;
+      this.kitComp.attack.value = 0.01;
+      this.kitComp.release.value = 0.15;
+      this.kitWet = ctx.createGain();
+      this.kitWet.gain.value = 0;
+      this.input.connect(this.sum);
+      this.input.connect(this.kitComp).connect(this.kitWet).connect(this.sum);
+      this.input.connect(this.sendSum);
+    }
     this.update(track, true);
   }
 
@@ -81,7 +95,11 @@ export class TrackGraph {
     this.sendVol.gain.setTargetAtTime(track.volume, t, 0.02);
     this.pan.pan.setTargetAtTime(track.pan, t, 0.02);
     this.mute.gain.setTargetAtTime(audible ? 1 : 0, t, 0.01);
-    if (track.type === 'drums') return;
+    if (track.type === 'drums') {
+      this.kitWet?.gain.setTargetAtTime((track.drumComp ?? 0.35) * 1.8, t, 0.02);
+      this.sendSum.gain.setTargetAtTime(0.12, t, 0.02); // a little room on the kit
+      return;
+    }
     const seen = new Set<string>();
     for (const tone of track.tones) {
       seen.add(tone.id);

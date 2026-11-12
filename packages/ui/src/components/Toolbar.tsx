@@ -199,6 +199,9 @@ export function Toolbar({ right }: { right?: React.ReactNode }) {
       </label>
       <div className="spacer" />
       {right}
+      <button className="btn" onClick={() => st.set({ modal: 'mixer' })} title="Mixer">
+        Mixer
+      </button>
       <button className="btn ghost" onClick={() => st.set({ modal: 'shortcuts' })} aria-label="Keyboard shortcuts" title="Shortcuts (?)">
         ?
       </button>

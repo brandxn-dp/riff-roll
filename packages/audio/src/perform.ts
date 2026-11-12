@@ -1,4 +1,4 @@
-import { BarMap, toneChanges, trackFingering, type Note, type Song, type Track } from '@riffroll/core';
+import { BarMap, laneById, toneChanges, trackFingering, type Note, type Song, type Track } from '@riffroll/core';
 import type { Sampler, Voice } from './sampler';
 import type { TrackGraph } from './graph';
 
@@ -45,7 +45,8 @@ export function scheduleTrack(
   if (track.type !== 'drums') {
     for (const ch of toneChanges(track.pedal)) if (ch.tick > 0 && ch.tick >= t0 && ch.tick < t1) graph.setTone(ch.toneId, timeOf(ch.tick));
   }
-  if (!sampler || track.type === 'drums') return; // drum playback lands in M5
+  if (!sampler) return;
+  if (track.type === 'drums') return scheduleDrums(ctx, track, sampler, graph, t0, t1, timeOf, st, human);
   const fing = trackFingering(track);
   const notes = track.notes;
   for (let i = lb(notes, t0); i < notes.length && notes[i].start < t1; i++) {
@@ -83,6 +84,60 @@ export function scheduleTrack(
     st.voices.push(...voices);
   }
   if (st.voices.length > 512) st.voices = st.voices.filter((v) => v.end > ctx.currentTime);
+}
+
+/** Mic balance for kits with close/overhead samples (regions tagged riffroll_mic=close|oh). */
+export function micGain(track: Track) {
+  const m = track.drumMics ?? { close: 1, oh: 1 };
+  return (r: { raw: Record<string, string> }) => (r.raw.riffroll_mic === 'oh' ? m.oh : r.raw.riffroll_mic === 'close' ? m.close : 1);
+}
+
+/** Play one drum lane hit (also used for previews in the drum grid). */
+export function playDrum(
+  ctx: BaseAudioContext,
+  track: Track,
+  sampler: Sampler,
+  dest: AudioNode,
+  laneId: string,
+  velocity: number,
+  when: number,
+): Voice[] {
+  const lane = laneById.get(laneId);
+  if (!lane) return [];
+  const piece = track.drumMix?.[lane.piece] ?? 1;
+  const regionGain = micGain(track);
+  const vel = Math.max(1, Math.min(127, Math.round(velocity * (lane.velScale ?? 1))));
+  const out: Voice[] = [];
+  if (lane.flam) out.push(...sampler.play(ctx, dest, { pitch: lane.key, velocity: vel * 0.55, when: Math.max(ctx.currentTime, when - lane.flam), gain: piece, regionGain }));
+  out.push(...sampler.play(ctx, dest, { pitch: lane.key, velocity: vel, when, gain: piece, regionGain }));
+  return out;
+}
+
+function scheduleDrums(
+  ctx: BaseAudioContext,
+  track: Track,
+  sampler: Sampler,
+  graph: TrackGraph,
+  t0: number,
+  t1: number,
+  timeOf: (tick: number) => number,
+  st: TrackPerfState,
+  human: Humanize,
+) {
+  const hits = track.hits;
+  let lo = 0,
+    hi = hits.length;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (hits[m].start < t0) lo = m + 1;
+    else hi = m;
+  }
+  for (let i = lo; i < hits.length && hits[i].start < t1; i++) {
+    const h = hits[i];
+    const jitter = human.timingMs ? ((Math.random() * 2 - 1) * human.timingMs) / 1000 : 0;
+    const vel = h.velocity + (human.velocity ? Math.round((Math.random() * 2 - 1) * human.velocity) : 0);
+    st.voices.push(...playDrum(ctx, track, sampler, graph.input, `${h.piece}:${h.articulation}`, vel, Math.max(ctx.currentTime, timeOf(h.start) + jitter)));
+  }
 }
 
 /** Bends, vibrato and whammy as pitch automation on the playing voice. */

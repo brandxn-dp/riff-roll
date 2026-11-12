@@ -1,7 +1,7 @@
-import { BarMap, TempoMap, toneAt, type Song, type Track } from '@riffroll/core';
+import { BarMap, TempoMap, laneById, toneAt, type Song, type Track } from '@riffroll/core';
 import { InstrumentLibrary, isFallback } from './instruments';
 import { MasterBus, TrackGraph, audibleTracks } from './graph';
-import { newPerfState, scheduleClicks, scheduleTrack, click, type TrackPerfState } from './perform';
+import { newPerfState, playDrum, scheduleClicks, scheduleTrack, click, type TrackPerfState } from './perform';
 import type { Sampler } from './sampler';
 
 export interface EngineOptions {
@@ -101,8 +101,7 @@ export class AudioEngine {
       if (this.samplerKeys.get(t.id) !== key) {
         this.samplerKeys.set(t.id, key);
         this.samplers.delete(t.id);
-        if (t.type !== 'drums')
-          this.lib.sampler(t.instrument, t.type).then((s) => {
+        this.lib.sampler(t.instrument, t.type).then((s) => {
             if (this.samplerKeys.get(t.id) === key) {
               this.samplers.set(t.id, s);
               if (isFallback(s)) this.opts.onStatus?.('Instruments not installed — using a basic fallback sound. Run "pnpm fetch-instruments".');
@@ -132,11 +131,11 @@ export class AudioEngine {
       onProgress?.(d, t);
     };
     for (const t of song.tracks) {
-      if (t.type === 'drums') continue;
+      const pitches = t.type === 'drums' ? t.hits.map((h) => laneById.get(`${h.piece}:${h.articulation}`)?.key ?? 0) : t.notes.map((n) => n.pitch);
       jobs.push(
         this.lib.sampler(t.instrument, t.type).then((s) =>
           s.preload(
-            t.notes.map((n) => n.pitch),
+            pitches,
             (d, n) => {
               prog.set(t.id, [d, n]);
               report();
@@ -163,6 +162,18 @@ export class AudioEngine {
     const song = this.song;
     const secs = song ? (lengthTicks * 60) / (this.tempoMap(song).bpmAt(tick) * song.ppq) : 0.4;
     s.play(this.ctx, g.input, { pitch, velocity: 100, when: this.ctx.currentTime + 0.005, duration: Math.min(1.2, Math.max(0.15, secs)) });
+  }
+
+  /** Audition a drum lane (drum grid clicks). */
+  async previewDrum(track: Track, laneId: string, velocity = 100) {
+    await this.resume();
+    const g = this.graphs.get(track.id);
+    if (!g) return;
+    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, 'drums'));
+    const key = laneById.get(laneId)?.key;
+    if (key == null) return;
+    await s.preload([key]);
+    playDrum(this.ctx, track, s, g.input, laneId, velocity, this.ctx.currentTime + 0.005);
   }
 
   /** Start playback at `fromTick`. Count-in bars come from song.metronome.countIn. */

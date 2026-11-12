@@ -91,6 +91,8 @@ const track = z.object({
   notes: z.array(note),
   hits: z.array(hit),
   drumMix: z.record(z.string(), z.number()).optional(),
+  drumMics: z.object({ close: z.number(), oh: z.number() }).optional(),
+  drumComp: z.number().min(0).max(1).optional(),
 });
 
 export const songSchema = z.object({

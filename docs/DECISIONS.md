@@ -77,3 +77,20 @@ Non-obvious choices and why. Newest at the bottom of each section.
   instruments (Instruments panel); until then only SFZ is supported.
 - **Fallback sound**: if no packs are installed, a Karplus-Strong pluck rendered into buffers is played through the
   same SFZ sampler and the status bar says to run `pnpm fetch-instruments`. It never replaces installed samples.
+
+## Drums
+
+- **Big Rusty Drums (CC0) instead of the Muldjord kit**: no attribution requirement, and its release is a single
+  zip. The full kit is 620 MB, so `fetch-instruments` reads the zip's central directory and pulls only the needed
+  files with HTTP range requests (`zipremote.ts`): close + overhead mics, every velocity layer, 2 round robins —
+  492 files / ~75 MB. No 620 MB download, no unzip step.
+- **Normalised kit SFZ.** The kit's own programs depend on CC-driven mic blends, `#include`s and curves. Rather than
+  implement that SFZ superset, the fetch step writes `riffroll-kit.sfz` in Riff Roll's own drum keymap
+  (`packages/core/src/drums.ts`): one key per lane, close and overhead regions layered (tagged `riffroll_mic=`),
+  hi-hat and cymbal choke groups via `group`/`off_by`. Any kit can be supported by adding a mapping table.
+- The kit has **no splash**; the splash lane plays the 17" crash tuned up a fifth. Ghost notes are the snare at ~1/3
+  velocity (soft layers), flams are a grace hit 28 ms early.
+- **Drum mixer** = per-piece gain, close/overhead balance (applied per region), and a kit-bus parallel compressor.
+- For drum tracks the "piano roll" view *is* the drum grid (named lanes instead of keys, as the spec asks), so there
+  is one editor to learn for drums.
+- A synthesised fallback kit (same keymap) plays when no kit is installed.

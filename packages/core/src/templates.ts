@@ -66,6 +66,45 @@ export function newSong(title = 'Untitled'): Song {
   };
 }
 
+/** A basic rock beat matching the example riff: 8th hats, kick on 1 and 3 (+ the "and" of 3), snare on 2 and 4. */
+export function exampleBeat(track: Track, bars = 4): Track {
+  const E = PPQ / 2;
+  const hits: Track['hits'] = [];
+  const add = (piece: Track['hits'][number]['piece'], articulation: string, start: number, velocity: number) =>
+    hits.push({ id: newId('h'), start, piece, articulation, velocity });
+  for (let b = 0; b < bars; b++) {
+    const bar = b * PPQ * 4;
+    for (let k = 0; k < 8; k++) {
+      if (b === 0 && k === 0) add('crash1', 'hit', bar, 110);
+      else if (b >= 2) add('ride', 'bow', bar + k * E, k % 2 ? 84 : 104);
+      else add('hihat', 'closed', bar + k * E, k % 2 ? 78 : 102);
+    }
+    if (b === 2) add('crash1', 'hit', bar, 118);
+    add('kick', 'right', bar, 112);
+    add('kick', 'right', bar + 4 * E, 108);
+    add('kick', 'right', bar + 5 * E, 96);
+    add('snare', 'center', bar + 2 * E, 112);
+    add('snare', 'center', bar + 6 * E, 116);
+    if (b === bars - 1) {
+      add('tom1', 'hit', bar + 7 * E - E / 2, 100);
+      add('tom3', 'hit', bar + 7 * E, 106);
+    }
+  }
+  return { ...track, hits: hits.sort((a, b) => a.start - b.start) };
+}
+
+/** Root notes in 8ths under the example riff (E, C, then the power-chord roots). */
+export function exampleBass(track: Track): Track {
+  const E = PPQ / 2;
+  const notes: Note[] = [];
+  const add = (p: number, s: number, l = E, v = 100) => notes.push({ id: newId('n'), pitch: p, start: s, duration: l, velocity: v });
+  for (let k = 0; k < 8; k++) add(28, k * E, E, k % 2 ? 88 : 104); // E1
+  for (let k = 0; k < 8; k++) add(36, PPQ * 4 + k * E, E, k % 2 ? 88 : 104); // C2
+  const roots = [28, 28, 31, 28, 33, 33, 31, 31, 36, 36, 35, 35, 28, 28, 28, 28];
+  roots.forEach((p, k) => add(p, PPQ * 8 + k * E, E, k % 2 ? 92 : 108));
+  return { ...track, notes };
+}
+
 /** The prototype's example riff: clean Em/C arpeggios, then a distorted power-chord riff with a stomp at bar 3. */
 export function exampleRiff(track: Track): Track {
   const S = PPQ / 4; // one 1/16 step

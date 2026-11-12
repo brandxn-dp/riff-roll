@@ -1,5 +1,5 @@
 import { Sampler, SampleLoader, defaultFetch, joinUrl } from './sampler';
-import { fallbackFetch, fallbackSfz } from './fallback';
+import { fallbackDrumSfz, fallbackFetch, fallbackSfz } from './fallback';
 
 export interface InstrumentInfo {
   id: string;
@@ -57,8 +57,8 @@ export class InstrumentLibrary {
       p = (async () => {
         const info = await this.resolve(id, role);
         if (!info) {
-          const kind = role === 'bass' ? 'bass' : 'guitar';
-          const s = new Sampler(fallbackSfz(kind), 'fallback://', this.fallbackLoader);
+          const text = role === 'drums' ? fallbackDrumSfz() : fallbackSfz(role === 'bass' ? 'bass' : 'guitar');
+          const s = new Sampler(text, 'fallback://', this.fallbackLoader);
           (s as Sampler & { fallback?: boolean }).fallback = true;
           return s;
         }

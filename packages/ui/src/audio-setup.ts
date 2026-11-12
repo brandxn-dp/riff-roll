@@ -77,7 +77,9 @@ export function installAudio() {
     preview: (track, pitch, tick, len) => {
       void ensureEngine().then((e) => e.preview(track, pitch, tick, len));
     },
-    previewDrum: () => {},
+    previewDrum: (track, lane, velocity) => {
+      void ensureEngine().then((e) => e.previewDrum(track, lane, velocity));
+    },
   });
 
   setTransport({

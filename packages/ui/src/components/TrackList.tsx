@@ -28,7 +28,10 @@ export function TrackList() {
             if (t.id !== trackId) st.set({ trackId: t.id, selection: new Set(), focusId: null, view: t.type === 'drums' ? 'drums' : st.view === 'drums' ? 'split' : st.view });
           }}
         >
-          <span className="tkind">{ICON[t.type]}</span>
+          <label className="tcolor" title="Track colour" onClick={(e) => e.stopPropagation()}>
+            <input type="color" value={t.color} onChange={(e) => st.exec(updateTrack(t.id, { color: e.target.value }, 'Track colour'))} aria-label="Track colour" />
+            <span className="tkind">{ICON[t.type]}</span>
+          </label>
           <input
             className="tname"
             value={t.name}

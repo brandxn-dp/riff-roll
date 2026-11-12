@@ -7,6 +7,8 @@ import { Inspector } from './components/Inspector';
 import { ShortcutSheet } from './components/ShortcutSheet';
 import { PianoRoll } from './views/PianoRoll';
 import { LowerPanel } from './views/LowerPanel';
+import { DrumGrid } from './views/DrumGrid';
+import { Mixer } from './components/Mixer';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
 
@@ -33,7 +35,7 @@ export function App() {
         <TrackList />
         <main className="main">
           {trackType === 'drums' ? (
-            <div className="placeholder">The drum grid arrives in milestone 5.</div>
+            <DrumGrid />
           ) : (
             <>
               {showRoll && <PianoRoll />}
@@ -49,6 +51,7 @@ export function App() {
         <span className="mute">storage: {storage?.kind ?? '…'}</span>
       </footer>
       {modal === 'shortcuts' && <ShortcutSheet />}
+      {modal === 'mixer' && <Mixer />}
     </div>
   );
 }
