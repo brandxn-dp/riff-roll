@@ -8,6 +8,7 @@ import { ShortcutSheet } from './components/ShortcutSheet';
 import { PianoRoll } from './views/PianoRoll';
 import { LowerPanel } from './views/LowerPanel';
 import { installShortcuts } from './shortcuts';
+import { installAudio } from './audio-setup';
 
 export function App() {
   const [storage, setStorage] = useState<StorageAdapter | null>(null);
@@ -18,6 +19,7 @@ export function App() {
 
   useEffect(() => {
     detectStorage().then(setStorage);
+    installAudio();
     return installShortcuts();
   }, []);
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { PPQ, setBars, setTempos, setTuning, tuningByName, tuningsFor, updateSong, updateTrack } from '@riffroll/core';
-import { SNAPS, ZOOMS, currentTrack, useStore, type MainView } from '../store';
+import { PPQ, setBars, setLoop, setTempos, setTuning, tuningByName, tuningsFor, updateSong, updateTrack } from '@riffroll/core';
+import { SNAPS, ZOOMS, barMap, currentTrack, useStore, type MainView } from '../store';
 import { togglePlay } from '../transport';
 
 const LENS = [
@@ -17,6 +17,7 @@ export function Toolbar({ right }: { right?: React.ReactNode }) {
   const snap = useStore((s) => s.snap);
   const noteLen = useStore((s) => s.noteLen);
   const view = useStore((s) => s.view);
+  const speed = useStore((s) => s.speed);
   useStore((s) => s.historyVersion);
   const st = useStore.getState();
   const [bpmText, setBpmText] = useState<string | null>(null);
@@ -38,6 +39,54 @@ export function Toolbar({ right }: { right?: React.ReactNode }) {
       <button className={'btn play' + (playing ? ' on' : '')} onClick={togglePlay} title="Play / stop (Space)">
         {playing ? '■ Stop' : '▶ Play'}
       </button>
+      <div className="group" role="group" aria-label="Transport options">
+        <button
+          aria-pressed={!!song.loop?.on}
+          title="Loop (Shift+drag in the ruler to set the region)"
+          onClick={() => {
+            const bm = barMap(song);
+            const loop = song.loop ?? {
+              start: bm.barAtTick(st.cursor).start,
+              end: bm.barStart(Math.min(song.bars, bm.barAtTick(st.cursor).index + 2)),
+              on: false,
+            };
+            st.exec(setLoop({ ...loop, on: !loop.on }));
+          }}
+        >
+          ⟲ Loop
+        </button>
+        <button
+          aria-pressed={song.metronome.on}
+          title="Metronome"
+          onClick={() => st.exec(updateSong({ metronome: { ...song.metronome, on: !song.metronome.on } }, 'Metronome'))}
+        >
+          Click
+        </button>
+        <select
+          className="mini"
+          aria-label="Count-in bars"
+          title="Count-in"
+          value={song.metronome.countIn}
+          onChange={(e) => st.exec(updateSong({ metronome: { ...song.metronome, countIn: Number(e.target.value) } }, 'Count-in'))}
+        >
+          <option value={0}>No count-in</option>
+          <option value={1}>Count-in 1 bar</option>
+          <option value={2}>Count-in 2 bars</option>
+        </select>
+        <select
+          className="mini"
+          aria-label="Playback speed"
+          title="Playback speed (pitch unchanged)"
+          value={speed}
+          onChange={(e) => st.set({ speed: Number(e.target.value) })}
+        >
+          {[0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.5].map((v) => (
+            <option key={v} value={v}>
+              {Math.round(v * 100)}%
+            </option>
+          ))}
+        </select>
+      </div>
       <label className="field">
         BPM
         <input

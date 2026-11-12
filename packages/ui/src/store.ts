@@ -45,6 +45,7 @@ export interface UiState {
   playing: boolean;
   playhead: number | null; // tick while playing
   cursor: number; // playback start / paste position (tick)
+  speed: number; // playback speed 0.5..1.5 (pitch unaffected)
   status: string;
   modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files';
 
@@ -84,6 +85,7 @@ export const useStore = create<UiState>((set, get) => {
     playing: false,
     playhead: null,
     cursor: 0,
+    speed: 1,
     status: '',
     modal: null,
     exec: (cmd) => get().history.execute(cmd),

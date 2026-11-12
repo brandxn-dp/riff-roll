@@ -5,6 +5,7 @@ import {
   pitchClassName,
   pitchName,
   removeNotes,
+  setLoop,
   stringColor,
   trackFingering,
   updateNotes,
@@ -30,6 +31,7 @@ import {
 import { drawGrid, drawPlayhead, drawToneWash, isCleanTone, tickToX, toneOf, xToTick, type TimeAxis } from './timeline';
 import { pedalSegments } from '@riffroll/core';
 import { preview } from '../audio-bridge';
+import { seek } from '../transport';
 
 const RH = 18; // row height
 const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
@@ -51,7 +53,8 @@ type Drag =
   | { mode: 'move'; ids: string[]; startTick: number; startPitch: number; orig: Map<string, Note>; moved: boolean }
   | { mode: 'resize'; ids: string[]; orig: Map<string, Note>; anchorTick: number; fresh: boolean }
   | { mode: 'box'; x0: number; y0: number; x1: number; y1: number; additive: boolean; base: Set<string> }
-  | { mode: 'erase' };
+  | { mode: 'erase' }
+  | { mode: 'loop'; from: number };
 
 export function PianoRoll() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -344,7 +347,7 @@ export function PianoRoll() {
     function rulerClick(p: ReturnType<typeof pt>) {
       const st = useStore.getState();
       const tick = Math.max(0, Math.min(songEnd(st.song) - 1, floorTick(tickAt(p.gx), st.snap)));
-      st.set({ cursor: tick });
+      seek(tick);
     }
 
     // ---------------- pointer: mouse/pen get the FL-style editor, touch gets the prototype's tap model ----------
@@ -358,7 +361,14 @@ export function PianoRoll() {
         return;
       }
       if (p.ly < RULER_H && p.lx >= KEYS_W) {
-        if (e.button === 0) rulerClick(p);
+        if (e.button !== 0) return;
+        if (e.shiftKey) {
+          // Shift+drag in the ruler sets the loop region (snapped to bars' grid)
+          const from = Math.max(0, snapTick(tickAt(p.gx), st.snap));
+          st.begin('Set loop');
+          drag = { mode: 'loop', from };
+          sc.setPointerCapture(e.pointerId);
+        } else rulerClick(p);
         return;
       }
       if (p.lx < KEYS_W && p.ly >= RULER_H) {
@@ -430,6 +440,12 @@ export function PianoRoll() {
         return;
       }
       const end = songEnd(st.song);
+      if (drag.mode === 'loop') {
+        const to = Math.max(0, Math.min(end, snapTick(tickAt(p.gx), st.snap)));
+        const [a, b] = drag.from < to ? [drag.from, to] : [to, drag.from];
+        if (b > a) st.exec(setLoop({ start: a, end: b, on: true }));
+        return;
+      }
       if (drag.mode === 'erase') {
         const hit = noteAt(t, p.gx, p.gy);
         if (hit) st.exec(removeNotes(t.id, [hit.id]));

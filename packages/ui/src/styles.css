@@ -156,6 +156,15 @@ button:disabled {
   color: var(--bg);
   border-color: var(--ink);
 }
+.group select.mini {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
 .group output {
   min-width: 22px;
   text-align: center;

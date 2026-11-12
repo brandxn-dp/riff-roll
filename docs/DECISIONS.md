@@ -47,3 +47,33 @@ Non-obvious choices and why. Newest at the bottom of each section.
   1 GB; the FreePats set is small enough to bundle in every installer.
 - **SHA-256 pins start as `null`**: the script prints each archive's hash on first download; it is then pinned in the
   manifest so later downloads are verified.
+
+## Audio
+
+- **One engine, one graph, live and offline.** `TrackGraph`/`MasterBus`/`ToneChainNode` take a `BaseAudioContext`,
+  so WAV export renders through exactly the same nodes as live playback.
+- **Pedal = crossfade between parallel amp chains.** Each tone is a full chain that is always connected; the DI
+  sampler feeds all of them and a stomp runs a 10 ms equal-power crossfade (`setValueCurveAtTime`) between their
+  output gains. Notes that are still ringing switch tone mid-sustain, like a real footswitch. Cost: N chains of CPU
+  per track (2 by default) — acceptable; inactive-chain suspension is a possible later optimisation.
+- **Lazy sample loading.** The FSBS guitar is 120 FLAC files (76 MB). Decoding everything would take hundreds of MB
+  of RAM, so samples are decoded per pitch range when a song needs them (`prepare()` before playback, on demand for
+  previews). Fetches go through Cache Storage on http(s) so a browser downloads each file once.
+- **Cabinet IRs are synthesised** (`impulses.ts`): an impulse + early cabinet reflections through each cab's
+  modelled frequency response, rendered once with `OfflineAudioContext`. No third-party IR files ship, so there's no
+  redistribution question. User IR WAVs are supported via `ToneChainNode.setUserIR`.
+- **Amp sim** is Web Audio nodes: drive pedal (mid-hump → tanh), amp (tight low-cut → 4× oversampled asymmetric
+  waveshaper → optional second gain stage → tone stack → power-amp saturation). The noise gate is an AudioWorklet
+  (`worklets/gate-processor.js`); without a secure origin it is skipped and the rest still works.
+- **Preset levels were matched by measurement, not by ear.** I can't listen, so I rendered an open Em chord and a
+  palm-muted E5 chug through every preset offline and set each voicing's output compensation so they land at a
+  similar RMS (guitar ≈0.16–0.22, bass ≈0.2). Tone *character* still needs a human ear; that's what the dev A/B
+  page (milestone 9) is for. The DI samples are recorded hot, so each track has a DI trim (guitar 0.35).
+- **Palm mute / dead notes**: the default pack has no palm-mute samples, so the sampler uses a short envelope +
+  low-pass (spec's fallback).
+- **Playback speed without pitch change** comes for free: we schedule note events at a scaled tempo; no audio is
+  time-stretched.
+- **spessasynth_lib is not wired in yet.** None of the default instruments are SF2. It is planned for user SF2/SF3
+  instruments (Instruments panel); until then only SFZ is supported.
+- **Fallback sound**: if no packs are installed, a Karplus-Strong pluck rendered into buffers is played through the
+  same SFZ sampler and the status bar says to run `pnpm fetch-instruments`. It never replaces installed samples.

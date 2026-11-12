@@ -25,6 +25,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/worklets/*.js'],
+    languageOptions: { globals: { ...globals.audioWorklet } },
+  },
+  {
     files: ['packages/ui/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {
