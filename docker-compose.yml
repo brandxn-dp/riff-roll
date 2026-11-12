@@ -1,0 +1,26 @@
+services:
+  riffroll:
+    build:
+      context: .
+      args:
+        INCLUDE_INSTRUMENTS: ${INCLUDE_INSTRUMENTS:-true}
+    image: riffroll:latest
+    ports:
+      - '8080:8080'
+    environment:
+      # optional: "user:password" to require basic auth (for LAN use)
+      RIFFROLL_BASIC_AUTH: ${RIFFROLL_BASIC_AUTH:-}
+    volumes:
+      - projects:/data/projects
+      - instruments:/data/instruments
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/api/health']
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  projects:
+  instruments:

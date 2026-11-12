@@ -1,0 +1,22 @@
+{
+  "name": "@riffroll/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Riff Roll desktop app",
+  "author": "Riff Roll",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "build:main": "node build.mjs",
+    "dev": "concurrently -k -n ui,electron \"pnpm --filter @riffroll/ui dev\" \"wait-on tcp:127.0.0.1:5173 && node build.mjs && electron .\"",
+    "start": "node build.mjs && electron .",
+    "dist": "pnpm --filter @riffroll/ui build && node build.mjs && electron-builder --config electron-builder.yml",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "electron": "^45.3.1",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "wait-on": "^9.5.1"
+  }
+}

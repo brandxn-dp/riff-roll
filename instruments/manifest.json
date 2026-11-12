@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "instruments": [
+    {
+      "id": "guitar-fsbs-direct",
+      "name": "FSBS Electric Guitar Direct (DI)",
+      "role": "guitar",
+      "url": "https://github.com/freepats/electric-guitar-FSBS-direct/releases/download/2022-09-11/EGuitarFSBS-direct-SFZ+FLAC-20220911.7z",
+      "sha256": "7ab2a4551bb8847342d6fd10cc56e0642fcaf43f3be8d665269c4dc9bfbbd599",
+      "format": "7z",
+      "sfz": null,
+      "license": "CC0-1.0",
+      "author": "FreePats project",
+      "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html",
+      "attribution": "FSBS Electric Guitar Direct by the FreePats project, released under CC0 1.0 (public domain dedication).",
+      "default": true
+    },
+    {
+      "id": "bass-yr-picked",
+      "name": "Yamaha RBX Bass (picked)",
+      "role": "bass",
+      "url": "https://github.com/freepats/electric-bass-YR/releases/download/2019-09-30/PickedBassYR-SFZ+FLAC-20190930.7z",
+      "sha256": "aa7650fc206a7ed83ecafa36a24572e1f4ea041938182b981bf111b99e1b8e85",
+      "format": "7z",
+      "sfz": null,
+      "license": "CC0-1.0",
+      "author": "FreePats project",
+      "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+      "attribution": "Picked Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication).",
+      "default": true
+    },
+    {
+      "id": "bass-yr-finger",
+      "name": "Yamaha RBX Bass (finger)",
+      "role": "bass",
+      "url": "https://github.com/freepats/electric-bass-YR/releases/download/2019-09-30/FingerBassYR-SFZ+FLAC-20190930.7z",
+      "sha256": "36f87ec9eb086ef25050312522aacf71213c582f46989e0c5a12681304596587",
+      "format": "7z",
+      "sfz": null,
+      "license": "CC0-1.0",
+      "author": "FreePats project",
+      "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+      "attribution": "Finger Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication).",
+      "default": true
+    },
+    {
+      "id": "drums-big-rusty",
+      "name": "Big Rusty Drums",
+      "role": "drums",
+      "url": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums/releases/download/v1.100/Big_Rusty_Drums_1100.zip",
+      "sha256": null,
+      "format": "zip",
+      "sfz": null,
+      "license": "CC0-1.0",
+      "author": "Karoryfer Samples",
+      "homepage": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums",
+      "attribution": "Big Rusty Drums by Karoryfer Samples, released under CC0 1.0 (public domain dedication).",
+      "default": true,
+      "large": true
+    }
+  ]
+}

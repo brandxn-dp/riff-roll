@@ -1,0 +1,89 @@
+{
+  "instruments": [
+    {
+      "name": "FSBS Electric Guitar Direct (DI)",
+      "author": "FreePats project",
+      "license": "CC0-1.0",
+      "url": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html",
+      "attribution": "FSBS Electric Guitar Direct by the FreePats project, released under CC0 1.0 (public domain dedication)."
+    },
+    {
+      "name": "Yamaha RBX Bass (picked)",
+      "author": "FreePats project",
+      "license": "CC0-1.0",
+      "url": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+      "attribution": "Picked Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication)."
+    },
+    {
+      "name": "Yamaha RBX Bass (finger)",
+      "author": "FreePats project",
+      "license": "CC0-1.0",
+      "url": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+      "attribution": "Finger Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication)."
+    },
+    {
+      "name": "Big Rusty Drums",
+      "author": "Karoryfer Samples",
+      "license": "CC0-1.0",
+      "url": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums",
+      "attribution": "Big Rusty Drums by Karoryfer Samples, released under CC0 1.0 (public domain dedication)."
+    }
+  ],
+  "software": [
+    {
+      "name": "React",
+      "license": "MIT",
+      "url": "https://react.dev"
+    },
+    {
+      "name": "Zustand",
+      "license": "MIT",
+      "url": "https://github.com/pmndrs/zustand"
+    },
+    {
+      "name": "zod",
+      "license": "MIT",
+      "url": "https://zod.dev"
+    },
+    {
+      "name": "fflate",
+      "license": "MIT",
+      "url": "https://github.com/101arrowz/fflate"
+    },
+    {
+      "name": "alphaTab",
+      "license": "MPL-2.0",
+      "url": "https://alphatab.net"
+    },
+    {
+      "name": "spessasynth_lib",
+      "license": "Apache-2.0",
+      "url": "https://github.com/spessasus/spessasynth_lib"
+    },
+    {
+      "name": "Fastify",
+      "license": "MIT",
+      "url": "https://fastify.dev"
+    },
+    {
+      "name": "Electron",
+      "license": "MIT",
+      "url": "https://www.electronjs.org"
+    },
+    {
+      "name": "7-Zip (via 7zip-bin)",
+      "license": "LGPL-2.1 / MIT",
+      "url": "https://www.7-zip.org"
+    },
+    {
+      "name": "IBM Plex Sans / Mono",
+      "license": "OFL-1.1",
+      "url": "https://github.com/IBM/plex"
+    },
+    {
+      "name": "Barlow Condensed",
+      "license": "OFL-1.1",
+      "url": "https://github.com/jpt/barlow"
+    }
+  ]
+}

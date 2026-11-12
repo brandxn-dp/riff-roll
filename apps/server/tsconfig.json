@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "types": ["node"], "module": "NodeNext", "moduleResolution": "NodeNext", "verbatimModuleSyntax": false }, "include": ["src"] }

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+release/
+coverage/
+*.log
+.DS_Store
+# instrument audio is downloaded, never committed
+instruments/packs/
+instruments/cache/
+data/
+.env

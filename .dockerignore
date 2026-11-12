@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/dist-electron
+**/release
+instruments/packs
+instruments/cache
+data
+.git

@@ -1,0 +1,39 @@
+{
+  "name": "riff-roll",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Songwriting app for rock bands: piano roll to tab, pedal stomps, sampled playback.",
+  "packageManager": "pnpm@10.12.1",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @riffroll/ui dev",
+    "build": "pnpm -r --filter ./packages/** --filter ./apps/server run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r run typecheck",
+    "server": "pnpm --filter @riffroll/server start",
+    "desktop:dev": "pnpm --filter @riffroll/desktop dev",
+    "desktop:build": "pnpm --filter @riffroll/desktop dist",
+    "fetch-instruments": "tsx scripts/fetch-instruments.ts",
+    "notices": "tsx scripts/gen-notices.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.15.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}

@@ -1,0 +1,41 @@
+appId: app.riffroll.desktop
+productName: Riff Roll
+copyright: Riff Roll contributors
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist-electron/**
+  - package.json
+extraResources:
+  - from: ../../packages/ui/dist
+    to: ui
+  # instruments are bundled by default (offline-first); run `pnpm fetch-instruments` before packaging
+  - from: ../../instruments/packs
+    to: instruments
+    filter: ['**/*']
+  - from: ../../THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+fileAssociations:
+  - ext: riff
+    name: Riff Roll Song
+    description: Riff Roll song
+    mimeType: application/x-riffroll
+    role: Editor
+asar: true
+win:
+  target: [nsis]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+mac:
+  target:
+    - target: dmg
+      arch: [universal]
+  category: public.app-category.music
+  hardenedRuntime: true
+linux:
+  target: [AppImage, deb]
+  category: Audio
+  maintainer: Riff Roll contributors
