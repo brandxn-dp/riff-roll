@@ -146,12 +146,19 @@ export function handleTabKey(e: KeyboardEvent): boolean {
     tabCursorTo(c.tick, c.string + (e.key === 'ArrowUp' ? 1 : -1));
     return true;
   }
-  if (/^[0-9]$/.test(e.key) && !mod) {
+  const direct = /^fret:[0-9]+$/.test(e.key); // from the on-screen fret pad
+  if ((/^[0-9]$/.test(e.key) || direct) && !mod) {
     const now = Date.now();
-    let fret = Number(e.key);
-    if (digitBuf && now - digitAt < 700 && Number(digitBuf + e.key) <= t.maxFret)
-      fret = Number(digitBuf + e.key);
-    digitBuf = String(fret).length === 1 && fret <= Math.floor(t.maxFret / 10) ? e.key : '';
+    let fret: number;
+    if (direct) {
+      fret = Math.min(t.maxFret, Number(e.key.slice(5)));
+      digitBuf = '';
+    } else {
+      fret = Number(e.key);
+      if (digitBuf && now - digitAt < 700 && Number(digitBuf + e.key) <= t.maxFret)
+        fret = Number(digitBuf + e.key);
+      digitBuf = String(fret).length === 1 && fret <= Math.floor(t.maxFret / 10) ? e.key : '';
+    }
     digitAt = now;
     const pitch = t.tuning.strings[c.string] + t.capo + fret;
     if (here && here.start === c.tick) {
@@ -248,4 +255,15 @@ export function handleTabKey(e: KeyboardEvent): boolean {
     return true;
   }
   return false;
+}
+
+/** Drive tab entry from on-screen controls (the mobile fret pad): same behaviour as the keyboard. */
+export function tabKey(key: string, ctrl = false): boolean {
+  return handleTabKey({
+    key,
+    ctrlKey: ctrl,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+  } as KeyboardEvent);
 }

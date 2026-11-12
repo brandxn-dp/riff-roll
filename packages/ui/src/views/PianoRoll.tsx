@@ -43,7 +43,7 @@ import { preview } from '../audio-bridge';
 import { seek } from '../transport';
 import { techCode } from './tabDraw';
 
-const RH = 18; // row height
+let RH = 18; // row height (24 in the mobile layout: finger-sized)
 const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
 const EDGE = 7; // px: grab zone for resizing at a note's right edge
 
@@ -80,6 +80,7 @@ export function PianoRoll() {
   const sizerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    RH = useStore.getState().layout === 'mobile' ? 24 : 18;
     const wrap = wrapRef.current!,
       cv = cvRef.current!,
       sc = scRef.current!,

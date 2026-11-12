@@ -20,6 +20,8 @@ import { installMidi } from './midiInput';
 import { InputControls } from './components/InputControls';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
+import { MobileApp } from './components/mobile/MobileApp';
+import { installLayoutWatcher } from './device';
 
 export function App() {
   const [storage, setStorage] = useState<StorageAdapter | null>(null);
@@ -27,6 +29,7 @@ export function App() {
   const modal = useStore((s) => s.modal);
   const status = useStore((s) => s.status);
   const trackType = useStore((s) => currentTrack(s)?.type);
+  const layout = useStore((s) => s.layout);
 
   useEffect(() => {
     detectStorage().then(setStorage);
@@ -34,12 +37,26 @@ export function App() {
     const offFiles = installFileActions();
     const offMidi = installMidi();
     const offKeys = installShortcuts();
+    const offLayout = installLayoutWatcher();
     return () => {
+      offLayout();
       offFiles();
       offMidi();
       offKeys();
     };
   }, []);
+
+  const modals = (
+    <>
+      {modal === 'shortcuts' && <ShortcutSheet />}
+      {modal === 'mixer' && <Mixer />}
+      {modal === 'files' && <ProjectsDialog />}
+      {modal === 'about' && <About />}
+      {modal === 'tone' && <ToneEditor />}
+      {modal === 'instruments' && <Instruments />}
+    </>
+  );
+  if (layout === 'mobile') return <MobileApp modals={modals} />;
 
   const showRoll = view === 'split' || view === 'roll';
   const showTab = view === 'split' || view === 'tab';
@@ -79,12 +96,7 @@ export function App() {
         </span>
         <span className="mute">storage: {storage?.kind ?? '…'}</span>
       </footer>
-      {modal === 'shortcuts' && <ShortcutSheet />}
-      {modal === 'mixer' && <Mixer />}
-      {modal === 'files' && <ProjectsDialog />}
-      {modal === 'about' && <About />}
-      {modal === 'tone' && <ToneEditor />}
-      {modal === 'instruments' && <Instruments />}
+      {modals}
     </div>
   );
 }

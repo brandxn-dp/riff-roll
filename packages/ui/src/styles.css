@@ -1082,3 +1082,346 @@ button:disabled {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
 }
+
+/* ================= phone layout (device.ts decides when) ================= */
+.app.mobile {
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+}
+.app.mobile button,
+.app.mobile select,
+.app.mobile input {
+  font-size: 16px; /* below 16px iOS zooms the page when a field gets focus */
+}
+.m-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.m-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-icon,
+.m-play {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-size: 20px !important;
+  cursor: pointer;
+}
+.m-play {
+  width: 56px;
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.m-play.on {
+  background: var(--dist);
+  border-color: var(--dist);
+  color: #fff;
+}
+.m-tracks {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.m-tracks::-webkit-scrollbar {
+  display: none;
+}
+.m-chip {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--tc, var(--line));
+  background: var(--raise);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m-chip[aria-pressed='true'] {
+  background: var(--tc);
+  border-color: var(--tc);
+  color: #15171c;
+}
+.m-chip.muted {
+  opacity: 0.5;
+}
+.m-chip.add {
+  width: 52px;
+  padding: 0 6px;
+  text-align: center;
+}
+.m-nav {
+  flex: 0 0 auto;
+  display: flex;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.m-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 0 6px;
+  border: none;
+  background: none;
+  color: var(--mute);
+  font-size: 12px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+.m-nav button span {
+  font-size: 20px;
+  line-height: 1;
+}
+.m-nav button[aria-current='page'] {
+  color: var(--ink);
+  box-shadow: inset 0 2px 0 var(--ink);
+}
+.app.mobile .cvwrap.roll {
+  min-height: 140px;
+}
+.app.mobile .insp {
+  max-height: 42dvh;
+  overflow-y: auto;
+  padding: 8px;
+}
+.app.mobile .ib,
+.app.mobile .pos,
+.app.mobile .tech {
+  height: 40px;
+  min-width: 40px;
+}
+.app.mobile .techdetails summary {
+  cursor: pointer;
+  color: var(--mute);
+  font-size: 14px;
+  padding: 4px 0;
+}
+.app.mobile .ptools {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.app.mobile .ptools .mute {
+  display: none;
+}
+
+/* fret pad */
+.fretpad {
+  flex: 0 0 auto;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fp-head .ib {
+  margin-left: auto;
+}
+.fp-frets {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fp-fret {
+  flex: 0 0 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-family: var(--mono);
+  font-weight: 600;
+  cursor: pointer;
+}
+.fp-fret.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+.fp-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fp-row::-webkit-scrollbar,
+.fp-frets::-webkit-scrollbar {
+  display: none;
+}
+.fp-row > * {
+  flex: 0 0 auto;
+}
+.fretpad .fp-head {
+  min-height: 32px;
+}
+.fretpad .fp-head .ib {
+  height: 32px;
+}
+
+/* bottom sheet with every other control */
+.m-sheet-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+}
+.m-sheet {
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  background: var(--panel);
+  border-radius: 16px 16px 0 0;
+  border-top: 1px solid var(--line-hi);
+  padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
+}
+.m-grab {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-hi);
+  margin: 4px auto 8px;
+}
+.m-sec h3 {
+  margin: 12px 0 6px;
+  font-family: var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+  font-size: 14px;
+}
+.m-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.m-item,
+.m-done {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-weight: 600;
+  cursor: pointer;
+}
+.m-done {
+  width: 100%;
+  margin-top: 14px;
+  background: var(--ink);
+  color: var(--bg);
+}
+.m-sheet .topbar,
+.m-sheet .songbar {
+  padding: 0;
+  border: none;
+  background: none;
+}
+.m-sheet .topbar .brand,
+.m-sheet .topbar .play,
+.m-sheet .topbar .spacer,
+.m-sheet .minimap {
+  display: none;
+}
+.m-sheet .group button,
+.m-sheet .field select,
+.m-sheet .field input {
+  height: 40px;
+}
+
+/* toast instead of the status bar */
+.m-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(20px);
+  max-width: calc(100vw - 32px);
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #2b303b;
+  border: 1px solid var(--line-hi);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 60;
+}
+.m-toast.on {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* dialogs are full screen on phones */
+.app.mobile .modal,
+.app.mobile .modal.wide {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+}
+.app.mobile .modal-head .ib {
+  height: 44px;
+  min-width: 44px;
+}
+.app.mobile .sheet {
+  columns: 1;
+}
+
+/* tablets / touch screens on the desktop layout: bigger hit targets */
+@media (pointer: coarse) {
+  .app:not(.mobile) .btn,
+  .app:not(.mobile) .group button,
+  .app:not(.mobile) .ib,
+  .app:not(.mobile) .pos,
+  .app:not(.mobile) .field select,
+  .app:not(.mobile) .field input {
+    min-height: 40px;
+  }
+}
+.m-sheet .topbar button[aria-label='Keyboard shortcuts'] {
+  display: none;
+}
+.app.mobile .ptools > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.app.mobile .ptools {
+  scrollbar-width: none;
+}

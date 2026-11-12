@@ -42,6 +42,10 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Inputs**: record from a MIDI keyboard or MIDI guitar (step entry when stopped, string-per-channel mode for MIDI
   guitars), or play a real guitar through a track's amp and pedal via your audio interface.
 
+- **Phones**: a dedicated touch layout is picked automatically on phones (tap to add notes, an on-screen fret
+  pad for tab, bottom navigation, full controls in the ☰ sheet). Tablets keep the full layout with larger touch
+  targets. Override it under File → Phone layout or ☰ → App → Layout.
+
 Press **?** in the app for the keyboard cheat sheet.
 
 ## Run with Docker

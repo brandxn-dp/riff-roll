@@ -48,7 +48,9 @@ export function NotationView() {
   const selection = useStore((s) => s.selection);
 
   useEffect(() => {
-    const api = new alphaTab.AlphaTabApi(hostRef.current!, alphaTabSettings(true) as never);
+    const settings = alphaTabSettings(true) as { display: Record<string, unknown> };
+    if (useStore.getState().layout === 'mobile') settings.display.scale = 0.62;
+    const api = new alphaTab.AlphaTabApi(hostRef.current!, settings as never);
     apiRef.current = api;
     api.error.on((e) => setError(String((e as Error)?.message ?? e)));
     api.renderStarted.on(() => setBusy(true));

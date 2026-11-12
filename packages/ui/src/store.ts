@@ -53,6 +53,11 @@ export interface UiState {
   status: string;
   /** unsaved changes since the last (auto)save */
   dirty: boolean;
+  /** 'mobile' = phone layout (see device.ts) */
+  layout: 'mobile' | 'desktop';
+  layoutPref: 'auto' | 'mobile' | 'desktop';
+  /** mobile: the bottom sheet with all controls is open */
+  sheet: boolean;
   /** MIDI input state (Web MIDI) */
   midi: {
     inputs: { id: string; name: string }[];
@@ -112,6 +117,9 @@ export const useStore = create<UiState>((set, get) => {
     status: '',
     dirty: false,
     assets: {},
+    layout: 'desktop',
+    layoutPref: 'auto',
+    sheet: false,
     midi: { inputs: [], inputId: null, armed: false, quantize: true, guitarChannels: false },
     modal: null,
     exec: (cmd) => get().history.execute(cmd),

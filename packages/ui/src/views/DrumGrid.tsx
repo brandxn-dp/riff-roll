@@ -29,8 +29,8 @@ import {
 import { previewDrum } from '../audio-bridge';
 import { seek } from '../transport';
 
-const LW = 132; // label gutter
-const RH = 20;
+let LW = 132; // label gutter (96 on phones)
+let RH = 20; // lane height (28 on phones)
 const VEL_H = 54;
 
 const PIECE_COL: Record<DrumPiece, string> = {
@@ -68,6 +68,9 @@ export function DrumGrid() {
   const velRef = useRef(vel);
   velRef.current = vel;
 
+  const mobile = useStore((s) => s.layout === 'mobile');
+  LW = mobile ? 96 : 132;
+  RH = mobile ? 28 : 20;
   useEffect(() => {
     const cv = cvRef.current!,
       sc = scRef.current!,
@@ -298,10 +301,16 @@ export function DrumGrid() {
       st.set({ status: `Velocity ${v}` });
     }
 
+    let tap: { x: number; y: number; sl: number; st: number; id: number } | null = null;
     const onDown = (e: PointerEvent) => {
       const st = useStore.getState();
       const t = currentTrack(st);
       if (!t) return;
+      if (e.pointerType === 'touch') {
+        // touch: a tap toggles a cell; a drag scrolls (painting would fight with scrolling)
+        tap = { x: e.clientX, y: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop, id: e.pointerId };
+        return;
+      }
       const p = pt(e);
       if (p.ly < RULER_H) {
         if (p.lx < LW || e.button !== 0) return;
@@ -368,7 +377,32 @@ export function DrumGrid() {
       if (li == null) return;
       paintAt(t, li, tickOf(p.lx), drag);
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' && tap && tap.id === e.pointerId) {
+        const moved =
+          Math.hypot(e.clientX - tap.x, e.clientY - tap.y) +
+          Math.abs(sc.scrollLeft - tap.sl) +
+          Math.abs(sc.scrollTop - tap.st);
+        tap = null;
+        if (moved > 10) return;
+        const st = useStore.getState();
+        const t = currentTrack(st);
+        const p = pt(e);
+        if (!t) return;
+        if (p.ly < RULER_H && p.lx >= LW)
+          return seek(Math.max(0, Math.min(songEnd(st.song) - 1, floorTick(tickOf(p.lx), st.snap))));
+        const li = laneAt(p.gy);
+        if (li == null) return;
+        setLane(li);
+        laneRef.current = li;
+        if (p.lx < LW) return previewDrum(t, DRUM_LANES[li].id, velRef.current);
+        const cell = floorTick(tickOf(p.lx), st.snap);
+        const has = t.hits.some(
+          (h) => hitLane(h) === DRUM_LANES[li].id && h.start >= cell && h.start < cell + st.snap,
+        );
+        paintAt(t, li, tickOf(p.lx), { mode: 'paint', add: !has, lane: li, done: new Set() });
+        return;
+      }
       if (drag) useStore.getState().commit();
       drag = null;
     };
@@ -403,7 +437,7 @@ export function DrumGrid() {
       sc.removeEventListener('pointercancel', onUp);
       sc.removeEventListener('scroll', onScroll);
     };
-  }, []);
+  }, [mobile]);
 
   useEffect(() => {
     // redraw when the selected lane changes

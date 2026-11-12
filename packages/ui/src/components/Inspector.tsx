@@ -30,7 +30,19 @@ function Legend({ t }: { t: Track }) {
   );
 }
 
+/** Techniques: always open on desktop, a collapsible section on phones (screen space). */
+function Techs({ track, notes, mobile }: { track: Track; notes: Note[]; mobile: boolean }) {
+  if (!mobile) return <TechniquePanel track={track} notes={notes} />;
+  return (
+    <details className="techdetails">
+      <summary>Techniques</summary>
+      <TechniquePanel track={track} notes={notes} />
+    </details>
+  );
+}
+
 export function Inspector() {
+  const mobile = useStore((s) => s.layout === 'mobile');
   const song = useStore((s) => s.song);
   const track = useStore((s) => currentTrack(s));
   const selection = useStore((s) => s.selection);
@@ -53,9 +65,18 @@ export function Inspector() {
               {track.capo ? ` (capo ${track.capo})` : ''}
             </span>
           )}
-          Click the grid to add a note, drag to move, drag the right edge to resize, right-click to delete,
-          Ctrl-drag to box-select. Click the pedal lane to add or remove a stomp. Press <kbd>?</kbd> for
-          shortcuts.
+          {mobile ? (
+            <>
+              Tap the grid to add a note, tap a note to edit it. Tap the pedal lane for a stomp, tap a tab
+              line to type frets.
+            </>
+          ) : (
+            <>
+              Click the grid to add a note, drag to move, drag the right edge to resize, right-click to
+              delete, Ctrl-drag to box-select. Click the pedal lane to add or remove a stomp. Press{' '}
+              <kbd>?</kbd> for shortcuts.
+            </>
+          )}
         </div>
         <Legend t={track} />
       </div>
@@ -129,7 +150,7 @@ export function Inspector() {
             Done
           </button>
         </div>
-        <TechniquePanel track={track} notes={sel} />
+        <Techs track={track} notes={sel} mobile={mobile} />
       </div>
     );
   }
@@ -258,7 +279,7 @@ export function Inspector() {
           Done
         </button>
       </div>
-      <TechniquePanel track={track} notes={sel} />
+      <Techs track={track} notes={sel} mobile={mobile} />
     </div>
   );
 }

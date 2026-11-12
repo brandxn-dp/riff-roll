@@ -48,7 +48,8 @@ export const VEL_H = 38;
 export const PED_Y = VEL_Y + VEL_H + 10;
 export const PED_H = 26;
 export const TAB_Y = PED_Y + PED_H + 22 + META_ROW;
-export const LS = 15; // tab line spacing
+// tab line spacing (wider in the mobile layout so strings can be tapped)
+export let LS = 15;
 const STOMP_R = 8;
 
 export function lowerPanelHeight(strings: number, showVelocity = true) {
@@ -92,6 +93,8 @@ export function LowerPanel({
   const scRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
+  const mobile = useStore((s) => s.layout === 'mobile');
+  LS = mobile ? 21 : 15;
   const strings = useStore((s) => currentTrack(s)?.tuning.strings.length ?? 6);
   const trackType = useStore((s) => currentTrack(s)?.type);
   const pedalOn = trackType === 'guitar' || trackType === 'bass';
@@ -496,7 +499,7 @@ export function LowerPanel({
       sc.removeEventListener('pointercancel', onUp);
       sc.removeEventListener('scroll', onScroll);
     };
-  }, [showVelocity, showTab]);
+  }, [showVelocity, showTab, mobile]);
 
   const track = useStore((s) => currentTrack(s));
   return (

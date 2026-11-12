@@ -206,3 +206,21 @@ Non-obvious choices and why. Newest at the bottom of each section.
   root would otherwise be unwritable. Starting the container with `--user` skips this and runs as that user.
 - **Image publishing**: `docker.yml` pushes `ghcr.io/<owner>/riff-roll:latest` (amd64) on every push to main and
   multi-arch tags on version tags; the release workflow only builds desktop installers.
+
+## Phone layout
+
+- **Detection** (`device.ts`): the phone layout is used when the viewport is narrower than 700 px, or on a
+  touch-first device (`pointer: coarse`) whose short screen side is under 600 px (phones in either orientation).
+  Tablets keep the full layout, with 40 px touch targets via `@media (pointer: coarse)`. The choice follows rotation
+  and resizing, and can be forced to Phone/Desktop/Automatic (stored per device in localStorage; File → Phone layout
+  on desktop, ☰ → App → Layout on phones).
+- **Phone shell**: compact top bar (menu, title, undo/redo, play), swipeable track chips, the editor, and a bottom
+  navigation bar (Edit / Tab / Score / Tones / Mixer). Every other control lives in a bottom sheet that reuses the
+  desktop toolbar and song bar, so there's one implementation of each control. Status messages become toasts;
+  dialogs go full screen.
+- **Touch editing** keeps the prototype's model: tap empty grid to add, tap a note to select, edit in the inspector
+  (techniques collapse into a section). Rows are 24 px in the roll, tab strings 21 px apart, drum lanes 28 px; drum
+  cells toggle on tap (dragging scrolls instead of painting).
+- **Fret pad**: phones have no keyboard for Guitar Pro–style entry, so tapping a tab line opens an on-screen pad
+  (frets 0–24, beat/string arrows, durations, rest, delete, common techniques). It sends the same commands as the
+  keyboard (`tabKey()`), so both paths share code and tests.

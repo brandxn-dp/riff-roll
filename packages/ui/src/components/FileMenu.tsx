@@ -16,6 +16,7 @@ import {
   saveProject,
 } from '../files/actions';
 import { printScore } from '../files/print';
+import { setLayoutPref } from '../device';
 import type { ProjectInfo } from '../storage';
 
 const run = (fn: () => unknown) => () => {
@@ -69,6 +70,7 @@ export function FileMenu() {
           {item('Copy as ASCII tab', copyAsciiTab, 'Ctrl+Shift+C')}
           <hr />
           {item('Instruments…', () => st.set({ modal: 'instruments' }))}
+          {item('Phone layout', () => setLayoutPref('mobile'))}
           {item('About & credits', () => st.set({ modal: 'about' }))}
         </div>
       )}
