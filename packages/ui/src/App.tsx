@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { detectStorage, type StorageAdapter } from './storage';
 import { currentTrack, useStore } from './store';
 import { Toolbar } from './components/Toolbar';
-import { TrackList } from './components/TrackList';
+import { EditPalette } from './components/EditPalette';
 import { Inspector } from './components/Inspector';
 import { ShortcutSheet } from './components/ShortcutSheet';
 import { PianoRoll } from './views/PianoRoll';
@@ -104,7 +104,7 @@ export function App() {
         }
       />
       <div className="body">
-        <TrackList />
+        <EditPalette />
         <main className="main">
           <DocBanner />
           <SongBar />

@@ -306,3 +306,18 @@ each and tested without the UI:
   repeats/endings and the loop. Deleting bars keeps the tempo that was in effect at their end, never deletes the
   last bar, and shortens notes that ring into the deleted range;
 - the global view is desktop-only for now (a phone screen has no room for it); it can be collapsed.
+
+## Edit palette, global view columns, top bar
+
+- The track list sidebar is gone (the global view has every track, with add / rename / move / delete on the
+  track names). Its place is an edit palette in Guitar Pro's order so people can move between the two programs:
+  bar items (section, tempo, time signature, repeat at the cursor), note values (whole → 64th, dot, triplet, tie,
+  rest), dynamics (ppp–fff using Guitar Pro's velocity mapping, hairpins as velocity ramps), articulations, then
+  effects. Symbols come from Bravura (already bundled for the score), effects use Guitar Pro's text labels. Every
+  button acts on the selection or the note under the tab cursor; a button is "on" when all of them have it.
+  Guitar-only effects are disabled on drum and other tracks. Multiple voices, grace notes and lyrics/chords
+  aren't modelled, so they aren't in the palette.
+- Global view columns: drag the line after the names (narrower names) or the panel's right edge (longer
+  sliders); double-click resets; widths are remembered per device.
+- Top bar: two rows. Row 1: song on the left, transport and tempo centred, inputs/tones/mixer on the right.
+  Row 2: view, tuning/capo, snap, bars, zoom, undo. Note lengths moved to the palette (phones keep them).

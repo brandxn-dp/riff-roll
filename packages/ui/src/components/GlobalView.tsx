@@ -17,6 +17,8 @@ import {
   insertBars,
   isFretted,
   makeTrack,
+  moveTrack,
+  removeTrack,
   newId,
   pasteBars,
   setLoop,
@@ -48,6 +50,39 @@ const norm = (s: BarSel) => ({
 let clip: BarClip | null = null;
 
 const status = (msg: string) => useStore.getState().set({ status: msg });
+
+const COLS_KEY = 'riffroll.globalview.cols';
+function readCols(): { left: number; name: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(COLS_KEY) ?? 'null') as { left: number; name: number } | null;
+    if (v && v.left > 0 && v.name > 0) return v;
+  } catch {
+    /* defaults */
+  }
+  return { left: 360, name: 150 };
+}
+function saveCols(c: { left: number; name: number }) {
+  try {
+    localStorage.setItem(COLS_KEY, JSON.stringify(c));
+  } catch {
+    /* remembered for this session only */
+  }
+}
+
+function moveBy(i: number, d: number) {
+  const st = useStore.getState();
+  const t = st.song.tracks[i];
+  if (t) st.exec(moveTrack(t.id, i + d));
+}
+function deleteTrackAt(i: number) {
+  const st = useStore.getState();
+  const t = st.song.tracks[i];
+  if (!t || st.song.tracks.length < 2) return;
+  if (!confirm('Delete the track "' + t.name + '"? (Ctrl+Z brings it back)')) return;
+  const next = st.song.tracks.find((x) => x.id !== t.id)!;
+  st.exec(removeTrack(t.id));
+  st.set({ trackId: st.trackId === t.id ? next.id : st.trackId, selection: new Set(), barSel: null });
+}
 
 /** Bars selected in the global view, as track ids and a bar range. */
 function selection() {
@@ -136,7 +171,15 @@ const MENU: [string, () => void, string?][] = [
   ['Add section here…', barActions.section],
 ];
 
-function TrackRow({ i }: { i: number }) {
+function renameTrack(i: number) {
+  const st = useStore.getState();
+  const t = st.song.tracks[i];
+  if (!t) return;
+  const name = prompt('Track name', t.name);
+  if (name && name.trim()) st.exec(updateTrack(t.id, { name: name.trim() }, 'Rename track'));
+}
+
+function TrackRow({ i, onMenu }: { i: number; onMenu: (i: number, x: number, y: number) => void }) {
   const t = useStore((s) => s.song.tracks[i]);
   const on = useStore((s) => s.trackId === t?.id);
   const anySolo = useStore((s) => s.song.tracks.some((x) => x.solo));
@@ -147,10 +190,15 @@ function TrackRow({ i }: { i: number }) {
     <div
       className={'gv-row' + (on ? ' on' : '') + (t.mute || (anySolo && !t.solo) ? ' muted' : '')}
       style={{ ['--tc' as string]: t.color }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onMenu(i, e.clientX, e.clientY);
+      }}
     >
       <button
         className="gv-name"
-        title={`${t.name}: open in the editor`}
+        title={`${t.name}: click to edit, double-click to rename, right-click for more`}
+        onDoubleClick={() => renameTrack(i)}
         onClick={() =>
           st.set({
             trackId: t.id,
@@ -259,12 +307,40 @@ export function GlobalView() {
   const sizerRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [tm, setTm] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [cols, setCols] = useState(readCols);
+  /** drag a column edge: the whole track panel, or just the names (the sliders get the rest) */
+  const resize = (key: 'left' | 'name') => (e: React.PointerEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX,
+      v0 = cols[key];
+    const lim = key === 'left' ? [220, 760] : [40, cols.left - 150];
+    let last = cols;
+    const move = (ev: PointerEvent) => {
+      last = { ...cols, [key]: Math.max(lim[0], Math.min(lim[1], v0 + ev.clientX - x0)) };
+      if (key === 'left') last.name = Math.min(last.name, last.left - 150);
+      setCols(last);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      saveCols(last);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const song = useStore((s) => s.song);
   const filled = useMemo(() => filledBars(song), [song]);
   const filledRef = useRef(filled);
   filledRef.current = filled;
 
   // close the right-click menu on any click outside it
+  useEffect(() => {
+    if (!tm) return;
+    const close = () => setTm(null);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [tm]);
   useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
@@ -574,8 +650,40 @@ export function GlobalView() {
 
   const rowsH = RULER + nTracks * RH;
   return (
-    <section className={'gv' + (open ? '' : ' closed')} aria-label="Global view">
+    <section
+      className={'gv' + (open ? '' : ' closed')}
+      aria-label="Global view"
+      style={{ ['--gv-left' as string]: cols.left + 'px', ['--gv-name' as string]: cols.name + 'px' }}
+    >
       <div className="gv-left">
+        {open && (
+          <>
+            <div
+              className="gv-split name"
+              role="separator"
+              aria-label="Drag to change the width of the track names"
+              title="Drag: wider or narrower names (double-click resets)"
+              onPointerDown={resize('name')}
+              onDoubleClick={() => {
+                const c = { ...cols, name: 150 };
+                setCols(c);
+                saveCols(c);
+              }}
+            />
+            <div
+              className="gv-split left"
+              role="separator"
+              aria-label="Drag to change the width of the track panel"
+              title="Drag: wider or narrower track panel, longer sliders (double-click resets)"
+              onPointerDown={resize('left')}
+              onDoubleClick={() => {
+                const c = { left: 360, name: 150 };
+                setCols(c);
+                saveCols(c);
+              }}
+            />
+          </>
+        )}
         <div className="gv-head">
           <AddTrack />
           <span className="gv-title">Tracks</span>
@@ -594,7 +702,17 @@ export function GlobalView() {
         {open && (
           <div className="gv-rows" ref={rowsRef}>
             {Array.from({ length: nTracks }, (_, i) => (
-              <TrackRow key={i} i={i} />
+              <TrackRow
+                key={i}
+                i={i}
+                onMenu={(ti, x, y) =>
+                  setTm({
+                    i: ti,
+                    x: Math.min(x, window.innerWidth - 200),
+                    y: Math.min(y, window.innerHeight - 170),
+                  })
+                }
+              />
             ))}
           </div>
         )}
@@ -639,6 +757,42 @@ export function GlobalView() {
             )}
         </div>
       )}
+      {tm &&
+        createPortal(
+          <div
+            className="ctxmenu gv-menu"
+            role="menu"
+            style={{ position: 'fixed', left: tm.x, top: tm.y, zIndex: 60 }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {(
+              [
+                ['Rename…', () => renameTrack(tm.i)],
+                ['Move up', () => moveBy(tm.i, -1)],
+                ['Move down', () => moveBy(tm.i, 1)],
+                ['Delete track', () => deleteTrackAt(tm.i)],
+              ] as [string, () => void][]
+            ).map(([label, fn]) => (
+              <button
+                key={label}
+                role="menuitem"
+                className={label.startsWith('Delete') ? 'danger' : ''}
+                disabled={
+                  (label === 'Move up' && tm.i === 0) ||
+                  (label === 'Move down' && tm.i === nTracks - 1) ||
+                  (label.startsWith('Delete') && nTracks < 2)
+                }
+                onClick={() => {
+                  setTm(null);
+                  fn();
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </section>
   );
 }
