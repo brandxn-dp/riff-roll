@@ -2262,3 +2262,42 @@ button:disabled {
 .pal-btn.span2 {
   grid-column: span 2;
 }
+
+/* ---- SoundFont preset picker ---- */
+.sfpick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sf-presets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.sf-presets li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.sf-presets li.on {
+  background: #1d212a;
+}
+.sf-presets li .check {
+  flex: 1;
+}
+.sf-presets select {
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+}
+.sf-num {
+  font-family: var(--mono);
+  font-size: 11px;
+}

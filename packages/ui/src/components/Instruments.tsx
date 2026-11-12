@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { InstrumentInfo } from '@riffroll/audio';
+import { parseSoundFont, soundFontPresetToSfz, type InstrumentInfo, type SoundFont } from '@riffroll/audio';
 import { useStore } from '../store';
 import { Modal } from './Modal';
 import { ensureEngine } from '../audio-setup';
@@ -41,6 +41,30 @@ async function uploader(): Promise<Uploader | null> {
   };
 }
 
+type Role = 'guitar' | 'bass' | 'drums' | 'other';
+
+/** General MIDI program → our instrument kind (guitars 24–31, basses 32–39, bank 128 = drums). */
+function roleForPreset(p: { bank: number; program: number; drums: boolean }): Role {
+  if (p.drums) return 'drums';
+  if (p.program >= 24 && p.program <= 31) return 'guitar';
+  if (p.program >= 32 && p.program <= 39) return 'bass';
+  return 'other';
+}
+
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40) || 'inst';
+
+interface SfPick {
+  file: string;
+  sf: SoundFont;
+  chosen: Map<number, Role>;
+  query: string;
+}
+
 interface Picked {
   folder: string;
   files: File[];
@@ -52,10 +76,68 @@ export function Instruments() {
   const [canAdd, setCanAdd] = useState<boolean | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'guitar' | 'bass' | 'drums' | 'other'>('guitar');
+  const [role, setRole] = useState<Role>('guitar');
   const [sfz, setSfz] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [sfPick, setSfPick] = useState<SfPick | null>(null);
+
+  const pickSoundFont = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.sf2,.sf3';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setErr(null);
+      setBusy('Reading the SoundFont…');
+      try {
+        const sf = parseSoundFont(new Uint8Array(await file.arrayBuffer()));
+        if (!sf.presets.length) throw new Error('This SoundFont has no presets.');
+        // a single-preset font is chosen right away
+        const chosen = new Map<number, Role>();
+        if (sf.presets.length === 1) chosen.set(sf.presets[0].index, roleForPreset(sf.presets[0]));
+        setSfPick({ file: file.name, sf, chosen, query: '' });
+      } catch (e) {
+        setErr((e as Error).message);
+      } finally {
+        setBusy(null);
+      }
+    };
+    input.click();
+  };
+
+  const addSoundFont = async () => {
+    if (!sfPick) return;
+    const up = await uploader();
+    if (!up) return;
+    const picks = sfPick.sf.presets.filter((p) => sfPick.chosen.has(p.index));
+    try {
+      let done = 0;
+      for (const p of picks) {
+        setBusy(`Converting “${p.name}” (${++done}/${picks.length})…`);
+        const conv = soundFontPresetToSfz(sfPick.sf, p.index);
+        const id = `user-${slug(p.name)}-${Date.now().toString(36)}${done}`;
+        const sfzName = `${slug(p.name)}.sfz`;
+        let i = 0;
+        for (const file of conv.files) {
+          if (++i % 10 === 0) setBusy(`Copying “${p.name}”: ${i}/${conv.files.length} samples…`);
+          await up.putFile(id, file.path, file.data);
+        }
+        await up.putFile(id, sfzName, new TextEncoder().encode(conv.sfz));
+        await up.finalize(id, { name: p.name, role: sfPick.chosen.get(p.index)!, sfz: sfzName });
+      }
+      setSfPick(null);
+      useStore.getState().set({
+        status: `Added ${picks.length} instrument${picks.length === 1 ? '' : 's'} from ${sfPick.file}. Pick them in the Mixer.`,
+      });
+      await refresh();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const refresh = async () => {
     const e = await ensureEngine();
@@ -128,7 +210,7 @@ export function Instruments() {
     await refresh();
   };
 
-  const roles: ['guitar' | 'bass' | 'drums' | 'other', string][] = [
+  const roles: [Role, string][] = [
     ['guitar', 'Guitar'],
     ['bass', 'Bass'],
     ['drums', 'Drums'],
@@ -213,6 +295,95 @@ export function Instruments() {
           </button>
         </div>
       )}
+      <h3 className="h3">Add a SoundFont (SF2 / SF3)</h3>
+      {canAdd === false && (
+        <p className="mute">Adding instruments needs the desktop app or the Docker server.</p>
+      )}
+      {canAdd && !sfPick && (
+        <div className="row">
+          <button className="ib" disabled={!!busy} onClick={pickSoundFont}>
+            Choose a SoundFont…
+          </button>
+          <span className="mute">
+            Pick the presets you want; each becomes an instrument (converted to SFZ, so it plays and exports
+            like the others). GM drum kits (bank 128) become drum instruments.
+          </span>
+        </div>
+      )}
+      {sfPick && (
+        <div className="sfpick">
+          <div className="row">
+            <strong>{sfPick.sf.name}</strong>
+            <span className="mute">
+              {sfPick.file} · {sfPick.sf.presets.length} preset{sfPick.sf.presets.length === 1 ? '' : 's'}
+              {sfPick.sf.compressed ? ' · compressed (SF3)' : ''}
+            </span>
+            <div className="spacer" />
+            <input
+              className="search"
+              type="search"
+              placeholder="Search presets"
+              aria-label="Search presets"
+              value={sfPick.query}
+              onChange={(e) => setSfPick({ ...sfPick, query: e.target.value })}
+            />
+          </div>
+          <ul className="sf-presets">
+            {sfPick.sf.presets
+              .filter((p) => !sfPick.query || p.name.toLowerCase().includes(sfPick.query.toLowerCase()))
+              .map((p) => {
+                const on = sfPick.chosen.has(p.index);
+                const toggle = () => {
+                  const chosen = new Map(sfPick.chosen);
+                  if (on) chosen.delete(p.index);
+                  else chosen.set(p.index, roleForPreset(p));
+                  setSfPick({ ...sfPick, chosen });
+                };
+                return (
+                  <li key={p.index} className={on ? 'on' : ''}>
+                    <label className="check">
+                      <input type="checkbox" checked={on} onChange={toggle} />
+                      <span className="mute sf-num">
+                        {p.bank}:{String(p.program).padStart(3, '0')}
+                      </span>
+                      {p.name}
+                    </label>
+                    {on && (
+                      <select
+                        aria-label={`Kind of instrument for ${p.name}`}
+                        value={sfPick.chosen.get(p.index)}
+                        onChange={(e) => {
+                          const chosen = new Map(sfPick.chosen);
+                          chosen.set(p.index, e.target.value as Role);
+                          setSfPick({ ...sfPick, chosen });
+                        }}
+                      >
+                        {roles.map(([r, l]) => (
+                          <option key={r} value={r}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </li>
+                );
+              })}
+          </ul>
+          <div className="row">
+            <button
+              className="ib"
+              disabled={!!busy || !sfPick.chosen.size}
+              onClick={() => void addSoundFont()}
+            >
+              {busy ?? `Add ${sfPick.chosen.size || ''} instrument${sfPick.chosen.size === 1 ? '' : 's'}`}
+            </button>
+            <button className="ib" disabled={!!busy} onClick={() => setSfPick(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {busy && !picked && !sfPick && <p className="mute">{busy}</p>}
       {err && <p className="warn">{err}</p>}
     </Modal>
   );

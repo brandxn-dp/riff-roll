@@ -73,8 +73,7 @@ Non-obvious choices and why. Newest at the bottom of each section.
   low-pass (spec's fallback).
 - **Playback speed without pitch change** comes for free: we schedule note events at a scaled tempo; no audio is
   time-stretched.
-- **spessasynth_lib is not wired in yet.** None of the default instruments are SF2. It is planned for user SF2/SF3
-  instruments (Instruments panel); until then only SFZ is supported.
+- **spessasynth_lib is not used.** SF2/SF3 are supported by converting to SFZ instead (see "SoundFonts" below).
 - **Fallback sound**: if no packs are installed, a Karplus-Strong pluck rendered into buffers is played through the
   same SFZ sampler and the status bar says to run `pnpm fetch-instruments`. It never replaces installed samples.
 
@@ -177,9 +176,7 @@ Non-obvious choices and why. Newest at the bottom of each section.
   (IndexedDB) mode can't host sample files, so the panel explains that instead. Samples referenced outside the
   chosen folder (`../`) aren't supported. User drum kits should use General MIDI keys (Riff Roll's keymap is GM
   except the half-open hat and the two choke lanes).
-- **SF2/SF3 still unsupported**: spessasynth_lib would add a second synth path with its own routing into the amp
-  chains; every default instrument is SFZ, so this was deprioritised. SF2 files can be converted to SFZ with
-  Polyphone.
+- **SF2/SF3**: superseded, see "SoundFonts (SF2 / SF3)" below.
 - **Accessibility pass**: track rows are buttons (Enter/Space), the roll/tab/drum canvases are focusable with
   descriptive labels, dialogs trap focus and Escape closes them, the status bar is a polite live region, and tab
   entry announces string/bar/beat/fret there. Colour is never the only cue (string letters and fret numbers are
@@ -321,3 +318,23 @@ each and tested without the UI:
   sliders); double-click resets; widths are remembered per device.
 - Top bar: two rows. Row 1: song on the left, transport and tempo centred, inputs/tones/mixer on the right.
   Row 2: view, tuning/capo, snap, bars, zoom, undo. Note lengths moved to the palette (phones keep them).
+
+## SoundFonts (SF2 / SF3)
+
+SoundFonts are converted, not played by a second synth: when you add one, the browser parses the file
+(`parseSoundFont`), you tick the presets you want, and each preset becomes an ordinary user instrument, an SFZ file
+plus one audio file per sample, uploaded through the same path as a folder of SFZ (desktop IPC or the server). So
+playback, the amp chains, offline WAV export, Docker storage and the desktop app need no changes, and a converted
+instrument can be inspected or edited like any SFZ.
+
+Conversion follows SF2.04: instrument zones over the instrument's global zone, preset generators added on top
+(tuning, attenuation, pan, envelope times), key/velocity ranges intersected. Root key (overriding or the sample's
+own), coarse/fine tune plus the sample's pitch correction, attenuation (applied at 0.4 strength, as FluidSynth and
+most players do, so fonts sound the way people expect), pan, the volume envelope (timecents → seconds, sustain
+centibels → %), loops (continuous / until release), sample start/end/loop offsets, and exclusive classes (hi-hat
+choke → `group`/`off_by`) are kept. Not converted: modulators, filters, LFOs, chorus/reverb sends (our amp and mixer
+cover those). SF2 samples are written as 16-bit mono WAV; SF3 samples are already Ogg Vorbis and are copied as
+`.ogg` (browsers decode it). Presets from bank 128 default to drum instruments, GM programs 24–31 to guitar,
+32–39 to bass, the rest to "Other"; each can be changed before adding. Checked against the Sonivox GM SoundFont
+that ships with alphaTab: all 132 presets of the .sf2 and .sf3 convert, and piano, guitar and kit render audibly
+in the browser.
