@@ -8,6 +8,9 @@ services:
     ports:
       - '${RIFFROLL_PORT:-8080}:8080'
     environment:
+      # user/group the server runs as and that owns the volumes (Unraid: 99 / 100)
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
       # optional: "user:password" to require basic auth (for LAN use)
       RIFFROLL_BASIC_AUTH: ${RIFFROLL_BASIC_AUTH:-}
     volumes:

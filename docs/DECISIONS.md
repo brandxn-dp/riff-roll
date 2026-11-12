@@ -200,3 +200,9 @@ Non-obvious choices and why. Newest at the bottom of each section.
   WebAssembly build with an AudioWorklet wrapper to depend on, and compiling/maintaining one (plus measuring that a
   .nam model runs in real time inside a 128-sample worklet quantum on typical laptops) is a project of its own. The
   `ToneChain` model leaves room for it as another amp type.
+
+- **PUID/PGID entrypoint**: the image starts as root only to make `/data` owned by `PUID:PGID` (default 1000, Unraid
+  99/100), then runs the server unprivileged via `su-exec`. Bind-mounted appdata folders created by the host as
+  root would otherwise be unwritable. Starting the container with `--user` skips this and runs as that user.
+- **Image publishing**: `docker.yml` pushes `ghcr.io/<owner>/riff-roll:latest` (amd64) on every push to main and
+  multi-arch tags on version tags; the release workflow only builds desktop installers.

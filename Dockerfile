@@ -31,17 +31,20 @@ RUN pnpm --filter @riffroll/server deploy --prod --legacy /out/server
 
 # ---------- runtime stage ----------
 FROM node:22-alpine AS runtime
-ENV NODE_ENV=production PORT=8080 HOST=0.0.0.0 \
+ENV NODE_ENV=production PORT=8080 HOST=0.0.0.0 PUID=1000 PGID=1000 \
     UI_DIR=/app/ui PROJECTS_DIR=/data/projects INSTRUMENTS_DIR=/data/instruments \
     BUNDLED_INSTRUMENTS_DIR=/app/instruments MANIFEST_PATH=/app/manifest.json
 WORKDIR /app
+RUN apk add --no-cache su-exec
 COPY --from=build /out/server /app/server
 COPY --from=build /src/packages/ui/dist /app/ui
 COPY --from=build /src/instruments/manifest.json /app/manifest.json
 COPY --from=build /out/instruments /app/instruments
-RUN mkdir -p /data/projects /data/instruments && chown -R node:node /data
-USER node
+COPY docker/entrypoint.sh /usr/local/bin/riffroll-entrypoint
+RUN chmod 755 /usr/local/bin/riffroll-entrypoint && mkdir -p /data/projects /data/instruments && chown -R node:node /data
+# starts as root only to fix /data ownership, then runs the server as PUID:PGID (see docker/entrypoint.sh)
 EXPOSE 8080
 VOLUME ["/data/projects", "/data/instruments"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
+ENTRYPOINT ["riffroll-entrypoint"]
 CMD ["node", "/app/server/dist/index.js"]

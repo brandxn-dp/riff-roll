@@ -46,6 +46,11 @@ Press **?** in the app for the keyboard cheat sheet.
 
 ## Run with Docker
 
+A prebuilt image is published on every push to `main`: `ghcr.io/brandxn-dp/riff-roll:latest`.
+**Unraid**: see [docs/UNRAID.md](docs/UNRAID.md).
+
+Or build it yourself:
+
 ```bash
 docker compose up -d
 ```
