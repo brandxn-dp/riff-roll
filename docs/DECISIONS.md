@@ -224,3 +224,16 @@ Non-obvious choices and why. Newest at the bottom of each section.
 - **Fret pad**: phones have no keyboard for Guitar Pro–style entry, so tapping a tab line opens an on-screen pad
   (frets 0–24, beat/string arrows, durations, rest, delete, common techniques). It sends the same commands as the
   keyboard (`tabKey()`), so both paths share code and tests.
+
+## MIDI import: Songsterr / Guitar Pro exports
+
+Songsterr's MIDI (and Guitar Pro's own MIDI export) puts every string of an instrument on its own channel (channel 0 =
+highest string) so bends can be per string, offsets chord notes by a few ticks to fake a strum, writes dead notes as
+blips ~30 ticks long, and adds a `MEASURE_n` marker on every bar plus `END_OF_VOICE`. The old importer split each
+guitar into one track per string and guessed the tuning from the lowest note only (Drop D guitars became 7-strings or
+bass). Now, in format 1 files, one MTrk = one track; a track whose channels look like strings (each almost always one
+note at a time, lowest note falling channel by channel) keeps the string as `pinnedString`, and the tuning is the known
+tuning closest to the lowest note on each string (parts that only use the top strings take the tuning the other parts
+clearly use). Strums are lined up on their first note, blips become dead notes with their written length, pitch bend
+(with the RPN bend range) becomes a bend curve or vibrato, GM drum keys without a lane map to the nearest piece, and GM
+40 is the main snare when a part has no 38. Format 0 files still split by channel.
