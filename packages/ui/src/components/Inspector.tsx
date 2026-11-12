@@ -14,6 +14,7 @@ import {
 import { currentTrack, songEnd, useStore } from '../store';
 import { preview } from '../audio-bridge';
 import { lengthLabel } from '../format';
+import { TechniquePanel } from './TechniquePanel';
 
 function Legend({ t }: { t: Track }) {
   const n = t.tuning.strings.length;
@@ -93,6 +94,7 @@ export function Inspector() {
             Done
           </button>
         </div>
+        <TechniquePanel track={track} notes={sel} />
       </div>
     );
   }
@@ -197,6 +199,7 @@ export function Inspector() {
           Done
         </button>
       </div>
+      <TechniquePanel track={track} notes={sel} />
     </div>
   );
 }

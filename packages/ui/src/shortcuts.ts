@@ -1,6 +1,7 @@
 import { copy, cut, deleteSelection, duplicate, nudge, paste, quantize, selectAll } from './editing';
 import { currentTrack, useStore } from './store';
 import { togglePlay } from './transport';
+import { handleTabKey } from './tabEntry';
 
 export interface Shortcut {
   keys: string;
@@ -31,6 +32,19 @@ export const SHORTCUTS: Shortcut[] = [
   { group: 'Pedal lane', keys: 'Drag stomp', what: 'Move stomp' },
   { group: 'Pedal lane', keys: 'Click "PEDAL"', what: 'Change the starting tone' },
   { group: 'Pedal lane', keys: 'Right-click stomp', what: 'Pick its tone (advanced mode)' },
+  { group: 'Tab entry', keys: 'Click a tab line', what: 'Put the cursor there (Esc leaves tab entry)' },
+  { group: 'Tab entry', keys: '← → ↑ ↓', what: 'Move by beat / change string' },
+  { group: 'Tab entry', keys: '0–9', what: 'Type a fret (two digits quickly for 10–24); pins the note to that string' },
+  { group: 'Tab entry', keys: '+ / −', what: 'Longer / shorter note value' },
+  { group: 'Tab entry', keys: '.  /  T', what: 'Dotted / triplet' },
+  { group: 'Tab entry', keys: 'R  /  L', what: 'Rest / tie to previous' },
+  { group: 'Tab entry', keys: 'Ins  /  Ctrl+Del', what: 'Insert beat / delete beat' },
+  { group: 'Tab entry', keys: 'Del', what: 'Delete the note on this string' },
+  { group: 'Techniques', keys: 'H S B V', what: 'Hammer/pull, slide, bend, vibrato' },
+  { group: 'Techniques', keys: 'P X G A', what: 'Palm mute, dead note, ghost, accent' },
+  { group: 'Techniques', keys: 'I N K O', what: 'Let ring, harmonic, tap, staccato' },
+  { group: 'Techniques', keys: 'U D F M', what: 'Pick up/down, fade in, tremolo picking' },
+  { group: 'Song', keys: 'Section chips', what: 'Jump to a section (double-click to rename)' },
   { group: 'Help', keys: '?', what: 'This cheat sheet' },
 ];
 
@@ -56,6 +70,7 @@ export function installShortcuts() {
     const st = useStore.getState();
     if (st.modal && e.key === 'Escape') return st.set({ modal: null });
     for (const h of handlers) if (h(e)) return e.preventDefault();
+    if (e.code !== 'Space' && handleTabKey(e)) return e.preventDefault();
     const mod = e.ctrlKey || e.metaKey;
     const k = e.key.toLowerCase();
     let handled = true;

@@ -8,7 +8,9 @@ import { ShortcutSheet } from './components/ShortcutSheet';
 import { PianoRoll } from './views/PianoRoll';
 import { LowerPanel } from './views/LowerPanel';
 import { DrumGrid } from './views/DrumGrid';
+import { NotationView } from './views/NotationView';
 import { Mixer } from './components/Mixer';
+import { SongBar } from './components/SongBar';
 import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
 
@@ -34,7 +36,10 @@ export function App() {
       <div className="body">
         <TrackList />
         <main className="main">
-          {trackType === 'drums' ? (
+          <SongBar />
+          {view === 'notation' ? (
+            <NotationView />
+          ) : trackType === 'drums' ? (
             <DrumGrid />
           ) : (
             <>

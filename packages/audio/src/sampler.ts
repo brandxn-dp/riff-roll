@@ -179,7 +179,7 @@ export class Sampler {
     const when = Math.max(o.when, ctx.currentTime);
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    const semis = ((o.pitch - r.pitchKeycenter) * r.pitchKeytrack) / 100 + r.transpose + r.tune / 100 + (o.harmonic ? 12 : 0);
+    const semis = ((o.pitch - r.pitchKeycenter) * r.pitchKeytrack) / 100 + r.transpose + r.tune / 100;
     src.playbackRate.value = Math.pow(2, semis / 12);
     if (r.loopMode === 'loop_continuous' || r.loopMode === 'loop_sustain') {
       if (r.loopStart !== undefined && r.loopEnd !== undefined && r.loopEnd > r.loopStart) {

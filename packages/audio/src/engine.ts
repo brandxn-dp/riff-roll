@@ -1,4 +1,4 @@
-import { BarMap, TempoMap, laneById, toneAt, type Song, type Track } from '@riffroll/core';
+import { BarMap, TempoMap, laneById, playbackSegments, toneAt, type Song, type Track } from '@riffroll/core';
 import { InstrumentLibrary, isFallback } from './instruments';
 import { MasterBus, TrackGraph, audibleTracks } from './graph';
 import { newPerfState, playDrum, scheduleClicks, scheduleTrack, click, type TrackPerfState } from './perform';
@@ -26,6 +26,8 @@ interface PlayState {
   tempo: TempoMap;
   tempos: Song['tempos'];
   endTime: number | null;
+  /** segments still to play after the current one (repeats / alternate endings) */
+  queue: { start: number; end: number }[];
 }
 
 export class AudioEngine {
@@ -201,12 +203,24 @@ export class AudioEngine {
     }
     for (const t of song.tracks) this.graphs.get(t.id)?.setTone(toneAt(t.pedal, fromTick), now, 0);
 
+    // playback order: the loop region, or the song with its repeats expanded
+    let segEnd = loop ? loop.end : songEnd;
+    let queue: { start: number; end: number }[] = [];
+    if (!loop) {
+      const order = playbackSegments(song);
+      const i = order.findIndex((sg) => fromTick >= sg.start && fromTick < sg.end);
+      if (i >= 0) {
+        segEnd = order[i].end;
+        queue = order.slice(i + 1);
+      }
+    }
     const perf = new Map<string, TrackPerfState>();
     for (const t of song.tracks) perf.set(t.id, newPerfState());
     this.st = {
       segStart: fromTick,
       segTime: start,
-      segEnd: loop ? loop.end : songEnd,
+      segEnd,
+      queue,
       next: fromTick,
       anchors: [{ time: start, tick: fromTick }],
       timer: setInterval(() => this.tick(), INTERVAL),
@@ -266,6 +280,17 @@ export class AudioEngine {
         if (st.anchors.length > 8) st.anchors.shift();
         for (const t of song.tracks) this.graphs.get(t.id)?.setTone(toneAt(t.pedal, loop.start), wrapTime, 0.01);
         for (const p of st.perf.values()) for (const v of p.voices) if (v.end > wrapTime) v.stop(wrapTime);
+      } else if (st.queue.length) {
+        // jump for a repeat / alternate ending; ringing notes carry over like a real performance
+        const nextSeg = st.queue.shift()!;
+        const jumpTime = this.timeOf(st.segEnd);
+        st.segStart = nextSeg.start;
+        st.segTime = jumpTime;
+        st.segEnd = nextSeg.end;
+        st.next = nextSeg.start;
+        st.anchors.push({ time: jumpTime, tick: nextSeg.start });
+        if (st.anchors.length > 8) st.anchors.shift();
+        for (const t of song.tracks) this.graphs.get(t.id)?.setTone(toneAt(t.pedal, nextSeg.start), jumpTime, 0.01);
       } else {
         st.endTime = this.timeOf(st.segEnd) + 0.3;
         break;

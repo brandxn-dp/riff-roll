@@ -32,6 +32,7 @@ import { drawGrid, drawPlayhead, drawToneWash, isCleanTone, tickToX, toneOf, xTo
 import { pedalSegments } from '@riffroll/core';
 import { preview } from '../audio-bridge';
 import { seek } from '../transport';
+import { techCode } from './tabDraw';
 
 const RH = 18; // row height
 const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
@@ -168,6 +169,17 @@ export function PianoRoll() {
           c.lineTo(x + nw, y);
           c.lineTo(x + nw, y + 7);
           c.fill();
+        }
+        const code = techCode(n);
+        if (code) {
+          c.font = '600 9px ' + BODY;
+          const cw = c.measureText(code).width;
+          if (cw < nw - 22) {
+            c.fillStyle = 'rgba(21,23,28,0.85)';
+            c.textAlign = 'right';
+            c.fillText(code, x + nw - 4, y + nh / 2 + 0.5);
+            c.textAlign = 'left';
+          }
         }
         if (st.selection.has(n.id)) {
           c.strokeStyle = COL.head;

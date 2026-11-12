@@ -48,6 +48,8 @@ export interface UiState {
   playhead: number | null; // tick while playing
   cursor: number; // playback start / paste position (tick)
   speed: number; // playback speed 0.5..1.5 (pitch unaffected)
+  /** keyboard tab-entry cursor (Guitar Pro style); null = not in tab entry */
+  tabCursor: { tick: number; string: number } | null;
   status: string;
   modal: null | 'shortcuts' | 'about' | 'tone' | 'mixer' | 'files';
 
@@ -92,6 +94,7 @@ export const useStore = create<UiState>((set, get) => {
     playhead: null,
     cursor: 0,
     speed: 1,
+    tabCursor: null,
     status: '',
     modal: null,
     exec: (cmd) => get().history.execute(cmd),
@@ -112,7 +115,7 @@ export const useStore = create<UiState>((set, get) => {
     loadSong: (s) => {
       get().history.reset(s);
       const t = s.tracks.find((x) => x.type !== 'drums') ?? s.tracks[0];
-      set({ trackId: t?.id ?? '', selection: new Set(), focusId: null, cursor: 0, scrollX: 0 });
+      set({ trackId: t?.id ?? '', selection: new Set(), focusId: null, cursor: 0, scrollX: 0, tabCursor: null });
     },
     set: (p) => set(p),
     select: (ids, focus) => {

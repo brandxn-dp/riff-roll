@@ -4,7 +4,7 @@ import type { TrackGraph } from './graph';
 
 /** Per-track playing state: what each string is currently sounding (for string-aware cutoff). */
 export interface TrackPerfState {
-  strings: Map<number, { voices: Voice[]; letRing: boolean }>;
+  strings: Map<number, { voices: Voice[]; letRing: boolean; pitch?: number }>;
   voices: Voice[];
 }
 
@@ -14,6 +14,9 @@ export interface Humanize {
   timingMs: number;
   velocity: number;
 }
+
+/** Natural harmonic at a fret → semitones above the open string. */
+const NATURAL_HARMONICS: Record<number, number> = { 12: 12, 24: 24, 7: 19, 19: 19, 5: 24, 4: 28, 9: 28, 16: 28, 3: 31, 2: 34 };
 
 /** first index with start >= tick */
 function lb(notes: readonly Note[], tick: number) {
@@ -63,24 +66,53 @@ export function scheduleTrack(
     const dur = Math.max(0.02, timeOf(endTick) - timeOf(n.start));
     const vel = Math.max(1, Math.min(127, n.velocity + (human.velocity ? Math.round((Math.random() * 2 - 1) * human.velocity) : 0)));
 
+    const tech = n.tech ?? {};
     // a new note on a string cuts the previous note on that string, unless it was let ring
-    if (pos) {
-      const prev = st.strings.get(pos.string);
-      if (prev && !prev.letRing) for (const v of prev.voices) if (v.end > when) v.stop(when);
+    const prev = pos ? st.strings.get(pos.string) : undefined;
+    if (prev && !prev.letRing) for (const v of prev.voices) if (v.end > when) v.stop(when);
+
+    // pitch actually heard (harmonics sound above the fretted pitch)
+    let pitch = n.pitch;
+    if (tech.harmonic && pos) {
+      const open = n.pitch - pos.fret;
+      if (tech.harmonic === 'natural') pitch = open + (NATURAL_HARMONICS[pos.fret] ?? pos.fret + 12);
+      else if (tech.harmonic === 'pinch') pitch = n.pitch + 19;
+      else pitch = n.pitch + 12; // artificial / tapped: octave harmonic
     }
-    const voices = sampler.play(ctx, graph.input, {
-      pitch: n.pitch,
-      velocity: vel,
-      when,
-      duration: n.tech?.letRing ? undefined : dur,
-      palmMute: n.tech?.palmMute,
-      dead: n.tech?.dead,
-      fadeIn: n.tech?.fadeIn ? Math.min(dur, 0.6) : undefined,
-      gain: n.tech?.ghost ? 0.5 : n.tech?.accent ? 1.25 : 1,
-      harmonic: n.tech?.harmonic === 'natural' || n.tech?.harmonic === 'artificial',
-      detune: detuneFor(n, when, dur),
-    });
-    if (pos) st.strings.set(pos.string, { voices, letRing: !!n.tech?.letRing });
+    const legato = !!(tech.hammer || tech.tap || ((tech.slide === 'legato' || tech.slide === 'shift') && prev));
+    const detune = detuneFor(n, when, dur) ?? [];
+    if ((tech.slide === 'legato' || tech.slide === 'shift') && prev?.pitch != null && prev.pitch !== n.pitch) {
+      // slide: glide from the previous pitch on this string
+      const glide = Math.min(0.09, dur * 0.5);
+      detune.unshift({ time: when, cents: (prev.pitch - n.pitch) * 100 }, { time: when + glide, cents: 0, ramp: true });
+    }
+    const base = {
+      pitch,
+      palmMute: tech.palmMute,
+      dead: tech.dead,
+      fadeIn: tech.fadeIn ? Math.min(dur, 0.6) : legato ? 0.006 : undefined,
+      gain: (tech.ghost ? 0.5 : tech.accent === 'heavy' ? 1.4 : tech.accent ? 1.25 : 1) * (legato ? 0.72 : 1),
+      harmonic: !!tech.harmonic,
+      detune: detune.length ? detune : undefined,
+    };
+    const v = Math.max(1, vel - (tech.pick === 'up' ? 8 : 0));
+    const sounding = tech.staccato ? dur * 0.45 : dur;
+    let voices: Voice[] = [];
+    if (tech.tremolo || tech.trill) {
+      // re-articulate the note at the tremolo/trill rate for its whole length
+      const rate = tech.tremolo ?? tech.trill!.speed;
+      const step = timeOf(n.start + 3840 / rate) - timeOf(n.start);
+      const count = Math.max(1, Math.floor(dur / Math.max(0.03, step)));
+      for (let k = 0; k < count; k++) {
+        const trillUp = tech.trill && k % 2 === 1 && pos ? n.pitch - pos.fret + tech.trill.fret - n.pitch : 0;
+        voices.push(
+          ...sampler.play(ctx, graph.input, { ...base, pitch: pitch + trillUp, velocity: k % 2 ? v * 0.85 : v, when: when + k * step, duration: step * 0.95 }),
+        );
+      }
+    } else {
+      voices = sampler.play(ctx, graph.input, { ...base, velocity: v, when, duration: tech.letRing ? undefined : sounding });
+    }
+    if (pos) st.strings.set(pos.string, { voices, letRing: !!tech.letRing, pitch: n.pitch });
     st.voices.push(...voices);
   }
   if (st.voices.length > 512) st.voices = st.voices.filter((v) => v.end > ctx.currentTime);

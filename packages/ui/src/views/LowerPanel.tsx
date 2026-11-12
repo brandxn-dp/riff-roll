@@ -18,18 +18,21 @@ import { currentTrack, songEnd, useStore } from '../store';
 import { COL, DISP, KEYS_W, MONO, alpha, fit, frameScheduler, lowerBound, pxPerTick, rr, snapTick } from '../canvas';
 import { drawGrid, drawPlayhead, isCleanTone, tickToX, toneOf, xToTick, type TimeAxis } from './timeline';
 import { preview } from '../audio-bridge';
+import { META_ROW, RHYTHM_H, drawRepeats, drawRhythm, drawTabCursor, drawTabMeta, drawTechniques } from './tabDraw';
+import { floorTick } from '../canvas';
+import { tabCursorTo } from '../tabEntry';
 
 // vertical layout of the lower panel
 export const VEL_Y = 6;
 export const VEL_H = 38;
 export const PED_Y = VEL_Y + VEL_H + 10;
 export const PED_H = 26;
-export const TAB_Y = PED_Y + PED_H + 30;
+export const TAB_Y = PED_Y + PED_H + 22 + META_ROW;
 export const LS = 15; // tab line spacing
 const STOMP_R = 8;
 
 export function lowerPanelHeight(strings: number, showVelocity = true) {
-  return (showVelocity ? TAB_Y : TAB_Y - VEL_H - 10) + (strings - 1) * LS + 22;
+  return (showVelocity ? TAB_Y : TAB_Y - VEL_H - 10) + (strings - 1) * LS + 14 + RHYTHM_H;
 }
 
 type Drag =
@@ -203,6 +206,9 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
           const y = tabY + (n - 1 - pos.string) * LS;
           items.push({ nt, x: tickToX(a, nt.start) + Math.min(8, (nt.duration * a.ppt) / 2), y, txt, tw: c.measureText(txt).width, s: pos.string });
         }
+        drawTabMeta(c, st.song, a, tabY, w);
+        drawRepeats(c, st.song, a, tabY, (n - 1) * LS);
+        drawRhythm(c, st.song, t, a, tabY + (n - 1) * LS + 6, w);
         // sustain lines
         for (const it of items) {
           const xe = tickToX(a, it.nt.start + it.nt.duration) - 3,
@@ -228,6 +234,8 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
           c.fillText(it.txt, it.x, it.y + 0.5);
         }
         c.textAlign = 'left';
+        drawTechniques(c, t, items);
+        if (st.tabCursor) drawTabCursor(c, st.song, t, a, tabY, LS, st.tabCursor, st.noteLen);
       }
       drawPlayhead(c, a, st.playhead, 0, h);
       c.restore();
@@ -371,11 +379,9 @@ export function LowerPanel({ showVelocity = true, showTab = true }: { showVeloci
         const p = fing.get(nt.id);
         return p && p.string === s && tick >= nt.start - 60 && tick < nt.start + nt.duration;
       });
-      if (hit) {
-        st.select([hit.id]);
-        preview(t, hit.pitch, hit.start, hit.duration);
-      } else st.select([]);
-      st.set({ cursor: Math.max(0, snapTick(tick, st.snap)) });
+      // clicking the tab puts the keyboard-entry cursor there (Guitar Pro style)
+      tabCursorTo(hit ? hit.start : Math.max(0, floorTick(tick, st.snap)), s);
+      if (hit) preview(t, hit.pitch, hit.start, hit.duration);
     }
 
     const onMove = (e: PointerEvent) => {

@@ -94,3 +94,28 @@ Non-obvious choices and why. Newest at the bottom of each section.
 - For drum tracks the "piano roll" view *is* the drum grid (named lanes instead of keys, as the spec asks), so there
   is one editor to learn for drums.
 - A synthesised fallback kit (same keymap) plays when no kit is installed.
+
+## Tab, notation, techniques
+
+- **Notation via AlphaTex, not alphaTab's object model.** The notation view converts the song to AlphaTex text
+  (`packages/core/src/alphatex.ts`) and calls `api.tex()`. The text format is stable, testable without a DOM, and
+  alphaTab never becomes the source of truth. alphaTab renders on the main thread (`useWorkers: false`) with Bravura
+  loaded through Vite `?url` imports, which keeps the strict CSP (`script-src 'self'`) and works under `app://`.
+- **Percussion AlphaTex** needs `:8 (36 42)` (duration first); `42.8` is parsed as fret 42 / string 8. Found by
+  probing the parser; the generator emits the duration-first form for drum tracks.
+- **Rhythm quantisation** (`rhythm.ts`) turns free-timed notes into notatable beats: plain/dotted values first,
+  triplets only when needed, ties across beats and bars, rests for gaps. Shared by notation, tab rhythm stems and
+  (next milestone) MusicXML / Guitar Pro export.
+- **Notation editing is limited in v1** (allowed by the spec): click a beat to select its notes and move the cursor;
+  the selection is outlined using alphaTab's bounds lookup. All editing happens in the roll / tab / inspector.
+- **Hammer-on/pull-off is stored on the destination note** ("from the previous note on this string"); exporters move
+  it to the origin note where formats expect that (AlphaTex `h`).
+- **Technique playback** with a single DI sample set: hammer/pull/tap = softer, faster attack (no pick transient);
+  legato/shift slides = pitch glide from the previous note on the string; bends/whammy/vibrato = detune
+  automation; natural harmonics use the harmonic series by fret (12→+12, 7→+19, 5→+24 …) with a high-pass;
+  pinch = +19 semitones; tremolo picking/trills re-trigger the note; staccato halves the length.
+- **Keyboard tab entry** follows Guitar Pro where it doesn't clash with the browser: digits enter frets (two digits
+  within 0.7 s), +/− change the value, `.` dotted, `T` triplet, `R` rest, `L` tie, Ins/Ctrl+Del insert/delete beat,
+  letter keys toggle techniques. Entering a fret pins the note to that string.
+- **Repeats** are expanded into a playback order of tick segments (`repeats.ts`) that the scheduler walks, including
+  alternate endings; the loop region overrides it.

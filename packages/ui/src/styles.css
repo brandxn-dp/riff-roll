@@ -663,3 +663,172 @@ button:disabled {
   background: var(--raise);
   font-size: 12px;
 }
+
+/* ---- notation (alphaTab) ---- */
+.notation {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.notation-msg {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 2;
+  background: var(--panel);
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+.notation-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+.notation-inner {
+  position: relative;
+}
+.notation-host {
+  min-height: 200px;
+}
+.notation-sel {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  border: 1.5px solid rgba(140, 180, 255, 0.9);
+  background: rgba(120, 170, 255, 0.12);
+  border-radius: 3px;
+}
+.notation-host .at-surface {
+  cursor: pointer;
+}
+
+/* ---- song bar ---- */
+.songbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 5px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.secs,
+.songctl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.secchip {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.secchip button {
+  border: none;
+  background: var(--raise);
+  height: 26px;
+  padding: 0 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.secchip button small {
+  font-family: var(--mono);
+  color: var(--mute);
+  margin-left: 5px;
+  font-size: 10px;
+}
+.secchip .x {
+  padding: 0 6px;
+  color: var(--mute);
+  background: var(--panel);
+}
+.secedit {
+  height: 26px;
+  width: 110px;
+  border-radius: 5px;
+  border: 1px solid var(--line-hi);
+  background: var(--raise);
+  padding: 0 6px;
+}
+.ib.small {
+  height: 26px;
+  font-size: 12px;
+  padding: 0 7px;
+}
+.songctl select.mini,
+.songctl .inline input {
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-size: 12px;
+  font-weight: 600;
+}
+.songctl .inline {
+  display: inline-flex;
+  gap: 3px;
+}
+.songctl .inline input {
+  width: 58px;
+  padding: 0 4px;
+}
+.minimap {
+  flex: 1 1 200px;
+  min-width: 160px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ---- techniques ---- */
+.techs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.tech {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 7px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tech[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.techsel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--mute);
+}
+.techsel select {
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  font-size: 12px;
+  max-width: 108px;
+}
+.curve {
+  background: #16181e;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  touch-action: none;
+}

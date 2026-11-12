@@ -11,3 +11,6 @@ export * from './drums';
 export * from './tones';
 export * from './templates';
 export * from './schema';
+export * from './rhythm';
+export * from './repeats';
+export * from './alphatex';
