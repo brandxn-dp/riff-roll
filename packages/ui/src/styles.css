@@ -2301,3 +2301,25 @@ button:disabled {
   font-family: var(--mono);
   font-size: 11px;
 }
+
+.pal-btn.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.note-icon {
+  display: block;
+  flex: 0 0 auto;
+}
+.tempo-eq {
+  font-size: 13px;
+  font-weight: 700;
+}
+.tsig {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 0.9;
+  font-family: var(--display);
+  font-size: 12px;
+}

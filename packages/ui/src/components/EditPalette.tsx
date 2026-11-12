@@ -23,6 +23,7 @@ import {
 } from '@riffroll/core';
 import { barMap, currentTrack, useStore } from '../store';
 import { noteOnString, tabKey } from '../tabEntry';
+import { NoteIcon, RestIcon, TieIcon, TripletIcon } from './NoteIcon';
 
 // the score's music font, for note and dynamic symbols
 if (typeof FontFace !== 'undefined' && typeof document !== 'undefined') {
@@ -33,14 +34,14 @@ if (typeof FontFace !== 'undefined' && typeof document !== 'undefined') {
     .catch(() => {});
 }
 
-const DURATIONS: [string, number, string][] = [
-  ['', PPQ * 4, 'Whole note'],
-  ['', PPQ * 2, 'Half note'],
-  ['', PPQ, 'Quarter note'],
-  ['', PPQ / 2, 'Eighth note'],
-  ['', PPQ / 4, '16th note'],
-  ['', PPQ / 8, '32nd note'],
-  ['', PPQ / 16, '64th note'],
+const DURATIONS: [Parameters<typeof NoteIcon>[0], number, string][] = [
+  [{ hollow: true, stem: false }, PPQ * 4, 'Whole note'],
+  [{ hollow: true }, PPQ * 2, 'Half note'],
+  [{}, PPQ, 'Quarter note'],
+  [{ flags: 1 }, PPQ / 2, 'Eighth note'],
+  [{ flags: 2 }, PPQ / 4, '16th note'],
+  [{ flags: 3 }, PPQ / 8, '32nd note'],
+  [{ flags: 4 }, PPQ / 16, '64th note'],
 ];
 // Guitar Pro's dynamic → velocity mapping
 const DYNAMICS: [string, number, string][] = [
@@ -134,14 +135,16 @@ export function EditPalette() {
     value: Techniques[K],
     label: React.ReactNode,
     title: string,
-    opts: { music?: boolean; fretOnly?: boolean; span?: boolean } = {},
+    opts: { music?: boolean; fretOnly?: boolean; span?: boolean; icon?: boolean } = {},
   ) => {
     const on = n > 0 && notes.every((x) => same(x.tech?.[key], value));
     const disabled = !n || (opts.fretOnly && !fretted);
     return (
       <button
         key={title}
-        className={'pal-btn' + (opts.music ? ' music' : '') + (opts.span ? ' span2' : '')}
+        className={
+          'pal-btn' + (opts.music ? ' music' : '') + (opts.span ? ' span2' : '') + (opts.icon ? ' icon' : '')
+        }
         aria-pressed={on}
         disabled={disabled}
         title={title}
@@ -256,11 +259,15 @@ export function EditPalette() {
         <button className="pal-btn boxed" title="Section marker at the cursor bar" onClick={addSectionHere}>
           A
         </button>
-        <button className="pal-btn" title="Tempo change at the cursor bar" onClick={addTempoHere}>
-          <span className="music">{''}</span>=
+        <button className="pal-btn icon" title="Tempo change at the cursor bar" onClick={addTempoHere}>
+          <NoteIcon size={16} />
+          <span className="tempo-eq">=</span>
         </button>
         <button className="pal-btn" title="Time signature from the cursor bar" onClick={timeSigHere}>
-          <span className="music">{''}</span>
+          <span className="tsig">
+            <b>4</b>
+            <b>4</b>
+          </span>
         </button>
         <button className="pal-btn" title="Repeat the cursor bar (or remove the repeat)" onClick={repeatHere}>
           𝄆 𝄇
@@ -271,33 +278,33 @@ export function EditPalette() {
         {DURATIONS.map(([g, ticks, title]) => (
           <button
             key={title}
-            className="pal-btn music big"
+            className="pal-btn icon"
             aria-pressed={baseLen === ticks}
             title={`${title}${drums ? '' : ' (sets the length of new and selected notes)'}`}
             onClick={() => setLength(dotted ? ticks * 1.5 : triplet ? (ticks * 2) / 3 : ticks, title)}
           >
-            {g}
+            <NoteIcon {...g} />
           </button>
         ))}
         <button
-          className="pal-btn music big"
+          className="pal-btn icon"
           aria-pressed={dotted}
           title="Dotted"
           onClick={() => setLength(dotted ? baseLen : baseLen * 1.5, 'Dotted')}
         >
-          {''}
+          <NoteIcon dot />
         </button>
         <button
-          className="pal-btn music big"
+          className="pal-btn icon"
           aria-pressed={triplet}
           title="Triplet"
           onClick={() => setLength(triplet ? baseLen : (baseLen * 2) / 3, 'Triplet')}
         >
-          {''}
+          <TripletIcon />
         </button>
-        {tech('tieFromPrevious', true, '‿', 'Tie to the previous note (L)')}
+        {tech('tieFromPrevious', true, <TieIcon />, 'Tie to the previous note (L)', { icon: true })}
         <button
-          className="pal-btn music big"
+          className="pal-btn icon"
           title="Rest (removes the selected notes)"
           disabled={!n && !st.tabCursor}
           onClick={() => {
@@ -313,7 +320,7 @@ export function EditPalette() {
               );
           }}
         >
-          {''}
+          <RestIcon />
         </button>
       </section>
 

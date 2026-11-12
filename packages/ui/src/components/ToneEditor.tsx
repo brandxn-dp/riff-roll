@@ -72,7 +72,7 @@ const BLOCKS: { block: Block; title: string; toggle: boolean; params: Param[] }[
   {
     block: 'amp',
     title: 'Amp',
-    toggle: false,
+    toggle: true, // off = bypass the amp (e.g. acoustic or DI sounds, or your own amp after Riff Roll)
     params: [knob('gain'), knob('bass'), knob('mid'), knob('treble'), knob('presence'), knob('master')],
   },
   {
@@ -159,7 +159,8 @@ function ToneBlocks({ track, tone }: { track: Track; tone: Tone }) {
     <div className="board">
       {BLOCKS.map(({ block, title, toggle, params }) => {
         const values = ch[block] as unknown as Record<string, number | boolean | string>;
-        const on = toggle ? !!values.on : true;
+        // the amp is on unless switched off (older songs have no amp.on)
+        const on = toggle ? (block === 'amp' ? values.on !== false : !!values.on) : true;
         return (
           <section key={block} className={'pedal' + (on ? ' on' : '')}>
             <header>

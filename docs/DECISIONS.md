@@ -338,3 +338,21 @@ cover those). SF2 samples are written as 16-bit mono WAV; SF3 samples are alread
 32–39 to bass, the rest to "Other"; each can be changed before adding. Checked against the Sonivox GM SoundFont
 that ships with alphaTab: all 132 presets of the .sf2 and .sf3 convert, and piano, guitar and kit render audibly
 in the browser.
+
+## Amp on/off, Ctrl+A, palette icons (0.2.0)
+
+- **Amp off**: the Amp block now has an On/Off switch like the other blocks (`amp.on`, default on, so older songs
+  are unchanged). Off routes the signal around the preamp stages, tone stack and power amp; the cabinet keeps its
+  own switch, so "amp off + cab off" is a clean DI (acoustic sounds, or re-amping elsewhere) and "amp off + cab on"
+  is a cab-only sound. The bypass is level-matched to the clean amp (×0.7, measured on the example guitar and bass
+  parts: 0.69 and 0.75).
+- **What the amp is**: Riff Roll's own amp model built from Web Audio nodes, no third-party plug-in or neural
+  model: noise gate (AudioWorklet), compressor, overdrive pedal (mid-hump → soft clip → tone), then the amp: tight
+  high-pass, two 4× oversampled tube-style waveshaper stages with an interstage filter (the second only on the
+  driven channels), a bass/mid/treble/presence tone stack and a power-amp waveshaper; then a convolution cabinet
+  (synthesised IRs or your own .wav), post EQ, chorus, delay and the reverb send.
+- **Ctrl+A** already selected every note of the track in the editor; it now also selects every bar of every track
+  in the global view (and Ctrl+A with the global view focused does that), so copy / cut / delete can act on the
+  whole song.
+- **Palette note icons** are drawn as SVG: a music font's glyphs sit on a staff baseline and looked off-centre
+  inside buttons. Dynamics and articulations keep the Bravura glyphs, which centre well.

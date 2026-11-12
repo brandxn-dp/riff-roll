@@ -40,6 +40,11 @@ function curve(kind: 'soft' | 'tube' | 'hard' | 'power'): Float32Array<ArrayBuff
 }
 
 const db = (d: number) => Math.pow(10, d / 20);
+/**
+ * Amp off: gain on the bypassed signal so it is about as loud as the clean amp. Measured by rendering the example
+ * guitar and bass parts through the clean presets with the amp on and off (0.69 and 0.75).
+ */
+const AMP_BYPASS_GAIN = 0.7;
 
 export interface ToneChainDeps {
   gateWorklet: boolean;
@@ -158,12 +163,17 @@ export class ToneChainNode {
     n.powerIn = g(1);
     n.power = ws('power');
     n.ampOut = g(1);
+    // amp bypass (amp off): the clean signal skips the amp, level-matched to the clean amp
+    n.ampWet = g(1);
+    n.ampDry = g(0);
+    n.ampSum = g();
+    node.connect(n.ampDry).connect(n.ampSum);
     node.connect(n.ampIn).connect(n.ampTight).connect(n.stage1).connect(n.interLp).connect(n.interHp);
     n.interHp.connect(n.stage2Gain).connect(n.stage2).connect(n.stage2Wet).connect(n.stage2Sum);
     n.interHp.connect(n.stage2Dry).connect(n.stage2Sum);
     n.stage2Sum.connect(n.bass).connect(n.mid).connect(n.treble).connect(n.presence);
-    n.presence.connect(n.powerIn).connect(n.power).connect(n.ampOut);
-    node = n.ampOut;
+    n.presence.connect(n.powerIn).connect(n.power).connect(n.ampOut).connect(n.ampWet).connect(n.ampSum);
+    node = n.ampSum;
 
     // cabinet
     n.cab = c.createConvolver();
@@ -284,6 +294,9 @@ export class ToneChainNode {
     n.presence.gain.value = (a.presence - 5) * 2;
     set(n.powerIn.gain, 0.4 + a.master * 0.12);
     set(n.ampOut.gain, comp);
+    const ampOn = a.on !== false;
+    set(n.ampWet.gain, ampOn ? 1 : 0);
+    set(n.ampDry.gain, ampOn ? 0 : AMP_BYPASS_GAIN);
 
     // cab
     const ir = ch.cab.on ? ch.cab.ir : '';

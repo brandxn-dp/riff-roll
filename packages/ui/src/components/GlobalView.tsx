@@ -622,7 +622,10 @@ export function GlobalView() {
     const k = e.key.toLowerCase();
     const st = useStore.getState();
     let handled = true;
-    if (mod && k === 'c') barActions.copy();
+    if (mod && k === 'a') {
+      st.set({ barSel: { t0: 0, t1: st.song.tracks.length - 1, b0: 0, b1: st.song.bars - 1 } });
+      status('Every bar of every track selected');
+    } else if (mod && k === 'c') barActions.copy();
     else if (mod && k === 'x') barActions.cut();
     else if (mod && k === 'v') barActions.paste(e.shiftKey);
     else if (mod && k === 'd') barActions.duplicate();

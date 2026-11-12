@@ -65,6 +65,7 @@ const toneChain = z.object({
   comp: z.object({ on: z.boolean(), threshold: z.number(), ratio: z.number() }),
   drive: z.object({ on: z.boolean(), gain: z.number(), tone: z.number(), level: z.number() }),
   amp: z.object({
+    on: z.boolean().optional(),
     gain: z.number(),
     bass: z.number(),
     mid: z.number(),

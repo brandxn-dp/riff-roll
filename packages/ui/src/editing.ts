@@ -52,10 +52,19 @@ export function deleteSelection() {
   s.st.select([]);
 }
 
+/**
+ * Ctrl+A: every note (or hit) of the track in the editor, and every bar of every track in the global view, so
+ * copy / cut / delete there act on the whole song.
+ */
 export function selectAll() {
   const s = selected();
   if (!s) return;
   s.st.select([...s.t.notes.map((n) => n.id), ...s.t.hits.map((h) => h.id)], null);
+  const { song } = s.st;
+  s.st.set({
+    barSel: { t0: 0, t1: song.tracks.length - 1, b0: 0, b1: song.bars - 1 },
+    status: `Selected all ${s.t.notes.length + s.t.hits.length} notes in “${s.t.name}” and every bar of every track (global view)`,
+  });
 }
 
 export function copy(): boolean {

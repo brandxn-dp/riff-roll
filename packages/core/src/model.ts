@@ -89,6 +89,8 @@ export interface ToneChain {
   comp: { on: boolean; threshold: number; ratio: number };
   drive: { on: boolean; gain: number; tone: number; level: number };
   amp: {
+    /** false = amp bypassed: the signal goes straight on to the cab (or past it if the cab is off). Default on. */
+    on?: boolean;
     gain: number; // 0..10
     bass: number; // 0..10
     mid: number;
