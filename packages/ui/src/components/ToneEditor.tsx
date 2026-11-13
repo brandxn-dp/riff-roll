@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BASS_PRESETS,
   GUITAR_PRESETS,
@@ -28,6 +28,58 @@ interface Param {
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+/**
+ * Where a tone's sound comes from: the track's DI guitar through the amp chain, or a sampled instrument (a guitar
+ * recorded through its own amp, e.g. Bread Bread's Overdriven Guitar) with the amp and cab switched off.
+ */
+function SoundSource({ track, tone }: { track: Track; tone: Tone }) {
+  const [list, setList] = useState<{ id: string; name: string }[] | null>(null);
+  useEffect(() => {
+    void ensureEngine().then(async (e) =>
+      setList((await e.lib.index()).filter((i) => i.role === track.type && i.id !== track.instrument)),
+    );
+  }, [track.type, track.instrument]);
+  const st = useStore.getState();
+  const pick = (id: string) =>
+    st.exec(
+      updateTone(
+        track.id,
+        tone.id,
+        id
+          ? {
+              instrument: id,
+              chain: { amp: { ...tone.chain.amp, on: false }, cab: { ...tone.chain.cab, on: false } },
+            }
+          : {
+              instrument: undefined,
+              chain: { amp: { ...tone.chain.amp, on: true }, cab: { ...tone.chain.cab, on: true } },
+            },
+        'Tone sound',
+      ),
+    );
+  return (
+    <div className="row">
+      <span className="lbl">Sound</span>
+      <select className="mini" value={tone.instrument ?? ''} onChange={(e) => pick(e.target.value)}>
+        <option value="">Track guitar (DI) through the amp below</option>
+        {(list ?? []).map((i) => (
+          <option key={i.id} value={i.id}>
+            Sampled: {i.name}
+          </option>
+        ))}
+        {tone.instrument && !list?.some((i) => i.id === tone.instrument) && (
+          <option value={tone.instrument}>{list ? `${tone.instrument} (not installed)` : 'Loading…'}</option>
+        )}
+      </select>
+      {tone.instrument && (
+        <span className="mute small">
+          Recorded with its own amp; palm mutes and hammer-ons use real samples.
+        </span>
+      )}
+    </div>
+  );
+}
 const knob = (key: string, label = key[0].toUpperCase() + key.slice(1)): Param => ({
   key,
   label,
@@ -346,6 +398,8 @@ export function ToneEditor() {
           </button>
         </div>
       </div>
+
+      <SoundSource track={track} tone={tone} />
 
       <div className="pedalcfg row">
         <span className="lbl">Pedal</span>

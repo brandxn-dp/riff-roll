@@ -172,6 +172,8 @@ async function createWindow(fileToOpen?: string) {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // keep the audio scheduler on time when the window is minimised or covered
+      backgroundThrottling: false,
     },
   });
   if (state.maximized) win.maximize();

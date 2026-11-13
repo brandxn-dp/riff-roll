@@ -27,6 +27,8 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Sound**: SFZ sampler (velocity layers, round robins, choke groups) with CC0 instruments:
   - FreePats FSBS DI guitar, played through an amp sim (gate, drive, two-stage amp, tone stack, cab IR, effects)
   - FreePats Yamaha bass
+  - Bread Bread's Overdriven Guitar (public domain): the default distorted tone, sampled through its own amp, with
+    real palm-mute, hammer-on/pull-off and up/down-stroke samples
   - Bread Bread's Drum Kit (the default kit; public domain) and Karoryfer Big Rusty Drums
 - **Song structure**: sections with jump-to chips, tempo changes (including gradual ones), time-signature and key
   changes, repeats with alternate endings, a loop region, a metronome with count-in, playback at 50–150 % speed
@@ -36,7 +38,8 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
   - Export: MIDI, MusicXML, Guitar Pro 7, WAV (full mix or per-track stems), PDF/print, and ASCII tab copied to the
     clipboard.
 
-- **Tones**: a pedalboard-style editor for every amp-chain parameter, your own cabinet IRs (WAV), and an A/B
+- **Tones**: each tone either runs the track's DI guitar through the amp chain or plays a sampled guitar (Tone
+  editor → Sound). A pedalboard-style editor for every amp-chain parameter, your own cabinet IRs (WAV), and an A/B
   listening tool for tuning tones.
 - **Your own instruments**: **File → Instruments…** adds an SFZ instrument from a folder, or any presets of an
   SF2 / SF3 SoundFont (Docker and desktop).
@@ -64,6 +67,8 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
   shortcuts; starting grid and note length, note preview, follow playhead; interface size in the desktop app. Server
   admins also get a **Server admin** page: version, uptime, users, songs and storage, a sign-up switch, and signing
   a person out of every device.
+- **Bulk edits**: with several notes selected, technique buttons apply to all of them, and the inspector moves them
+  to one string, a string up or down, or around a fret, by octaves, or clears their techniques.
 - **Lanes**: the velocity and pedal lanes under the piano roll can each be hidden and resized (Lanes menu, or drag
   their edges); the bar count can be typed, and **＋ Bars** in the global view inserts 1, 2, 4, 8 or 16 bars.
 

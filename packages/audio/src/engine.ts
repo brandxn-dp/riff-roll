@@ -28,8 +28,32 @@ export interface EngineOptions {
   sinkId?: string;
 }
 
-const LOOKAHEAD = 0.12; // seconds scheduled ahead of the audio clock
+// Seconds scheduled ahead of the audio clock. Notes are handed to the audio thread this far ahead, so a busy
+// main thread (a big song redrawing, garbage collection, saving) can stall for up to this long without the
+// music stuttering. Edits made while playing take about this long to be heard.
+const LOOKAHEAD = 0.3;
 const INTERVAL = 25; // ms between scheduler runs
+
+/**
+ * The scheduler's clock. A worker's timer keeps time when the browser throttles the page's own timers (a hidden
+ * tab, a minimised or covered window), which would otherwise starve playback; falls back to setInterval.
+ */
+function ticker(fn: () => void, ms: number): () => void {
+  try {
+    const src = `const t = setInterval(() => postMessage(0), ${ms}); onmessage = () => { clearInterval(t); close(); };`;
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    const w = new Worker(url);
+    URL.revokeObjectURL(url);
+    w.onmessage = fn;
+    return () => {
+      w.postMessage(0);
+      w.terminate();
+    };
+  } catch {
+    const id = setInterval(fn, ms);
+    return () => clearInterval(id);
+  }
+}
 
 interface PlayState {
   segStart: number; // tick where the current segment (pass through the loop) starts
@@ -37,7 +61,8 @@ interface PlayState {
   segEnd: number; // tick where this segment ends (loop end or song end)
   next: number; // ticks scheduled so far
   anchors: { time: number; tick: number }[]; // for playhead mapping across loop wraps
-  timer: ReturnType<typeof setInterval>;
+  /** stops the scheduler clock */
+  stopTimer: () => void;
   perf: Map<string, TrackPerfState>;
   tempo: TempoMap;
   tempos: Song['tempos'];
@@ -53,6 +78,9 @@ export class AudioEngine {
   private graphs = new Map<string, TrackGraph>();
   private samplers = new Map<string, Sampler>();
   private samplerKeys = new Map<string, string>();
+  /** samplers of sampled tones, by "trackId:toneId" */
+  private toneSamplers = new Map<string, Sampler>();
+  private toneSamplerKeys = new Map<string, string>();
   private gate = false;
   /** decoded user impulse responses by asset name */
   readonly userIRs = new Map<string, AudioBuffer>();
@@ -161,6 +189,26 @@ export class AudioEngine {
         });
       }
     }
+    // sampled tones: each loads its own instrument
+    const toneKeys = new Set<string>();
+    for (const t of song.tracks)
+      for (const tone of t.tones) {
+        if (!tone.instrument) continue;
+        const k = `${t.id}:${tone.id}`;
+        toneKeys.add(k);
+        const want = `${t.type}:${tone.instrument}`;
+        if (this.toneSamplerKeys.get(k) === want) continue;
+        this.toneSamplerKeys.set(k, want);
+        this.toneSamplers.delete(k);
+        this.lib.sampler(tone.instrument, t.type).then((smp) => {
+          if (this.toneSamplerKeys.get(k) === want) this.toneSamplers.set(k, smp);
+        });
+      }
+    for (const k of [...this.toneSamplerKeys.keys()])
+      if (!toneKeys.has(k)) {
+        this.toneSamplerKeys.delete(k);
+        this.toneSamplers.delete(k);
+      }
     // tempo edits while playing: re-anchor at the current position
     if (this.st && prev && prev.tempos !== song.tempos) {
       const at = this.currentTick();
@@ -195,8 +243,36 @@ export class AudioEngine {
           }),
         ),
       );
+      for (const tone of t.tones)
+        if (tone.instrument)
+          jobs.push(
+            this.lib.sampler(tone.instrument, t.type).then((s) =>
+              s.preload(pitches, (d, n) => {
+                prog.set(`${t.id}:${tone.id}`, [d, n]);
+                report();
+              }),
+            ),
+          );
     }
     await Promise.all(jobs);
+  }
+
+  /**
+   * The sampler and destination for a one-off note on a track under a tone: a sampled tone plays its own
+   * instrument into its chain, otherwise the track's DI goes to the amp. `pm` maps a palm mute onto real
+   * palm-mute samples when the instrument has them.
+   */
+  private async voiceFor(track: Track, toneId: string | undefined, until: number) {
+    const g = this.graphs.get(track.id)!;
+    const tone = toneId ? track.tones.find((t) => t.id === toneId) : undefined;
+    if (tone?.instrument) {
+      const s =
+        this.toneSamplers.get(`${track.id}:${tone.id}`) ??
+        (await this.lib.sampler(tone.instrument, track.type));
+      return { s, dest: g.inputFor(tone.id, until) };
+    }
+    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
+    return { s, dest: g.input as AudioNode };
   }
 
   private tempoMap(song: Song) {
@@ -208,12 +284,13 @@ export class AudioEngine {
     await this.resume();
     const g = this.graphs.get(track.id);
     if (!g || track.type === 'drums') return;
-    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
+    const toneId = isFretted(track.type) ? toneAt(track.pedal, tick) : undefined;
+    const { s, dest } = await this.voiceFor(track, toneId, this.ctx.currentTime + 2);
     await s.preload([pitch]);
-    if (!this.st) g.setTone(toneAt(track.pedal, tick), this.ctx.currentTime, 0);
+    if (!this.st && toneId) g.setTone(toneId, this.ctx.currentTime, 0);
     const song = this.song;
     const secs = song ? (lengthTicks * 60) / (this.tempoMap(song).bpmAt(tick) * song.ppq) : 0.4;
-    s.play(this.ctx, g.input, {
+    s.play(this.ctx, dest, {
       pitch,
       velocity: 100,
       when: this.ctx.currentTime + 0.005,
@@ -264,17 +341,26 @@ export class AudioEngine {
     await s.preload(notes.flatMap((n) => n.p));
     const passes = toneB ? [toneA, toneB, toneA, toneB] : [toneA];
     const t0 = this.ctx.currentTime + 0.05;
+    const voices = await Promise.all(
+      passes.map((tone, i) => this.voiceFor(track, tone, t0 + (i + 1) * len + 1)),
+    );
+    for (const v of voices) await v.s.preload(notes.flatMap((n) => n.p));
     passes.forEach((tone, i) => {
       const start = t0 + i * len;
       g.setTone(tone, start, i ? 0.01 : 0);
+      const { s: smp, dest } = voices[i];
+      const art = smp.articulations;
       for (const n of notes)
         n.p.forEach((pitch, k) => {
-          const vs = s.play(this.ctx, g.input, {
+          const layer = art ? (n.pm ? art.palmMute : (art.down ?? art.up)) : undefined;
+          const v = n.v ?? 100;
+          const vs = smp.play(this.ctx, dest, {
             pitch,
-            velocity: n.v ?? 100,
+            velocity: layer ? Math.round(layer[0] + ((layer[1] - layer[0]) * v) / 127) : v,
+            ...(layer ? { gainVelocity: v } : {}),
             when: start + n.t + k * 0.012,
             duration: n.d,
-            palmMute: n.pm,
+            palmMute: layer ? false : n.pm,
           });
           this.auditionVoices.push(...vs);
         });
@@ -295,9 +381,16 @@ export class AudioEngine {
       if (lane) void this.previewDrum(track, lane.id, velocity);
       return () => {};
     }
-    const s = this.samplers.get(track.id) ?? (await this.lib.sampler(track.instrument, track.type));
+    const toneId = isFretted(track.type) ? g.current || undefined : undefined;
+    const { s, dest } = await this.voiceFor(track, toneId, this.ctx.currentTime + 30);
     await s.preload([pitch]);
-    const voices = s.play(this.ctx, g.input, { pitch, velocity, when: this.ctx.currentTime });
+    const art = s.articulations?.down ?? s.articulations?.up;
+    const voices = s.play(this.ctx, dest, {
+      pitch,
+      velocity: art ? Math.round(art[0] + ((art[1] - art[0]) * velocity) / 127) : velocity,
+      ...(art ? { gainVelocity: velocity } : {}),
+      when: this.ctx.currentTime,
+    });
     return () => voices.forEach((v) => v.stop(this.ctx.currentTime));
   }
 
@@ -411,7 +504,7 @@ export class AudioEngine {
       queue,
       next: fromTick,
       anchors: [{ time: start, tick: fromTick }],
-      timer: setInterval(() => this.tick(), INTERVAL),
+      stopTimer: ticker(() => this.tick(), INTERVAL),
       perf,
       tempo,
       tempos: song.tempos,
@@ -460,6 +553,7 @@ export class AudioEngine {
             (x) => this.timeOf(x),
             st.perf.get(t.id) ?? newPerfState(),
             song.humanize,
+            (toneId) => this.toneSamplers.get(`${t.id}:${toneId}`),
           );
         }
         if (song.metronome.on)
@@ -523,7 +617,7 @@ export class AudioEngine {
   stop() {
     const st = this.st;
     if (!st) return;
-    clearInterval(st.timer);
+    st.stopTimer();
     const now = this.ctx.currentTime;
     for (const p of st.perf.values()) for (const v of p.voices) if (v.end > now) v.stop(now, true);
     this.st = null;

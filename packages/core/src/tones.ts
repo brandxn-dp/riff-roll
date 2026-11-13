@@ -12,7 +12,11 @@ const base = (): ToneChain => ({
   reverb: { on: true, size: 0.4, mix: 0.12 },
 });
 
-type Preset = { name: string; color: string; chain: (c: ToneChain) => ToneChain };
+/** A tone preset. `instrument`: a sampled tone (plays that instrument instead of the DI through the amp). */
+export type Preset = { name: string; color: string; chain: (c: ToneChain) => ToneChain; instrument?: string };
+
+/** Bread Bread's Overdriven Guitar: recorded through its own amp and cab, with real palm-mute and legato layers. */
+export const SAMPLED_OVERDRIVE = 'guitar-bread-overdrive';
 
 /** Shipped guitar tone presets. Values are tuned by ear against a palm-muted E5 chug and an open Em chord. */
 export const GUITAR_PRESETS: Record<string, Preset> = {
@@ -45,6 +49,20 @@ export const GUITAR_PRESETS: Record<string, Preset> = {
       amp: { gain: 7.5, bass: 6, mid: 4, treble: 6.5, presence: 6.5, master: 5, character: 'high-gain' },
       cab: { on: true, ir: 'builtin:4x12-closed', mix: 1 },
       reverb: { on: true, size: 0.3, mix: 0.05 },
+    }),
+  },
+  overdrive: {
+    name: 'Overdrive',
+    color: '#ff7a45',
+    instrument: SAMPLED_OVERDRIVE,
+    // the samples carry the amp and cabinet: the chain only adds a light gate and some room
+    chain: (c) => ({
+      ...c,
+      gate: { on: true, threshold: -62, release: 0.08 },
+      // amp off (the samples have one); 'crunch' labels it as overdriven for MIDI and score exports
+      amp: { ...c.amp, on: false, character: 'crunch' },
+      cab: { ...c.cab, on: false },
+      reverb: { on: true, size: 0.3, mix: 0.06 },
     }),
   },
   lead: {
@@ -90,7 +108,13 @@ export const BASS_PRESETS: Record<string, Preset> = {
 };
 
 export function makeTone(preset: Preset, id = newId('tone')): Tone {
-  return { id, name: preset.name, color: preset.color, chain: preset.chain(base()) };
+  return {
+    id,
+    name: preset.name,
+    color: preset.color,
+    chain: preset.chain(base()),
+    ...(preset.instrument ? { instrument: preset.instrument } : {}),
+  };
 }
 
 export function defaultChain(): ToneChain {

@@ -78,7 +78,9 @@ export class InstrumentLibrary {
           return r.text();
         });
         const dir = info.sfz.split('/').slice(0, -1).join('/');
-        return new Sampler(text, joinUrl(this.baseUrl, dir).replace(/\/?$/, '/'), this.loader);
+        const s = new Sampler(text, joinUrl(this.baseUrl, dir).replace(/\/?$/, '/'), this.loader);
+        if (info.meta?.articulations) s.articulations = info.meta.articulations as Sampler['articulations'];
+        return s;
       })();
       p.catch(() => this.samplers.delete(key));
       this.samplers.set(key, p);

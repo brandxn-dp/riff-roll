@@ -36,8 +36,8 @@ describe('MIDI', () => {
     const song = { ...demo(), tempos: [{ tick: 0, bpm: 140 }] };
     const bytes = songToMidi(song);
     expect(String.fromCharCode(...bytes.slice(0, 4))).toBe('MThd');
-    // program change 30 (distortion) appears for the stomp
-    const hasDistProgram = bytes.some((b, i) => (b & 0xf0) === 0xc0 && bytes[i + 1] === 30);
+    // program change 29 (overdriven guitar: the sampled Overdrive tone) appears for the stomp
+    const hasDistProgram = bytes.some((b, i) => (b & 0xf0) === 0xc0 && bytes[i + 1] === 29);
     expect(hasDistProgram).toBe(true);
     const back = midiToSong(bytes);
     expect(back.tempos[0].bpm).toBeCloseTo(140, 0);
@@ -57,7 +57,7 @@ describe('MusicXML', () => {
     expect(xml).toContain('<score-partwise version="4.0">');
     expect(xml).toContain('<sign>TAB</sign>');
     expect(xml).toContain('<fret>');
-    expect(xml).toContain('<words>Dist</words>');
+    expect(xml).toContain('<words>Overdrive</words>');
     // every opened measure is closed
     expect(xml.match(/<measure /g)!.length).toBe(xml.match(/<\/measure>/g)!.length);
     expect(xml.match(/<part id=/g)!.length).toBe(4);
@@ -80,7 +80,7 @@ describe('AlphaTex', () => {
     const { tex } = songToAlphaTex(demo());
     expect(tex.match(/\\track /g)!.length).toBe(4);
     expect(tex).toContain('\\tuning E4 B3 G3 D3 A2 E2');
-    expect(tex).toContain('txt "Dist"');
+    expect(tex).toContain('txt "Overdrive"');
     expect(tex).toContain('\\instrument percussion');
   });
 });

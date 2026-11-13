@@ -119,7 +119,10 @@ export const TOOLS = [
     description:
       'Change notes or drum hits in bulk: by ids, or everything in a bar range (default: the whole track). ' +
       'transpose (semitones), shift (quarter notes, + later / − earlier), velocity (set) or velocity_scale ' +
-      '(multiply), length (set, quarter notes). One undo step.',
+      '(multiply), length (set, quarter notes). Guitar/bass: string (1 = highest; notes that fit move there), ' +
+      'string_shift (+1 one string higher, −1 lower, same pitch), near_fret (play the passage around that fret), ' +
+      'auto_strings (let Riff Roll choose again). techniques: add or change ({"palmMute": true, "slide": ' +
+      '"legato"}), false removes one ({"palmMute": false}); clear_techniques removes all first. One undo step.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -132,6 +135,12 @@ export const TOOLS = [
         velocity: { type: 'number' },
         velocity_scale: { type: 'number' },
         length: { type: 'number' },
+        string: { type: 'number' },
+        string_shift: { type: 'number' },
+        near_fret: { type: 'number' },
+        auto_strings: { type: 'boolean' },
+        techniques: { type: 'object' },
+        clear_techniques: { type: 'boolean' },
       },
     },
   },

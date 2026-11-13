@@ -191,6 +191,8 @@ button:disabled {
 .main {
   flex: 1 1 auto;
   min-width: 0;
+  /* may shrink: otherwise a tall inspector spills under the global view, which then takes its clicks */
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2509,6 +2511,10 @@ body.resizing {
   row-gap: 6px;
   padding: 6px 12px;
   min-height: 0;
+  /* in a short window the inspector scrolls instead of overflowing */
+  flex-shrink: 1;
+  max-height: 45%;
+  overflow-y: auto;
 }
 .app:not(.mobile) .insp > .techs,
 .app:not(.mobile) .insp > .hint {
@@ -2903,4 +2909,12 @@ body.resizing {
 .mcp-dot.on {
   background: #43b562;
   box-shadow: 0 0 6px #43b562;
+}
+
+/* bulk string buttons (several notes selected) */
+.insp .bulk .ib.str {
+  min-width: 26px;
+  font-weight: 700;
+  color: var(--c);
+  border-color: color-mix(in srgb, var(--c) 45%, var(--line));
 }

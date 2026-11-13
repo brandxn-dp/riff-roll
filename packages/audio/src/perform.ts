@@ -20,6 +20,9 @@ export interface TrackPerfState {
 
 export const newPerfState = (): TrackPerfState => ({ strings: new Map(), voices: [] });
 
+/** Let ring: a note keeps sounding past its written length, up to this, unless its string is played again. */
+const LET_RING_MAX = 6;
+
 export interface Humanize {
   timingMs: number;
   velocity: number;
@@ -65,6 +68,8 @@ export function scheduleTrack(
   timeOf: (tick: number) => number,
   st: TrackPerfState,
   human: Humanize,
+  /** the sampler of a sampled tone (a tone with its own instrument), if any */
+  toneSampler?: (toneId: string) => Sampler | undefined,
 ) {
   if (isFretted(track.type)) {
     for (const ch of toneChanges(track.pedal))
@@ -72,6 +77,13 @@ export function scheduleTrack(
   }
   if (!sampler) return;
   if (track.type === 'drums') return scheduleDrums(ctx, track, sampler, graph, t0, t1, timeOf, st, human);
+  // which tone is on at a tick (for sampled tones)
+  const changes = toneSampler && isFretted(track.type) ? toneChanges(track.pedal) : null;
+  const toneAtTick = (tick: number) => {
+    let id = changes![0].toneId;
+    for (const c of changes!) if (c.tick <= tick) id = c.toneId;
+    return id;
+  };
   // strings matter for guitar and bass only (a new note on a string cuts the last one)
   const fing = isFretted(track.type) ? trackFingering(track) : new Map<string, Position | null>();
   const notes = track.notes;
@@ -93,9 +105,18 @@ export function scheduleTrack(
     );
 
     const tech = n.tech ?? {};
-    // a new note on a string cuts the previous note on that string, unless it was let ring
+    // a new note on a string cuts whatever that string was sounding, let ring or not (let ring only means the
+    // note isn't stopped at its written length)
     const prev = pos ? st.strings.get(pos.string) : undefined;
-    if (prev && !prev.letRing) for (const v of prev.voices) if (v.end > when) v.stop(when);
+    if (prev) for (const v of prev.voices) if (v.end > when) v.stop(when);
+
+    // a sampled tone plays its own instrument straight into its chain; otherwise the DI goes to the amp
+    const toneId = changes ? toneAtTick(n.start) : undefined;
+    const own = toneId ? toneSampler!(toneId) : undefined;
+    const smp = own ?? sampler;
+    const dest = own
+      ? graph.inputFor(toneId, when + dur + (tech.letRing ? LET_RING_MAX : 0) + 0.5)
+      : graph.input;
 
     // pitch actually heard (harmonics sound above the fretted pitch)
     let pitch = n.pitch;
@@ -123,16 +144,33 @@ export function scheduleTrack(
         { time: when + glide, cents: 0, ramp: true },
       );
     }
+    // an instrument with real palm-mute / legato / up- and down-stroke samples picks them by velocity; the note's
+    // own velocity then only sets the volume (and the faked palm mute and legato softening are not needed)
+    const art = smp.articulations;
+    const layer = art
+      ? tech.palmMute
+        ? art.palmMute
+        : legato
+          ? art.legato
+          : tech.pick === 'up'
+            ? (art.up ?? art.down)
+            : (art.down ?? art.up)
+      : undefined;
     const base = {
       pitch,
-      palmMute: tech.palmMute,
+      palmMute: layer && tech.palmMute ? false : tech.palmMute,
       dead: tech.dead,
-      fadeIn: tech.fadeIn ? Math.min(dur, 0.6) : legato ? 0.006 : undefined,
-      gain: (tech.ghost ? 0.5 : tech.accent === 'heavy' ? 1.4 : tech.accent ? 1.25 : 1) * (legato ? 0.72 : 1),
+      fadeIn: tech.fadeIn ? Math.min(dur, 0.6) : legato && !layer ? 0.006 : undefined,
+      gain:
+        (tech.ghost ? 0.5 : tech.accent === 'heavy' ? 1.4 : tech.accent ? 1.25 : 1) *
+        (legato && !layer ? 0.72 : 1),
       harmonic: !!tech.harmonic,
       detune: detune.length ? detune : undefined,
     };
     const v = Math.max(1, vel - (tech.pick === 'up' ? 8 : 0));
+    // the layer's velocity, keeping the note's dynamics inside the layer
+    const pickVel = (x: number) => (layer ? Math.round(layer[0] + ((layer[1] - layer[0]) * x) / 127) : x);
+    const gainVel = layer ? { gainVelocity: v } : {};
     const sounding = tech.staccato ? dur * 0.45 : dur;
     let voices: Voice[] = [];
     if (tech.tremolo || tech.trill) {
@@ -143,21 +181,25 @@ export function scheduleTrack(
       for (let k = 0; k < count; k++) {
         const trillUp = tech.trill && k % 2 === 1 && pos ? n.pitch - pos.fret + tech.trill.fret - n.pitch : 0;
         voices.push(
-          ...sampler.play(ctx, graph.input, {
+          ...smp.play(ctx, dest, {
             ...base,
+            ...gainVel,
             pitch: pitch + trillUp,
-            velocity: k % 2 ? v * 0.85 : v,
+            velocity: pickVel(k % 2 ? v * 0.85 : v),
             when: when + k * step,
             duration: step * 0.95,
           }),
         );
       }
     } else {
-      voices = sampler.play(ctx, graph.input, {
+      voices = smp.play(ctx, dest, {
         ...base,
-        velocity: v,
+        ...gainVel,
+        velocity: pickVel(v),
         when,
-        duration: tech.letRing ? undefined : sounding,
+        // let ring: past the written length (until the string is played again), but never forever: a sustaining
+        // sample would otherwise ring on and pile up until playback stops
+        duration: tech.letRing ? Math.max(sounding, LET_RING_MAX) : sounding,
       });
     }
     if (pos) st.strings.set(pos.string, { voices, letRing: !!tech.letRing, pitch: n.pitch });

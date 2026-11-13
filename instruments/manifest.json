@@ -16,6 +16,28 @@
       "default": true
     },
     {
+      "id": "guitar-bread-overdrive",
+      "name": "Bread Bread's Overdriven Guitar",
+      "role": "guitar",
+      "url": "https://github.com/brandxn-dp/riff-roll/releases/download/instruments-1/guitar-bread-overdrive.zip",
+      "sha256": "0c1d0145ca07aaeb2b72c7479babce5fb81263673dd069e14e0b3c9a9298516b",
+      "format": "zip",
+      "sfz": "riffroll.sfz",
+      "license": "Public domain",
+      "author": "Bananaslicedbread",
+      "homepage": "https://www.polyphone.io/en/soundfonts/guitars/856-bread-bread-s-overdriven-guitar-1-0",
+      "attribution": "Bread Bread's Overdriven Guitar v1.0 by Bananaslicedbread, shared on Polyphone as public domain. Left-channel preset converted to SFZ with scripts/build-sf2-kit.ts (release-noise layer left out).",
+      "default": true,
+      "meta": {
+        "articulations": {
+          "palmMute": [1, 23],
+          "legato": [48, 71],
+          "up": [72, 96],
+          "down": [97, 127]
+        }
+      }
+    },
+    {
       "id": "bass-yr-picked",
       "name": "Yamaha RBX Bass (picked)",
       "role": "bass",

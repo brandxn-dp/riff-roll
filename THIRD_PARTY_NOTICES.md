@@ -6,6 +6,8 @@ Generated from `instruments/manifest.json` by `pnpm notices`. Do not edit by han
 
 - **FSBS Electric Guitar Direct (DI)** by FreePats project — CC0-1.0 — https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html
   FSBS Electric Guitar Direct by the FreePats project, released under CC0 1.0 (public domain dedication).
+- **Bread Bread's Overdriven Guitar** by Bananaslicedbread — Public domain — https://www.polyphone.io/en/soundfonts/guitars/856-bread-bread-s-overdriven-guitar-1-0
+  Bread Bread's Overdriven Guitar v1.0 by Bananaslicedbread, shared on Polyphone as public domain. Left-channel preset converted to SFZ with scripts/build-sf2-kit.ts (release-noise layer left out).
 - **Yamaha RBX Bass (picked)** by FreePats project — CC0-1.0 — https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html
   Picked Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication).
 - **Yamaha RBX Bass (finger)** by FreePats project — CC0-1.0 — https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html

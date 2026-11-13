@@ -452,7 +452,7 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
   them so everything matches. Applied by mutating the shared tables (ROLE_COLORS, TRACK_COLORS, drum colours) and
   repainting. Piano roll notes can be coloured by string, track, velocity or pitch class.
 
-## Bread's drum kit, palm mutes, partial tempo/metre over MCP (0.3.5)
+## Bread's drum kit and overdriven guitar, playback performance, let ring, bulk strings (0.3.5)
 
 - **Default drum kit: Bread Bread's Drum Kit v1.03.1** (Polyphone, public domain, General MIDI). Polyphone only
   serves files to signed-in members, so the build can't download the .sf2. `scripts/build-sf2-kit.ts` converts its
@@ -471,3 +471,25 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
   signature changes keep notes at their times (like the editor), which the tool description tells the model.
 - **Velocity lane resize**: the drag lived inside an effect that re-ran on every size change, so a drag stopped after
   one step; it now lives in a ref, and uses screen coordinates (the panel grows upward as the lane grows).
+
+- **Playback performance**: every tone of a guitar or bass is a full amp chain (three 4x-oversampled waveshapers, a
+  convolver, ~20 filters, a gate worklet). All of them used to process the DI the whole time, with only their outputs
+  crossfaded, so songs with several guitars and tones overloaded the audio thread (crackles, lag). The footswitch
+  crossfade now happens at the chain inputs, and a chain that has been switched off (or whose track is muted) for
+  4 s is disconnected so the browser stops computing it. Offline export keeps every chain connected. The scheduler
+  plans 0.3 s ahead (was 0.12 s) so main-thread stalls don't make notes late, ticks from a worker (not throttled
+  in hidden or covered windows), and the desktop window no longer throttles in the background.
+- **Let ring**: a let-ring note had no end and wasn't cut by the next note on its string, so a sustaining
+  (looping) sample rang forever and voices piled up until stop. A new note on a string now always cuts it, and let
+  ring lasts at most 6 s past nothing else stopping it.
+- **Sampled tones**: a tone can name an `instrument` (Tone.instrument); notes starting under that tone play that
+  instrument straight into the tone's chain (amp and cab off by default, the samples have them) instead of the DI
+  through the amp. Default distorted tone for new guitar tracks: Bread Bread's Overdriven Guitar (public domain;
+  left-channel preset, release-noise layer dropped since the sampler has no release triggers). Its velocity ranges
+  are articulations (instrument meta `articulations`): palm mute 1–23, legato 48–71, up-stroke 72–96, down-stroke
+  97–127; palm-mute, hammer/tap/legato-slide and pick-direction marks choose the range and the note's velocity sets
+  the loudness (`gainVelocity`), so real palm-mute samples replace the filtered imitation. MIDI/score export label
+  it as overdriven (program 29).
+- **Bulk strings**: core/strings.ts puts a selection on one string, moves it a string up or down at the same pitch,
+  or near a fret (closest fret, thicker string on ties), as pins; notes that don't fit are left and counted. In
+  the inspector and in MCP `edit_notes` (with technique add/remove/clear).

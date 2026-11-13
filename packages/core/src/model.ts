@@ -113,6 +113,11 @@ export interface Tone {
   name: string;
   color: string;
   chain: ToneChain;
+  /**
+   * Sampled tone: play this instrument (e.g. a recorded overdriven guitar) instead of the track's DI through the
+   * amp. Its chain still adds gate, EQ and effects; amp and cab are usually off because the samples have them.
+   */
+  instrument?: string;
 }
 
 export interface Stomp {

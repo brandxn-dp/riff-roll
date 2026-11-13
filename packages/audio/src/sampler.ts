@@ -78,6 +78,22 @@ export interface PlayOptions {
   harmonic?: boolean;
   /** Extra per-region gain (drum mic balance). */
   regionGain?: (r: SfzRegion) => number;
+  /**
+   * Loudness velocity when `velocity` only picks an articulation layer (instruments whose velocity ranges are
+   * palm mute / legato / sustain): the layer comes from `velocity`, the volume from this.
+   */
+  gainVelocity?: number;
+}
+
+/**
+ * Velocity ranges of an instrument that switches articulation by velocity (from its instrument.json meta), e.g.
+ * Bread Bread's Overdriven Guitar: 0–23 palm mutes, 24–71 hammer-ons/pull-offs, 72–96 up-strokes, 97–127 down.
+ */
+export interface Articulations {
+  palmMute?: [number, number];
+  legato?: [number, number];
+  up?: [number, number];
+  down?: [number, number];
 }
 
 export interface Voice {
@@ -92,6 +108,8 @@ export interface Voice {
 /** Plays an SFZ instrument (subset) with sample-accurate scheduling. */
 export class Sampler {
   readonly inst: SfzInstrument;
+  /** set for instruments that switch articulation by velocity */
+  articulations?: Articulations;
   private seq = new Map<string, number>();
   private active: Voice[] = [];
   /** cents applied to a region with pitch tracking (0 for drums) */
@@ -201,7 +219,8 @@ export class Sampler {
     const env = ctx.createGain();
     // velocity curve: amp_veltrack 100% = (vel/127)^2 scaling of the sample layer
     const vt = r.ampVeltrack / 100;
-    const velGain = 1 - vt + vt * Math.pow(vel / 127, 1.6);
+    const gv = Math.max(1, Math.min(127, o.gainVelocity ?? vel));
+    const velGain = o.gainVelocity != null ? Math.pow(gv / 127, 0.9) : 1 - vt + vt * Math.pow(vel / 127, 1.6);
     const peak = Math.pow(10, r.volume / 20) * velGain * (o.gain ?? 1) * (o.regionGain ? o.regionGain(r) : 1);
     const a = r.ampeg;
     const t0 = when + a.delay;

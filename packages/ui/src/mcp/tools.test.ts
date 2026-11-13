@@ -158,3 +158,40 @@ describe('MCP tempo and time signature for part of a song', () => {
     expect((await call('set_time_signature', { signature: '5/5' })).error).toBe(true);
   });
 });
+
+describe('MCP bulk string and technique edits', () => {
+  it('moves notes to a string, near a fret, and adds/removes techniques', async () => {
+    const g = useStore.getState().song.tracks[1];
+    const ids = g.notes.slice(0, 4).map((n) => n.id);
+    await call('edit_notes', { track: g.id, ids, techniques: { palmMute: true, vibrato: 'normal' } });
+    let notes = useStore.getState().song.tracks[1].notes.filter((n) => ids.includes(n.id));
+    expect(notes.every((n) => n.tech?.palmMute && n.tech.vibrato === 'normal')).toBe(true);
+    await call('edit_notes', { track: g.id, ids, techniques: { vibrato: false } });
+    notes = useStore.getState().song.tracks[1].notes.filter((n) => ids.includes(n.id));
+    expect(notes.every((n) => n.tech?.palmMute && !n.tech.vibrato)).toBe(true);
+    await call('edit_notes', { track: g.id, ids, clear_techniques: true });
+    expect(
+      useStore
+        .getState()
+        .song.tracks[1].notes.filter((n) => ids.includes(n.id))
+        .every((n) => !n.tech),
+    ).toBe(true);
+
+    // string 6 = low E: the notes that fit go there, the rest are reported
+    const r = await call('edit_notes', { track: g.id, ids, string: 6 });
+    const after = (await call('get_notes', { track: g.id })).data.notes.filter((n: { id: string }) =>
+      ids.includes(n.id),
+    );
+    const onLow = after.filter((n: { string: number }) => n.string === 6).length;
+    expect(onLow + Number(/^(\d+)/.exec(r.data.not_moved ?? '0')?.[1] ?? 0)).toBe(ids.length);
+    await call('edit_notes', { track: g.id, ids, near_fret: 7 });
+    await call('edit_notes', { track: g.id, ids, auto_strings: true });
+    expect(
+      useStore
+        .getState()
+        .song.tracks[1].notes.filter((n) => ids.includes(n.id))
+        .every((n) => n.pinnedString == null),
+    ).toBe(true);
+    expect((await call('edit_notes', { track: g.id, ids, string: 9 })).error).toBe(true);
+  });
+});

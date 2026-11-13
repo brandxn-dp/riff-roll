@@ -8,6 +8,13 @@
       "attribution": "FSBS Electric Guitar Direct by the FreePats project, released under CC0 1.0 (public domain dedication)."
     },
     {
+      "name": "Bread Bread's Overdriven Guitar",
+      "author": "Bananaslicedbread",
+      "license": "Public domain",
+      "url": "https://www.polyphone.io/en/soundfonts/guitars/856-bread-bread-s-overdriven-guitar-1-0",
+      "attribution": "Bread Bread's Overdriven Guitar v1.0 by Bananaslicedbread, shared on Polyphone as public domain. Left-channel preset converted to SFZ with scripts/build-sf2-kit.ts (release-noise layer left out)."
+    },
+    {
       "name": "Yamaha RBX Bass (picked)",
       "author": "FreePats project",
       "license": "CC0-1.0",

@@ -18,6 +18,9 @@ import {
   isFretted,
   makeTrack,
   newId,
+  notesNearFret,
+  notesToString,
+  shiftStrings,
   parsePitch,
   pitchName,
   removeHits,
@@ -137,6 +140,20 @@ function techniques(v: unknown): Techniques | undefined {
       { pos: 1, value: bend },
     ];
   return Object.keys(out).length ? out : undefined;
+}
+
+/** Add, change or (with false/null) remove techniques; clear starts from none. */
+function mergeTech(old: Techniques | undefined, raw: unknown, clear: boolean): Techniques | undefined {
+  const out: Record<string, unknown> = clear ? {} : { ...(old ?? {}) };
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>;
+    for (const [k, v] of Object.entries(r)) if (v === false || v === null) delete out[k];
+    Object.assign(
+      out,
+      techniques(Object.fromEntries(Object.entries(r).filter(([, v]) => v !== false && v !== null))) ?? {},
+    );
+  }
+  return Object.keys(out).length ? (out as Techniques) : undefined;
 }
 
 function noteInfo(t: Track, n: Note, fing: ReturnType<typeof trackFingering> | null) {
@@ -402,14 +419,44 @@ const tools: Record<string, (a: Args) => unknown | Promise<unknown>> = {
         pitch,
         velocity: v(x.velocity),
         // a transposed note may not fit its pinned string any more: let the fingering engine choose
-        ...(transpose ? { pinnedString: null } : {}),
+        ...(transpose || a.auto_strings === true ? { pinnedString: null } : {}),
+        ...(a.techniques || a.clear_techniques
+          ? { tech: mergeTech(x.tech, a.techniques, a.clear_techniques === true) }
+          : {}),
       };
       last = Math.max(last, start + duration);
       n++;
     }
     if (!n) bad('No notes matched.');
+    // strings / neck position, worked out on the notes as they will be (after transposing)
+    let skipped = 0;
+    const strNum = num(a.string),
+      strShift = num(a.string_shift),
+      nearFret = num(a.near_fret);
+    if (strNum != null || strShift != null || nearFret != null) {
+      if (!isFretted(t.type)) bad(`${t.name} has no strings.`);
+      const nStr = t.tuning.strings.length;
+      const after = {
+        ...t,
+        notes: t.notes.map((x) => (changes[x.id] ? ({ ...x, ...changes[x.id] } as Note) : x)),
+      };
+      const moved = after.notes.filter((x) => changes[x.id]);
+      const r =
+        strNum != null
+          ? strNum >= 1 && strNum <= nStr
+            ? notesToString(after, moved, nStr - Math.round(strNum))
+            : bad(`string must be 1–${nStr}.`)
+          : strShift != null
+            ? shiftStrings(after, moved, strShift > 0 ? 1 : -1)
+            : notesNearFret(after, moved, nearFret!);
+      for (const [id, c] of Object.entries(r.changes)) changes[id] = { ...changes[id], ...c };
+      skipped = r.skipped;
+    }
     run('Edit notes', [updateNotes(t.id, changes)], last);
-    return { changed: n };
+    return {
+      changed: n,
+      ...(skipped ? { not_moved: `${skipped} notes don’t fit there and kept their string` } : {}),
+    };
   },
 
   delete_notes(a) {

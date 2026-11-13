@@ -1,5 +1,10 @@
+import { useState } from 'react';
 import {
   candidates,
+  notesNearFret,
+  notesToString,
+  shiftStrings,
+  type StringEdit,
   openStrings,
   pitchName,
   removeNotes,
@@ -15,6 +20,102 @@ import { currentTrack, songEnd, useStore } from '../store';
 import { preview } from '../audio-bridge';
 import { lengthLabel } from '../format';
 import { TechniquePanel } from './TechniquePanel';
+
+/** Several notes selected (guitar, bass): strings, neck position, octave, clear techniques, all at once. */
+function BulkStrings({ track, notes }: { track: Track; notes: Note[] }) {
+  const [fret, setFret] = useState('');
+  const st = useStore.getState();
+  const n = track.tuning.strings.length;
+  const apply = (r: StringEdit, label: string, done: string) => {
+    const moved = Object.keys(r.changes).length;
+    if (moved) st.exec(updateNotes(track.id, r.changes, label));
+    st.set({
+      status: r.skipped
+        ? `${done} (${moved} moved; ${r.skipped} don’t fit there and stayed put)`
+        : `${done} (${moved} notes)`,
+    });
+  };
+  const all = (fn: (x: Note) => Partial<Note>, label: string) => {
+    const ch: Record<string, Partial<Note>> = {};
+    for (const x of notes) ch[x.id] = fn(x);
+    st.exec(updateNotes(track.id, ch, label));
+  };
+  return (
+    <div className="row bulk">
+      <span className="lbl">String</span>
+      {Array.from({ length: n }, (_, i) => n - 1 - i).map((idx) => {
+        const name = stringLabel(track.tuning, idx, track.type);
+        return (
+          <button
+            key={idx}
+            className="ib str"
+            style={{ ['--c' as string]: stringColor(track.type, n, idx) }}
+            title={`Put the selected notes on the ${name} string (where they fit)`}
+            onClick={() => apply(notesToString(track, notes, idx), 'Move to string', `On the ${name} string`)}
+          >
+            {name}
+          </button>
+        );
+      })}
+      <button
+        className="ib"
+        title="Each note one string higher, same pitch"
+        onClick={() => apply(shiftStrings(track, notes, 1), 'String up', 'One string higher')}
+      >
+        Str ↑
+      </button>
+      <button
+        className="ib"
+        title="Each note one string lower, same pitch"
+        onClick={() => apply(shiftStrings(track, notes, -1), 'String down', 'One string lower')}
+      >
+        Str ↓
+      </button>
+      <select
+        className="mini"
+        aria-label="Play the selection near a fret"
+        title="Move the selection up or down the neck: each note goes to the string nearest this fret"
+        value={fret}
+        onChange={(e) => {
+          const f = Number(e.target.value);
+          setFret('');
+          if (e.target.value !== '')
+            apply(notesNearFret(track, notes, f), 'Neck position', `Around fret ${f}`);
+        }}
+      >
+        <option value="">Near fret…</option>
+        {Array.from({ length: Math.min(22, track.maxFret - track.capo) + 1 }, (_, f) => (
+          <option key={f} value={f}>
+            Fret {f}
+          </option>
+        ))}
+      </select>
+      <span className="sep" />
+      <button
+        className="ib"
+        title="Octave down"
+        onClick={() => all((x) => ({ pitch: Math.max(0, x.pitch - 12), pinnedString: null }), 'Octave down')}
+      >
+        8vb
+      </button>
+      <button
+        className="ib"
+        title="Octave up"
+        onClick={() => all((x) => ({ pitch: Math.min(127, x.pitch + 12), pinnedString: null }), 'Octave up')}
+      >
+        8va
+      </button>
+      <button
+        className="ib"
+        title="Remove every technique from the selected notes"
+        disabled={!notes.some((x) => x.tech && Object.keys(x.tech).length)}
+        onClick={() => all(() => ({ tech: undefined }), 'Clear techniques')}
+      >
+        Clear techniques
+      </button>
+    </div>
+  );
+}
 
 function Legend({ t }: { t: Track }) {
   const n = t.tuning.strings.length;
@@ -165,6 +266,7 @@ export function Inspector() {
             Done
           </button>
         </div>
+        {track.type !== 'other' && <BulkStrings track={track} notes={sel} />}
         {track.type !== 'other' && <Techs track={track} notes={sel} mobile={mobile} />}
       </div>
     );

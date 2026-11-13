@@ -95,7 +95,15 @@ const track = z.object({
   mute: z.boolean(),
   solo: z.boolean(),
   instrument: z.string(),
-  tones: z.array(z.object({ id: z.string(), name: z.string(), color: z.string(), chain: toneChain })),
+  tones: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      color: z.string(),
+      chain: toneChain,
+      instrument: z.string().optional(),
+    }),
+  ),
   pedal: z.object({
     mode: z.enum(['simple', 'advanced']),
     startTone: z.string(),

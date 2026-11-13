@@ -1,5 +1,6 @@
 /**
  * pnpm build-sf2-kit <kit.sf2> --id drums-bread --preset 0 --out <dir>
+ * pnpm build-sf2-kit <guitar.sf2> --id guitar-x --preset-name L_ALL --melodic --drop "/[0-9]+-R_" --out <dir>
  *
  * Turns a General MIDI SoundFont drum kit into a Riff Roll drum pack: the preset is converted to SFZ + WAV
  * samples, laid out on Riff Roll's drum keymap (packages/core/src/drums.ts), with stand-ins for pieces the kit
@@ -48,8 +49,40 @@ const STANDINS: {
 ];
 
 const sf = parseSoundFont(new Uint8Array(await readFile(input)));
-const preset = sf.presets[presetIndex] ?? (() => { throw new Error(`no preset ${presetIndex}`); })(); // prettier-ignore
-const conv = soundFontPresetToSfz(sf, presetIndex);
+// --preset-name picks a preset by name (the file's preset order isn't its index order)
+const byName = arg('--preset-name');
+const pIndex = byName ? (sf.presets.find((p) => p.name === byName)?.index ?? -1) : presetIndex;
+const preset = sf.presets.find((p) => p.index === pIndex) ?? (() => { throw new Error(`no preset ${byName ?? presetIndex}`); })(); // prettier-ignore
+const conv = soundFontPresetToSfz(sf, pIndex);
+
+/** zip a pack folder with the 7-Zip binary the instrument fetcher uses */
+async function zipPack(dir: string) {
+  const { path7za } = createRequire(path.resolve('apps/server/package.json'))('7zip-bin') as {
+    path7za: string;
+  };
+  const zip = path.join(outRoot, `${id}.zip`);
+  await rm(zip, { force: true });
+  execFileSync(path7za, ['a', '-tzip', '-mx=9', zip, './*'], { cwd: dir, stdio: 'ignore' });
+  return zip;
+}
+
+// --melodic: a pitched instrument (e.g. a guitar) keeps its own layout; --drop leaves out regions whose sample
+// name matches (e.g. release-noise layers, which the sampler would play at note-on)
+if (args.includes('--melodic')) {
+  const drop = arg('--drop') ? new RegExp(arg('--drop')!) : null;
+  const lines = conv.sfz.split('\n').filter((l) => !(l.startsWith('<region>') && drop?.test(l)));
+  const used = new Set(lines.flatMap((l) => /sample=(\S+)/.exec(l)?.[1] ?? []));
+  const dir = path.join(outRoot, id);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(path.join(dir, 'samples'), { recursive: true });
+  for (const f of conv.files) if (used.has(f.path)) await writeFile(path.join(dir, f.path), f.data);
+  await writeFile(path.join(dir, 'riffroll.sfz'), lines.join('\n') + '\n');
+  const zip = await zipPack(dir);
+  console.log(
+    `${id}: ${lines.filter((l) => l.startsWith('<region>')).length} regions, ${used.size} samples → ${zip}`,
+  );
+  process.exit(0);
+}
 
 interface Region {
   ops: Map<string, string>;
@@ -120,11 +153,5 @@ await mkdir(path.join(dir, 'samples'), { recursive: true });
 for (const f of conv.files) if (used.has(f.path)) await writeFile(path.join(dir, f.path), f.data);
 await writeFile(path.join(dir, 'riffroll-kit.sfz'), lines.join('\n') + '\n');
 
-// zip it with the 7-Zip binary the instrument fetcher uses
-const { path7za } = createRequire(path.resolve('apps/server/package.json'))('7zip-bin') as {
-  path7za: string;
-};
-const zip = path.join(outRoot, `${id}.zip`);
-await rm(zip, { force: true });
-execFileSync(path7za, ['a', '-tzip', '-mx=9', zip, './*'], { cwd: dir, stdio: 'ignore' });
+const zip = await zipPack(dir);
 console.log(`${id}: ${lines.length - 2} regions, ${used.size} samples → ${zip}`);

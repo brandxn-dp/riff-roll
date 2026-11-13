@@ -16,7 +16,8 @@ export const TRACK_COLORS = [
 export function makeTrack(type: TrackType, name: string, color: string, opts: Partial<Track> = {}): Track {
   const tones =
     type === 'guitar'
-      ? [makeTone(GUITAR_PRESETS.clean), makeTone(GUITAR_PRESETS.dist)]
+      ? // distorted tone: the sampled overdriven guitar (real palm mutes, lighter on the CPU than an amp chain)
+        [makeTone(GUITAR_PRESETS.clean), makeTone(GUITAR_PRESETS.overdrive)]
       : type === 'bass'
         ? [makeTone(BASS_PRESETS.clean), makeTone(BASS_PRESETS.driven)]
         : [];

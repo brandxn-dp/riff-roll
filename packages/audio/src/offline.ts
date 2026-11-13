@@ -60,6 +60,12 @@ export async function renderSong(
         : t.notes.map((n) => n.pitch);
     await s.preload(pitches);
     samplers.set(t.id, s);
+    for (const tone of t.tones)
+      if (tone.instrument) {
+        const ts = await lib.sampler(tone.instrument, t.type);
+        await ts.preload(pitches);
+        samplers.set(`${t.id}:${tone.id}`, ts);
+      }
   }
   await master.ready;
   await Promise.all([...graphs.values()].map((g) => g.ready()));
@@ -70,7 +76,9 @@ export async function renderSong(
     for (const sg of timed) {
       const timeOf = (tick: number) => sg.time + tempo.tickToSeconds(tick) - tempo.tickToSeconds(sg.start);
       if (t.type !== 'drums') g.setTone(toneAt(t.pedal, sg.start), sg.time, sg === timed[0] ? 0 : 0.01);
-      scheduleTrack(ctx, t, samplers.get(t.id), g, sg.start, sg.end, timeOf, perf, song.humanize);
+      scheduleTrack(ctx, t, samplers.get(t.id), g, sg.start, sg.end, timeOf, perf, song.humanize, (toneId) =>
+        samplers.get(`${t.id}:${toneId}`),
+      );
     }
   }
   if (o.onProgress) {
