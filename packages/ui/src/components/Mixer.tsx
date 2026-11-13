@@ -8,6 +8,8 @@ import {
   type DrumPiece,
   type Track,
   isFretted,
+  changeTrackType,
+  type TrackType,
 } from '@riffroll/core';
 import { useStore } from '../store';
 import { Modal } from './Modal';
@@ -69,10 +71,17 @@ function Slider({
   );
 }
 
-function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }) {
+const TYPES: [TrackType, string][] = [
+  ['guitar', 'Guitar'],
+  ['bass', 'Bass'],
+  ['drums', 'Drums'],
+  ['other', 'Other (piano, synth…)'],
+];
+
+function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] | null }) {
   const st = useStore.getState();
   const set = (ch: Partial<Track>, label: string) => st.exec(updateTrack(t.id, ch, label));
-  const options = instruments.filter((i) => i.role === t.type);
+  const options = (instruments ?? []).filter((i) => i.role === t.type);
   return (
     <section className="strip" style={{ ['--tc' as string]: t.color }}>
       <header>
@@ -105,10 +114,47 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
         }
       />
       <label className="slider">
+        <span>Type</span>
+        <select
+          value={t.type}
+          onChange={(e) => {
+            const type = e.target.value as TrackType;
+            if (
+              (type === 'drums') !== (t.type === 'drums') &&
+              !confirm(
+                type === 'drums'
+                  ? 'Turn this track into drums? Its notes become drum hits by General MIDI drum number.'
+                  : 'Turn these drums into a pitched track? Each hit becomes a short note at its General MIDI pitch.',
+              )
+            )
+              return;
+            st.exec(changeTrackType(t.id, type));
+            if (st.trackId === t.id)
+              st.set({
+                selection: new Set(),
+                tabCursor: null,
+                view: type === 'drums' ? 'drums' : st.view === 'drums' ? 'split' : st.view,
+              });
+          }}
+        >
+          {TYPES.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="slider">
         <span>Instrument</span>
         <select value={t.instrument} onChange={(e) => set({ instrument: e.target.value }, 'Instrument')}>
           {!options.some((o) => o.id === t.instrument) && (
-            <option value={t.instrument}>{t.instrument} (not installed)</option>
+            <option value={t.instrument}>
+              {instruments === null
+                ? 'Loading…'
+                : t.instrument
+                  ? `${t.instrument} (not installed)`
+                  : 'Default (none installed: basic sound)'}
+            </option>
           )}
           {options.map((o) => (
             <option key={o.id} value={o.id}>
@@ -177,16 +223,35 @@ function Strip({ t, instruments }: { t: Track; instruments: InstrumentOption[] }
 
 export function Mixer() {
   const song = useStore((s) => s.song);
-  const [instruments, setInstruments] = useState<InstrumentOption[]>([]);
+  const [instruments, setInstruments] = useState<InstrumentOption[] | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
   useEffect(() => {
     void ensureEngine().then(async (e) => {
+      e.lib.refresh(); // always the current list (instruments may have been added since)
       setInstruments(await e.lib.index());
       setLatency(e.latencyMs);
     });
   }, []);
   return (
     <Modal title="Mixer" wide>
+      {instruments !== null && instruments.length === 0 && (
+        <p className="warn">
+          Couldn’t load the instrument list, so every track is playing a basic fallback sound.{' '}
+          <button
+            className="ib small"
+            onClick={() => {
+              setInstruments(null);
+              void ensureEngine().then(async (e) => {
+                e.lib.refresh();
+                setInstruments(await e.lib.index());
+                e.setSong(useStore.getState().song);
+              });
+            }}
+          >
+            Retry
+          </button>
+        </p>
+      )}
       <div className="mixer">
         {song.tracks.map((t) => (
           <Strip key={t.id} t={t} instruments={instruments} />

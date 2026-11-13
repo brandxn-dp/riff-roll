@@ -1,4 +1,14 @@
-import { copy, cut, deleteSelection, duplicate, nudge, paste, quantize, selectAll } from './editing';
+import {
+  copy,
+  cut,
+  deleteSelection,
+  duplicate,
+  nudge,
+  nudgeHits,
+  paste,
+  quantize,
+  selectAll,
+} from './editing';
 import { currentTrack, useStore } from './store';
 import { togglePlay } from './transport';
 import { handleTabKey } from './tabEntry';
@@ -26,7 +36,13 @@ export const SHORTCUTS: Shortcut[] = [
   { group: 'Piano roll', keys: 'Right-click (drag)', what: 'Delete notes' },
   { group: 'Piano roll', keys: 'Ctrl+drag / Shift+drag', what: 'Box select / add to selection' },
   { group: 'Piano roll', keys: 'Ctrl+click', what: 'Toggle a note in the selection' },
-  { group: 'Piano roll', keys: '← → / ↑ ↓', what: 'Move by grid step / semitone (Shift: bar / octave)' },
+  { group: 'Piano roll', keys: '← → (Ctrl: bar)', what: 'Move the selected notes one grid step' },
+  {
+    group: 'Piano roll',
+    keys: 'Shift+↑ ↓ / Ctrl+↑ ↓',
+    what: 'Move the selected notes a semitone / an octave',
+  },
+  { group: 'Drum grid', keys: '← → / ↑ ↓', what: 'Move the selected hits one grid step / one lane' },
   { group: 'Piano roll', keys: 'Ctrl+wheel / Alt+wheel', what: 'Zoom horizontally / vertically' },
   {
     group: 'Piano roll',
@@ -121,19 +137,15 @@ export function installShortcuts() {
     else if (!mod && k === 'q') quantize();
     else if (e.key === 'Escape') st.select([]);
     else if (e.key === '?') st.set({ modal: st.modal === 'shortcuts' ? null : 'shortcuts' });
-    else if (!mod && e.key.startsWith('Arrow') && currentTrack(st)?.type !== 'drums') {
+    else if (e.key.startsWith('Arrow') && !e.altKey) {
+      // FL Studio style: ←/→ one grid step (Ctrl: a bar); ↑/↓ or Shift+↑/↓ a semitone (drums: a lane),
+      // Ctrl+↑/↓ an octave
       const bar = st.song.ppq * 4;
-      const dt =
-        e.key === 'ArrowLeft'
-          ? -(e.shiftKey ? bar : st.snap)
-          : e.key === 'ArrowRight'
-            ? e.shiftKey
-              ? bar
-              : st.snap
-            : 0;
-      const dp =
-        e.key === 'ArrowUp' ? (e.shiftKey ? 12 : 1) : e.key === 'ArrowDown' ? (e.shiftKey ? -12 : -1) : 0;
-      handled = nudge(dt, dp);
+      const step = mod ? bar : st.snap;
+      const dt = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dir = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0;
+      if (currentTrack(st)?.type === 'drums') handled = nudgeHits(dt, -dir);
+      else handled = nudge(dt, dir * (mod ? 12 : 1), !mod);
     } else handled = false;
     if (handled) e.preventDefault();
   };

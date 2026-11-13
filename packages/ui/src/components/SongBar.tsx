@@ -8,6 +8,7 @@ import {
   updateSection,
   updateSong,
   type Song,
+  SCALES,
 } from '@riffroll/core';
 import { barMap, songEnd, useStore } from '../store';
 import { COL, KEYS_W, pxPerTick } from '../canvas';
@@ -221,6 +222,22 @@ export function SongBar() {
               {k} minor
             </option>
           ))}
+        </select>
+        <select
+          className="mini"
+          aria-label="Scale"
+          title="Scale: shades the piano roll rows; Snap to scale keeps notes on it"
+          value={song.scale ?? ''}
+          onChange={(e) => st.exec(updateSong({ scale: e.target.value || undefined }, 'Scale'))}
+        >
+          <option value="">{song.keySig.minor ? 'Minor scale' : 'Major scale'}</option>
+          {Object.keys(SCALES)
+            .filter((n) => n !== 'major' && n !== 'minor')
+            .map((n) => (
+              <option key={n} value={n}>
+                {n[0].toUpperCase() + n.slice(1)}
+              </option>
+            ))}
         </select>
       </div>
       <Minimap song={song} />

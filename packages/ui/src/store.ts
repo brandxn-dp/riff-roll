@@ -102,6 +102,10 @@ export interface UiState {
   globalView: boolean;
   /** left edit palette (Guitar Pro style) shown */
   palette: boolean;
+  /** new, dragged and arrow-moved notes stay on the song's scale */
+  snapScale: boolean;
+  /** piano roll: show this other track's notes faintly behind the current track (null = off) */
+  ghostTrackId: string | null;
   barSel: { t0: number; t1: number; b0: number; b1: number } | null;
   /** song the share dialog is for */
   shareTarget: { id: string; title: string } | null;
@@ -167,6 +171,8 @@ export const useStore = create<UiState>((set, get) => {
     shareTarget: null,
     globalView: true,
     palette: true,
+    snapScale: false,
+    ghostTrackId: null,
     barSel: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),

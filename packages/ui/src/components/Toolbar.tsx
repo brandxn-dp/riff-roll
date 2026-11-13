@@ -33,6 +33,8 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
   const view = useStore((s) => s.view);
   const speed = useStore((s) => s.speed);
   const mobile = useStore((s) => s.layout === 'mobile');
+  const snapScale = useStore((s) => s.snapScale);
+  const ghostTrackId = useStore((s) => s.ghostTrackId);
   useStore((s) => s.historyVersion);
   const st = useStore.getState();
   const [bpmText, setBpmText] = useState<string | null>(null);
@@ -237,6 +239,31 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
             ))}
           </select>
         </label>
+        <label className="field" title="Ghost notes: show another track's notes faintly in the piano roll">
+          Ghost
+          <select
+            value={ghostTrackId ?? ''}
+            onChange={(e) => st.set({ ghostTrackId: e.target.value || null })}
+          >
+            <option value="">None</option>
+            {song.tracks
+              .filter((x) => x.id !== track?.id)
+              .map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+          </select>
+        </label>
+        <div className="group" role="group" aria-label="Snap to scale">
+          <button
+            aria-pressed={snapScale}
+            title="Snap to scale: new, dragged and arrow-moved notes stay on the song's scale (Song bar → scale)"
+            onClick={() => st.set({ snapScale: !snapScale })}
+          >
+            Scale snap
+          </button>
+        </div>
         {mobile && (
           // on the desktop the note values live in the edit palette
           <div className="group" role="group" aria-label="New note length">

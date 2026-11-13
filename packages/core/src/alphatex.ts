@@ -213,8 +213,12 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
           si++;
         }
         const dur = durTex(b);
+        // rests get a beat ref too, so the score can place a cursor on them (Guitar Pro style entry)
+        const restRef = () =>
+          beats.push({ trackIndex: ti, bar: bar.index, beat: bi, start: b.start, noteIds: [] });
         if (b.rest) {
           parts.push(`r${dur}`);
+          restRef();
           return;
         }
         let notesTex: string[];
@@ -222,6 +226,7 @@ export function songToAlphaTex(song: Song, trackIds?: string[]): TexResult {
           // tied drum continuations aren't meaningful: show them as rests
           if (b.notes.every((n) => n.tied)) {
             parts.push(`r${dur}`);
+            restRef();
             return;
           }
           notesTex = [

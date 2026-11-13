@@ -7,6 +7,10 @@ import {
   removeNotes,
   setLoop,
   isFretted,
+  laneById,
+  inScale,
+  snapToScale,
+  songScale,
   stringColor,
   trackFingering,
   updateNotes,
@@ -28,6 +32,7 @@ import {
   pxPerTick,
   rr,
   snapTick,
+  alpha,
 } from '../canvas';
 import {
   drawGrid,
@@ -73,7 +78,16 @@ type Drag =
   | { mode: 'resize'; ids: string[]; orig: Map<string, Note>; anchorTick: number; fresh: boolean }
   | { mode: 'box'; x0: number; y0: number; x1: number; y1: number; additive: boolean; base: Set<string> }
   | { mode: 'erase' }
-  | { mode: 'loop'; from: number };
+  | { mode: 'loop'; from: number }
+  /** drag the green loop bar: an edge, or the whole loop */
+  | {
+      mode: 'loopEdit';
+      kind: 'start' | 'end' | 'move';
+      grab: number;
+      orig: { start: number; end: number };
+      moved: boolean;
+      p0: number;
+    };
 
 export function PianoRoll() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -160,21 +174,62 @@ export function PianoRoll() {
       c.clip();
       const r0 = Math.max(0, Math.floor(sy / RH)),
         r1 = Math.min(rows - 1, Math.ceil((sy + h) / RH));
+      // rows follow the song's scale (out-of-scale rows dark, the tonic tinted); chromatic = piano keys
+      const scale = songScale(st.song);
+      const chromatic = scale.name === 'chromatic';
       for (let r = r0; r <= r1; r++) {
         const p = range.hi - r,
           y = gy0 + r * RH;
-        c.fillStyle = BLACK[p % 12] ? COL.rowB : COL.rowW;
+        const dark = chromatic ? BLACK[p % 12] : !inScale(p, scale);
+        c.fillStyle = dark ? COL.rowB : COL.rowW;
         c.fillRect(gx0, y, gridW, RH);
+        if (!chromatic && p % 12 === scale.tonic) {
+          c.fillStyle = 'rgba(232, 54, 93, 0.07)';
+          c.fillRect(gx0, y, gridW, RH);
+        }
         c.fillStyle = p % 12 === 0 ? COL.cLine : COL.rowLine;
         c.fillRect(gx0, y + RH - 1, gridW, 1);
       }
       drawToneWash(c, st.song, t, a, gy0, rows * RH);
       drawGrid(c, st.song, a, st.snap, gy0, rows * RH);
 
-      // notes (sorted by start; scan from a little before the visible window to catch long notes)
-      c.textBaseline = 'middle';
       const tA = xToTick(a, KEYS_W),
         tB = xToTick(a, w);
+      // ghost notes: another track's notes, faint and not editable (FL Studio style)
+      const ghost =
+        st.ghostTrackId && st.ghostTrackId !== t.id
+          ? st.song.tracks.find((x) => x.id === st.ghostTrackId)
+          : null;
+      if (ghost) {
+        const gNotes =
+          ghost.type === 'drums'
+            ? ghost.hits.map((hh) => ({
+                pitch: laneById.get(`${hh.piece}:${hh.articulation}`)?.gm ?? 38,
+                start: hh.start,
+                duration: st.song.ppq / 4,
+              }))
+            : ghost.notes;
+        c.save();
+        for (const n of gNotes) {
+          if (n.start > tB || n.start + n.duration < tA) continue;
+          if (n.pitch > range.hi || n.pitch < range.lo) continue;
+          const x = tickToX(a, n.start) + 1,
+            y = gy0 + (range.hi - n.pitch) * RH + 2;
+          const nw = Math.max(3, n.duration * a.ppt - 2);
+          c.fillStyle = alpha(ghost.color, 0.16);
+          rr(c, x, y, nw, RH - 4, 3);
+          c.fill();
+          c.strokeStyle = alpha(ghost.color, 0.55);
+          c.lineWidth = 1;
+          c.setLineDash([3, 2]);
+          rr(c, x + 0.5, y + 0.5, nw - 1, RH - 5, 3);
+          c.stroke();
+        }
+        c.restore();
+      }
+
+      // notes (sorted by start; scan from a little before the visible window to catch long notes)
+      c.textBaseline = 'middle';
       let maxDur = 0;
       for (const n of t.notes) if (n.duration > maxDur) maxDur = n.duration;
       for (let i = lowerBound(t.notes, tA - maxDur); i < t.notes.length; i++) {
@@ -306,8 +361,11 @@ export function PianoRoll() {
         c.fillStyle = 'rgba(95,209,124,0.22)';
         c.fillRect(lx0, 0, lx1 - lx0, RULER_H - 3);
         c.fillStyle = '#5fd17c';
-        c.fillRect(lx0, 0, 2, RULER_H - 3);
-        c.fillRect(lx1 - 2, 0, 2, RULER_H - 3);
+        c.fillRect(lx0, 0, 3, RULER_H - 3);
+        c.fillRect(lx1 - 3, 0, 3, RULER_H - 3);
+        // grab handles at the edges
+        c.fillRect(lx0, 0, 7, 5);
+        c.fillRect(lx1 - 7, 0, 7, 5);
       }
       const mx = tickToX(a, st.cursor);
       c.fillStyle = COL.ink;
@@ -326,12 +384,18 @@ export function PianoRoll() {
       c.rect(0, RULER_H, KEYS_W, h - RULER_H);
       c.clip();
       const open = t.tuning.strings.map((p) => p + t.capo);
+      const keyScale = songScale(st.song);
+      const keyChromatic = keyScale.name === 'chromatic';
       for (let r = r0; r <= r1; r++) {
         const p = range.hi - r,
           y = gy0 + r * RH,
           bk = BLACK[p % 12];
         c.fillStyle = bk ? '#14161b' : '#262a33';
         c.fillRect(0, y, KEYS_W - 1, RH - 1);
+        if (!keyChromatic && inScale(p, keyScale)) {
+          c.fillStyle = p % 12 === keyScale.tonic ? COL.dist : 'rgba(138,164,200,0.7)';
+          c.fillRect(0, y + 1, 2, RH - 3);
+        }
         c.font = (p % 12 === 0 ? '600 ' : '500 ') + '10px ' + MONO;
         c.fillStyle = bk ? COL.mute : p % 12 === 0 ? COL.ink : '#b9bfcb';
         c.fillText(pitchName(p), 5, y + RH / 2);
@@ -385,7 +449,8 @@ export function PianoRoll() {
       const end = songEnd(st.song);
       const start = Math.max(0, floorTick(tickAt(gx), st.snap));
       if (start >= end) return null;
-      const pitch = pitchAt(gy);
+      let pitch = pitchAt(gy);
+      if (st.snapScale) pitch = snapToScale(pitch, songScale(st.song));
       if (pitch < range.lo || pitch > range.hi) return null;
       const n: Note = {
         id: newId('n'),
@@ -398,6 +463,19 @@ export function PianoRoll() {
       st.select([n.id]);
       preview(t, n.pitch, n.start, n.duration);
       return n;
+    }
+
+    /** Which part of the loop bar is under x (ruler only): an edge (±6 px), inside, or none. */
+    function loopPart(lx: number): 'start' | 'end' | 'move' | null {
+      const loop = useStore.getState().song.loop;
+      if (!loop?.on) return null;
+      const a = axis();
+      const x0 = tickToX(a, loop.start),
+        x1 = tickToX(a, loop.end);
+      if (Math.abs(lx - x0) <= 6) return 'start';
+      if (Math.abs(lx - x1) <= 6) return 'end';
+      if (lx > x0 && lx < x1) return 'move';
+      return null;
     }
 
     function rulerClick(p: ReturnType<typeof pt>) {
@@ -431,7 +509,21 @@ export function PianoRoll() {
           st.begin('Set loop');
           drag = { mode: 'loop', from };
           sc.setPointerCapture(e.pointerId);
-        } else rulerClick(p);
+        } else {
+          const part = loopPart(p.lx);
+          if (part && st.song.loop) {
+            st.begin(part === 'move' ? 'Move loop' : 'Change loop');
+            drag = {
+              mode: 'loopEdit',
+              kind: part,
+              grab: tickAt(p.gx),
+              orig: { start: st.song.loop.start, end: st.song.loop.end },
+              moved: false,
+              p0: p.lx,
+            };
+            sc.setPointerCapture(e.pointerId);
+          } else rulerClick(p);
+        }
         return;
       }
       if (p.lx < KEYS_W && p.ly >= RULER_H) {
@@ -536,6 +628,12 @@ export function PianoRoll() {
       const t = currentTrack(st);
       if (!t) return;
       const p = pt(e);
+      if (!drag && p.ly < RULER_H && p.lx >= KEYS_W) {
+        const part = loopPart(p.lx);
+        sc.style.cursor =
+          part === 'start' || part === 'end' ? 'ew-resize' : part === 'move' ? 'grab' : 'pointer';
+        return;
+      }
       if (!drag) {
         const hit = inGrid(p) ? noteAt(t, p.gx, p.gy) : null;
         sc.style.cursor = hit
@@ -548,6 +646,24 @@ export function PianoRoll() {
         return;
       }
       const end = songEnd(st.song);
+      if (drag.mode === 'loopEdit') {
+        if (Math.abs(p.lx - drag.p0) > 3) drag.moved = true;
+        if (!drag.moved) return;
+        const { start: s0, end: e0 } = drag.orig;
+        const tick = snapTick(tickAt(p.gx), st.snap);
+        let ls = s0,
+          le = e0;
+        if (drag.kind === 'start') ls = Math.max(0, Math.min(e0 - st.snap, tick));
+        else if (drag.kind === 'end') le = Math.min(end, Math.max(s0 + st.snap, tick));
+        else {
+          const d = Math.max(-s0, Math.min(end - e0, snapTick(tickAt(p.gx) - drag.grab, st.snap)));
+          ls = s0 + d;
+          le = e0 + d;
+        }
+        st.exec(setLoop({ start: ls, end: le, on: true }));
+        sc.style.cursor = drag.kind === 'move' ? 'grabbing' : 'ew-resize';
+        return;
+      }
       if (drag.mode === 'loop') {
         const to = Math.max(0, Math.min(end, snapTick(tickAt(p.gx), st.snap)));
         const [a, b] = drag.from < to ? [drag.from, to] : [to, drag.from];
@@ -582,8 +698,13 @@ export function PianoRoll() {
         const dt = Math.max(-minStart, Math.min(end - maxEnd, dTick));
         const dp = Math.max(range.lo - minP, Math.min(range.hi - maxP, dPitch));
         const changes: Record<string, Partial<Note>> = {};
+        const sc8 = st.snapScale && dp ? songScale(st.song) : null;
         for (const [id, n] of drag.orig)
-          changes[id] = { start: n.start + dt, pitch: n.pitch + dp, ...(dp ? { pinnedString: null } : {}) };
+          changes[id] = {
+            start: n.start + dt,
+            pitch: sc8 ? snapToScale(n.pitch + dp, sc8) : n.pitch + dp,
+            ...(dp ? { pinnedString: null } : {}),
+          };
         const first = drag.orig.values().next().value!;
         const cur = t.notes.find((n) => n.id === first.id);
         if (dp && cur && cur.pitch !== first.pitch + dp)
@@ -626,6 +747,15 @@ export function PianoRoll() {
           }
         }
         tapStart = null;
+        return;
+      }
+      if (drag?.mode === 'loopEdit' && !drag.moved) {
+        // a click inside the loop (no drag) still moves the playback start
+        st.cancel();
+        const d = drag;
+        drag = null;
+        if (d.kind === 'move') rulerClick(pt(e));
+        requestDraw();
         return;
       }
       if (drag && drag.mode !== 'box') {

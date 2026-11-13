@@ -2323,3 +2323,56 @@ button:disabled {
   font-family: var(--display);
   font-size: 12px;
 }
+.notation-cursor {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  border: 2px solid var(--dist);
+  background: rgba(232, 54, 93, 0.18);
+  border-radius: 3px;
+}
+
+/* ---- resizable workspace ---- */
+.palette {
+  flex-basis: var(--pal-w, 196px);
+}
+.palette.closed {
+  flex-basis: 22px;
+}
+.main.roll-sized .cvwrap.roll {
+  flex: 0 0 var(--roll-h);
+  min-height: 100px;
+}
+.splitter {
+  flex: 0 0 auto;
+  background: var(--line);
+  z-index: 6;
+}
+.splitter.x {
+  width: 4px;
+  cursor: col-resize;
+}
+.splitter.y {
+  height: 4px;
+  cursor: row-resize;
+}
+.splitter:hover,
+body.resizing .splitter:active {
+  background: #5b8fe8;
+}
+body.resizing {
+  user-select: none;
+}
+.gv {
+  position: relative;
+}
+.gv > .splitter.y {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -3px;
+  background: transparent;
+}
+.gv > .splitter.y:hover {
+  background: #5b8fe8;
+}

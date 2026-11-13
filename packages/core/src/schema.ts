@@ -128,6 +128,7 @@ export const songSchema = z.object({
       z.object({ bar: z.number().int().min(0), num: z.number().int().min(1).max(32), den: z.number().int() }),
     )
     .min(1),
+  scale: z.string().optional(),
   keySig: z.object({ fifths: z.number().int().min(-7).max(7), minor: z.boolean() }),
   sections: z.array(z.object({ id: z.string(), tick: z.number().min(0), name: z.string() })),
   repeats: z.array(

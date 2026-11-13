@@ -51,6 +51,7 @@ export class AudioEngine {
   /** decoded user impulse responses by asset name */
   readonly userIRs = new Map<string, AudioBuffer>();
   private auditionVoices: { stop(t: number, fast?: boolean): void }[] = [];
+  private fallbackRetry = 0;
   private song: Song | null = null;
   private st: PlayState | null = null;
   /** playback speed 0.5..1.5; pitch is unaffected because we schedule MIDI events, not audio */
@@ -113,7 +114,11 @@ export class AudioEngine {
         this.graphs.set(t.id, ng);
       }
       const key = `${t.type}:${t.instrument}`;
-      if (this.samplerKeys.get(t.id) !== key) {
+      // a track on the fallback sound tries its real instrument again now and then (the list may load later)
+      const cur = this.samplers.get(t.id);
+      const retry = !!cur && isFallback(cur) && Date.now() - this.fallbackRetry > 10_000;
+      if (retry) this.fallbackRetry = Date.now();
+      if (this.samplerKeys.get(t.id) !== key || retry) {
         this.samplerKeys.set(t.id, key);
         this.samplers.delete(t.id);
         this.lib.sampler(t.instrument, t.type).then((s) => {
@@ -121,7 +126,7 @@ export class AudioEngine {
             this.samplers.set(t.id, s);
             if (isFallback(s))
               this.opts.onStatus?.(
-                'Instruments not installed — using a basic fallback sound. Run "pnpm fetch-instruments".',
+                `Couldn't load the instrument for “${t.name}”, so it plays a basic fallback sound. File → Instruments shows what is installed.`,
               );
           }
         });

@@ -249,7 +249,8 @@ export class Sampler {
     }
     const offset = r.offset / buf.sampleRate;
     src.start(when, offset);
-    const natural = when + (buf.duration - offset) / src.playbackRate.value;
+    // a looping sample (SoundFont pianos, organs, pads…) never ends by itself: only its release stops it
+    const natural = src.loop ? Infinity : when + (buf.duration - offset) / src.playbackRate.value;
     const releaseTau = Math.max(0.005, a.release / 4);
     let stopped = false;
     const voice: Voice = {

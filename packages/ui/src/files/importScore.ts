@@ -102,7 +102,17 @@ function convertTrack(score: ATScore, at: ATTrack, index: number, warnings: stri
   }
   // keyboards, strings, winds, synths… (no tab tuning, not a guitar or bass program): an "other" track
   const prog = at.playbackInfo.program;
-  if (!staff.tuning.length && (prog < 24 || prog > 39) && !/guitar|bass/i.test(at.name)) {
+  const fretName = /guit|gtr|bass|banjo|uke|ukulele|mandolin/i.test(at.name);
+  const keysName =
+    /piano|keys|keyboard|synth|organ|string|violin|viola|cello|pad|brass|trumpet|sax|flute|vocal|voice|choir|horn|bell|harp|clav|rhodes|wurli/i.test(
+      at.name,
+    );
+  const nonGuitarProgram = prog < 24 || prog > 39;
+  // Guitar Pro gives keyboard tracks a (hidden) guitar tuning too, so the tuning alone doesn't tell us
+  if (
+    !fretName &&
+    (keysName || (nonGuitarProgram && (!staff.tuning.length || !at.staves.some((sf) => sf.showTablature))))
+  ) {
     const t = makeTrack('other', at.name || 'Keys', color);
     const notes: Note[] = [];
     const sounding = new Map<number, Note>();

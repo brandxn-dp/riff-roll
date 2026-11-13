@@ -21,3 +21,5 @@ export * from './ascii';
 export * from './recorder';
 export * from './velocity';
 export * from './bars';
+export * from './convert';
+export * from './scales';

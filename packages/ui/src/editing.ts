@@ -7,6 +7,9 @@ import {
   removeNotes,
   updateHits,
   updateNotes,
+  DRUM_LANES,
+  songScale,
+  stepInScale,
   type DrumHit,
   type Note,
 } from '@riffroll/core';
@@ -134,20 +137,47 @@ export function quantize() {
 }
 
 /** Arrow keys: move selection in time (grid steps) and pitch (semitones). */
-export function nudge(dTicks: number, dPitch: number) {
+/** Move the selected notes in time and/or pitch. With snap to scale on, semitone steps go to the next scale note. */
+export function nudge(dTicks: number, dPitch: number, scaleStep = false) {
   const s = selected();
   if (!s || !s.notes.length) return false;
   const end = songEnd(s.st.song);
   const minStart = Math.min(...s.notes.map((n) => n.start));
   const maxEnd = Math.max(...s.notes.map((n) => n.start + n.duration));
   const dt = Math.max(-minStart, Math.min(end - maxEnd, dTicks));
+  const scale = s.st.snapScale ? songScale(s.st.song) : null;
+  const move = (p: number) => {
+    if (!dPitch) return p;
+    if (scale && scaleStep && Math.abs(dPitch) === 1) return stepInScale(p, dPitch, scale);
+    return p + dPitch;
+  };
   const ch: Record<string, Partial<Note>> = {};
   for (const n of s.notes)
     ch[n.id] = {
       start: n.start + dt,
-      pitch: Math.max(0, Math.min(127, n.pitch + dPitch)),
+      pitch: Math.max(0, Math.min(127, move(n.pitch))),
       ...(dPitch ? { pinnedString: null } : {}),
     };
   s.st.exec(updateNotes(s.t.id, ch, dPitch ? 'Transpose' : 'Move notes'));
+  return true;
+}
+
+/** Drum grid: move the selected hits in time and/or to a neighbouring lane (+1 = the lane below). */
+export function nudgeHits(dTicks: number, dLane: number) {
+  const s = selected();
+  if (!s || !s.hits.length) return false;
+  const end = songEnd(s.st.song);
+  const minStart = Math.min(...s.hits.map((h) => h.start));
+  const maxStart = Math.max(...s.hits.map((h) => h.start));
+  const dt = Math.max(-minStart, Math.min(end - 1 - maxStart, dTicks));
+  const idx = (h: DrumHit) => DRUM_LANES.findIndex((l) => l.id === `${h.piece}:${h.articulation}`);
+  const lanes = s.hits.map(idx);
+  const dl = Math.max(-Math.min(...lanes), Math.min(DRUM_LANES.length - 1 - Math.max(...lanes), dLane));
+  const ch: Record<string, Partial<DrumHit>> = {};
+  for (const h of s.hits) {
+    const lane = DRUM_LANES[Math.max(0, idx(h) + dl)];
+    ch[h.id] = { start: h.start + dt, piece: lane.piece, articulation: lane.articulation };
+  }
+  s.st.exec(updateHits(s.t.id, ch, dl ? 'Move hits to another drum' : 'Move hits'));
   return true;
 }

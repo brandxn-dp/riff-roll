@@ -193,6 +193,8 @@ export interface Song {
   tempos: TempoPoint[];
   timeSigs: TimeSig[];
   keySig: { fifths: number; minor: boolean };
+  /** scale for the piano roll shading and snap to scale (see SCALES); default: major/minor from keySig */
+  scale?: string;
   sections: Section[];
   repeats: Repeat[];
   loop: { start: number; end: number; on: boolean } | null;

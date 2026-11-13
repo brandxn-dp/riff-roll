@@ -34,8 +34,13 @@ export class InstrumentLibrary {
       this.list = fetch(joinUrl(this.baseUrl, 'index.json'), { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : { instruments: [] }))
         .then((j: { instruments: InstrumentInfo[] }) => j.instruments ?? [])
-        .catch(() => []);
-    return this.list;
+        .catch(() => [] as InstrumentInfo[]);
+    const list = this.list;
+    // a failed or empty load isn't remembered: the next call tries again (instead of fallback sounds for good)
+    void list.then((l) => {
+      if (!l.length && this.list === list) this.list = null;
+    });
+    return list;
   }
 
   /** Forget the cached index (after new instruments were installed). */
@@ -63,6 +68,8 @@ export class InstrumentLibrary {
               : fallbackSfz(role === 'bass' ? 'bass' : role === 'other' ? 'keys' : 'guitar');
           const s = new Sampler(text, 'fallback://', this.fallbackLoader);
           (s as Sampler & { fallback?: boolean }).fallback = true;
+          // don't keep the fallback: once the instrument list loads, the real instrument is used
+          queueMicrotask(() => this.samplers.delete(key));
           return s;
         }
         const sfzUrl = joinUrl(this.baseUrl, info.sfz);

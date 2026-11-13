@@ -356,3 +356,30 @@ in the browser.
   whole song.
 - **Palette note icons** are drawn as SVG: a music font's glyphs sit on a staff baseline and looked off-centre
   inside buttons. Dynamics and articulations keep the Bravura glyphs, which centre well.
+
+## Editing like FL Studio / Guitar Pro, scales, ghost notes, loop handles, resizable layout
+
+- **Arrow keys (FL Studio)**: ←/→ move the selection one grid step (Ctrl: a bar); ↑/↓ and Shift+↑/↓ a semitone;
+  Ctrl+↑/↓ an octave. In the drum grid ↑/↓ move hits to the neighbouring drum. With Snap to scale on, a semitone
+  step goes to the next scale note instead.
+- **Drum grid mouse**: like the piano roll, a click on a hit selects it and dragging moves the selection (time and
+  drum); empty cells still paint; right-click erases; Alt-drag paints across lanes.
+- **Notation + Tab (Guitar Pro)**: clicking a tab line puts the tab cursor on that string at that beat (rests
+  included: they now have beat refs), and the normal tab keys type frets and techniques there. The string comes
+  from the click height against the tab staff's line spacing in alphaTab's bounds; clicking the notation staff still
+  selects the beat.
+- **Scales**: the song keeps an optional scale type (`song.scale`) next to its key signature; the piano roll shades
+  out-of-scale rows dark, tints the tonic and marks scale notes in the key column ("chromatic" = plain piano keys).
+  Snap to scale (toolbar) applies to new notes, dragged notes and ↑/↓ steps.
+- **Ghost notes**: the toolbar's Ghost menu draws another track's notes (drums at their GM pitch) faintly behind
+  the current track; not editable, view state only.
+- **Loop**: the green bar's edges drag to change the loop, the middle drags to move it (snapped to the grid); a
+  plain click inside it still sets the playback start. Shift-drag still draws a new loop.
+- **Resizable workspace**: drag handles for the palette width, the piano roll height and the global view height;
+  remembered per device, double-click resets.
+- **Track type** can be changed in the Mixer (Guitar / Bass / Drums / Other, `convertTrack`): notes are kept,
+  drums ↔ pitched map through GM drum numbers. Guitar Pro import now also treats tracks named piano/keys/synth/…
+  or with a non-guitar program and no visible tab as Other (Guitar Pro gives keyboard tracks a guitar tuning too).
+- **Playback fixes**: a looping sample (SoundFont pianos, organs, pads) no longer "ends" at the end of its file (a
+  note was cut after ~0.05 s); a failed or empty instrument list is retried instead of leaving every track on the
+  fallback sound for the session, and a track on the fallback sound tries its real instrument again.

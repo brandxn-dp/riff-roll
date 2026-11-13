@@ -118,7 +118,9 @@ export function handleTabKey(e: KeyboardEvent): boolean {
   const st = useStore.getState();
   const c = st.tabCursor;
   const t = currentTrack(st);
-  if (!c || !t || !isFretted(t.type) || (st.view !== 'split' && st.view !== 'tab')) return false;
+  // the tab cursor works in Roll + Tab, Tab, and Notation + Tab (Guitar Pro style: click the tab staff, type)
+  if (!c || !t || !isFretted(t.type) || (st.view !== 'split' && st.view !== 'tab' && st.view !== 'notation'))
+    return false;
   if (e.altKey) return false;
   const mod = e.ctrlKey || e.metaKey;
   const here = noteOnString(t, c.tick, c.string);

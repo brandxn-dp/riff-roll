@@ -3,6 +3,7 @@ import { detectStorage, type StorageAdapter } from './storage';
 import { currentTrack, useStore } from './store';
 import { Toolbar } from './components/Toolbar';
 import { EditPalette } from './components/EditPalette';
+import { Splitter, usePanelSize } from './components/Splitter';
 import { Inspector } from './components/Inspector';
 import { ShortcutSheet } from './components/ShortcutSheet';
 import { PianoRoll } from './views/PianoRoll';
@@ -41,6 +42,9 @@ export function App() {
   const layout = useStore((s) => s.layout);
   const screen = useStore((s) => s.screen);
   const user = useStore((s) => s.user);
+  const paletteOpen = useStore((s) => s.palette);
+  const [palW, setPalW] = usePanelSize('palette');
+  const [rollH, setRollH] = usePanelSize('roll');
 
   useEffect(() => {
     detectStorage().then(setStorage);
@@ -82,6 +86,8 @@ export function App() {
   if (layout === 'mobile') return <MobileApp modals={modals} />;
 
   const showRoll = view === 'split' || view === 'roll';
+  const measure = (sel: string, dim: 'width' | 'height') =>
+    document.querySelector(sel)?.getBoundingClientRect()[dim] ?? 200;
   const showTab = view === 'split' || view === 'tab';
 
   return (
@@ -103,9 +109,25 @@ export function App() {
           </>
         }
       />
-      <div className="body">
+      <div
+        className="body"
+        style={{
+          ['--pal-w' as string]: palW ? palW + 'px' : undefined,
+          ['--roll-h' as string]: rollH ? rollH + 'px' : undefined,
+        }}
+      >
         <EditPalette />
-        <main className="main">
+        {paletteOpen && (
+          <Splitter
+            axis="x"
+            label="Edit palette width"
+            size={() => measure('.palette', 'width')}
+            min={150}
+            max={420}
+            onSize={setPalW}
+          />
+        )}
+        <main className={'main' + (rollH ? ' roll-sized' : '')}>
           <DocBanner />
           <SongBar />
           {view === 'notation' ? (
@@ -115,6 +137,16 @@ export function App() {
           ) : (
             <>
               {showRoll && <PianoRoll />}
+              {showRoll && (
+                <Splitter
+                  axis="y"
+                  label="Piano roll height"
+                  size={() => measure('.cvwrap.roll', 'height')}
+                  min={120}
+                  max={Math.max(200, window.innerHeight - 260)}
+                  onSize={setRollH}
+                />
+              )}
               <LowerPanel showVelocity={showRoll} showTab={showTab} />
               {view === 'tab' && <div className="fill" />}
               <Inspector />

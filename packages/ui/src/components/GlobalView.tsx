@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Splitter, usePanelSize } from './Splitter';
 import {
   TRACK_COLORS,
   addSection,
@@ -309,6 +310,7 @@ export function GlobalView() {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [tm, setTm] = useState<{ i: number; x: number; y: number } | null>(null);
   const [cols, setCols] = useState(readCols);
+  const [gvH, setGvH] = usePanelSize('globalview');
   /** drag a column edge: the whole track panel, or just the names (the sliders get the rest) */
   const resize = (key: 'left' | 'name') => (e: React.PointerEvent) => {
     e.preventDefault();
@@ -652,12 +654,24 @@ export function GlobalView() {
   };
 
   const rowsH = RULER + nTracks * RH;
+  const gridH = gvH ?? Math.min(rowsH + 14, 240);
   return (
     <section
       className={'gv' + (open ? '' : ' closed')}
       aria-label="Global view"
       style={{ ['--gv-left' as string]: cols.left + 'px', ['--gv-name' as string]: cols.name + 'px' }}
     >
+      {open && (
+        <Splitter
+          axis="y"
+          invert
+          label="Global view height"
+          size={() => gridH}
+          min={70}
+          max={Math.max(120, window.innerHeight - 220)}
+          onSize={setGvH}
+        />
+      )}
       <div className="gv-left">
         {open && (
           <>
@@ -703,7 +717,7 @@ export function GlobalView() {
           </button>
         </div>
         {open && (
-          <div className="gv-rows" ref={rowsRef}>
+          <div className="gv-rows" ref={rowsRef} style={{ maxHeight: gridH - 22 }}>
             {Array.from({ length: nTracks }, (_, i) => (
               <TrackRow
                 key={i}
@@ -721,7 +735,7 @@ export function GlobalView() {
         )}
       </div>
       {open && (
-        <div ref={wrapRef} className="cvwrap gv-grid" style={{ height: Math.min(rowsH + 14, 240) }}>
+        <div ref={wrapRef} className="cvwrap gv-grid" style={{ height: gridH }}>
           <canvas ref={cvRef} />
           <div
             ref={scRef}
