@@ -34,7 +34,6 @@ afterAll(async () => {
 });
 
 /** fetch, with JSON bodies typed loosely for assertions (Node's fetch types say unknown) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Res = Omit<Response, 'json'> & { json(): Promise<any> };
 const api = (url: string, method = 'GET', body?: unknown): Promise<Res> =>
   fetch(base + url, {
