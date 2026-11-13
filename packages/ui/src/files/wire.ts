@@ -11,6 +11,10 @@ import {
   openFromDisk,
   getStorage,
   goHome,
+  clearRecent,
+  openProject,
+  openProjectFolder,
+  syncRecentMenu,
   saveProject,
 } from './actions';
 import { printScore } from './print';
@@ -44,7 +48,7 @@ const run = (fn: () => unknown) =>
 /** File keyboard shortcuts, desktop menu commands, autosave and session restore. */
 export function installFileActions(): () => void {
   const offs: (() => void)[] = [];
-  void boot();
+  void boot().then(() => syncRecentMenu());
   offs.push(installAutosave());
 
   offs.push(
@@ -73,8 +77,15 @@ export function installFileActions(): () => void {
     offs.push(
       d.onMenuCommand((cmd) => {
         const st = useStore.getState();
+        if (cmd.startsWith('project:open:')) {
+          void run(() => openProject(cmd.slice('project:open:'.length)));
+          return;
+        }
         const map: Record<string, () => unknown> = {
           'file:new': newProject,
+          'file:home': goHome,
+          'file:open-folder': openProjectFolder,
+          'recent:clear': clearRecent,
           'file:open': openFromDisk,
           'file:save': () => saveProject(),
           'file:save-as': () => import('./actions').then((m) => m.exportRiff()),

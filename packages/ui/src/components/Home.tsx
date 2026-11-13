@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { unpackRiff } from '@riffroll/core';
 import { useStore } from '../store';
-import { getStorage, newProject, openExample, openFromDisk, openProject } from '../files/actions';
+import {
+  getStorage,
+  newProject,
+  openExample,
+  openFromDisk,
+  openProject,
+  openProjectFolder,
+  syncRecentMenu,
+} from '../files/actions';
 import { signOut } from '../account';
 import type { ProjectInfo } from '../storage';
 
@@ -74,6 +82,7 @@ function UserMenu() {
         <div className="menu right" role="menu">
           {accounts && item('Account…', () => st.set({ modal: 'account' }))}
           {accounts && user?.admin && item('Manage users…', () => st.set({ modal: 'users' }))}
+          {window.riffroll && item('Open project folder', openProjectFolder)}
           {item('Instruments…', () => st.set({ modal: 'instruments' }))}
           {item('About & credits', () => st.set({ modal: 'about' }))}
           {accounts && (
@@ -162,6 +171,7 @@ export function Home() {
         : `Remove “${title(p)}” from your songs? ${p.owner?.displayName ?? 'The owner'} still has it.`;
       if (!confirm(msg)) return;
       await (await getStorage()).remove(p.id);
+      void syncRecentMenu();
       await refresh();
     });
   const share = (p: ProjectInfo) => () =>

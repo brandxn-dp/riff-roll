@@ -16,7 +16,7 @@ import {
 import { audioBufferToWav, gateWorkletUrl, renderSong } from '@riffroll/audio';
 import { barMap, currentTrack, initialSong, songEnd, useStore } from '../store';
 import { SaveError, detectStorage, type StorageAdapter } from '../storage';
-import { noteLocal } from '../storage/local-meta';
+import { clearOpenedLocal, noteLocal } from '../storage/local-meta';
 import { stop } from '../transport';
 import { ensureEngine } from '../audio-setup';
 import { exportGp7, importScoreBytes } from './importScore';
@@ -68,6 +68,45 @@ export async function saveFile(name: string, data: Uint8Array | string, mime: st
 }
 
 // ---------------- projects ----------------
+/** The most recently opened songs (newest first), as the launch screen shows them. */
+export async function recentSongs(limit = 10): Promise<{ id: string; title: string }[]> {
+  const s = await getStorage();
+  const list = await s.list();
+  return list
+    .filter((p) => p.openedAt)
+    .sort((a, b) => b.openedAt!.localeCompare(a.openedAt!))
+    .slice(0, limit)
+    .map((p) => ({ id: p.id, title: p.name || 'Untitled' }));
+}
+
+/** Desktop: keep File → Open Recent in the native menu up to date. */
+export async function syncRecentMenu() {
+  const d = desktop();
+  if (!d?.projects.setRecent) return;
+  try {
+    d.projects.setRecent(await recentSongs(10));
+  } catch {
+    /* the menu just keeps its old list */
+  }
+}
+
+/** Forget what was opened recently (the songs themselves stay). */
+export async function clearRecent() {
+  const s = await getStorage();
+  if (s.kind === 'rest') return status('Recently opened is kept per account on the server.');
+  clearOpenedLocal();
+  await syncRecentMenu();
+  status('Cleared the recently opened list');
+}
+
+/** Desktop: open the folder the songs are saved in. */
+export async function openProjectFolder() {
+  const d = desktop();
+  if (!d?.projects.openFolder) return status('The project folder can be opened from the desktop app.');
+  const p = await d.projects.openFolder();
+  status(`Opened ${p}`);
+}
+
 /** The id a song is stored under. */
 export const storeId = (songId: string) => songId.replace(/[^A-Za-z0-9_-]/g, '_');
 
@@ -112,7 +151,11 @@ async function doSave(song: Song, auto: boolean) {
     const now = useStore.getState();
     if (now.song.id === song.id)
       now.set({ dirty: now.song !== song, doc: { ...now.doc, version: r.version ?? now.doc.version } });
+    // the song you're working on counts as recently opened (new songs, imports and the example too)
+    if (s.kind !== 'rest' && now.song.id === song.id)
+      noteLocal(storeId(song.id), { openedAt: new Date().toISOString(), title: song.title || 'Untitled' });
     if (!auto) status(`Saved “${song.title}”`);
+    void syncRecentMenu();
   } catch (e) {
     if (!(e instanceof SaveError)) throw e;
     const now = useStore.getState();
@@ -144,6 +187,7 @@ export async function openProject(id: string) {
   load(fixed, assets);
   useStore.getState().set({ dirty: false });
   if (s.kind !== 'rest') noteLocal(id, { openedAt: new Date().toISOString(), title: fixed.title });
+  void syncRecentMenu();
   status(p.access === 'view' ? `Opened “${fixed.title}” (view only)` : `Opened “${fixed.title}”`);
 }
 

@@ -2376,3 +2376,16 @@ body.resizing {
 .gv > .splitter.y:hover {
   background: #5b8fe8;
 }
+
+.filemenu .menu-label {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mute);
+}
+.filemenu .recent-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

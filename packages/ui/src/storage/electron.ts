@@ -9,6 +9,10 @@ export interface RiffRollBridge {
     load(id: string): Promise<Uint8Array>;
     save(id: string, data: Uint8Array): Promise<void>;
     remove(id: string): Promise<void>;
+    /** open the songs folder in Explorer / Finder (0.3.2+) */
+    openFolder?(): Promise<string>;
+    /** feed the native File → Open Recent menu (0.3.2+) */
+    setRecent?(list: { id: string; title: string }[]): void;
   };
   [key: string]: unknown;
 }

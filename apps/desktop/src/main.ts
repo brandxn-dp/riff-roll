@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { loadWindowState, trackWindowState } from './window-state';
-import { buildMenu } from './menu';
+import { buildMenu, type RecentSong } from './menu';
 import { initUpdater } from './updater';
 import {
   finalizeUserInstrument,
@@ -72,6 +72,20 @@ function registerAppProtocol() {
 }
 
 function registerIpc() {
+  // the page owns "recently opened" (it knows titles); it sends the list so the native menu can show it
+  ipcMain.on('recent:set', (_e, list: RecentSong[]) => {
+    const clean = (Array.isArray(list) ? list : [])
+      .filter((r) => r && typeof r.id === 'string' && ID_RE.test(r.id))
+      .slice(0, 12)
+      .map((r) => ({ id: r.id, title: String(r.title ?? '').slice(0, 80) }));
+    Menu.setApplicationMenu(buildMenu(clean));
+  });
+  ipcMain.handle('projects:open-folder', async () => {
+    await mkdir(projectsDir(), { recursive: true });
+    const err = await shell.openPath(projectsDir());
+    if (err) throw new Error(err);
+    return projectsDir();
+  });
   const file = (id: string) => {
     if (!ID_RE.test(id)) throw new Error('bad project id');
     return path.join(projectsDir(), `${id}.riff`);
@@ -189,7 +203,11 @@ async function createWindow(fileToOpen?: string) {
           instruments: (await fetch('./instruments/index.json').then((r) => r.json()).catch(() => ({ instruments: [] }))).instruments.map((i) => i.id),
         }))()`,
         );
+        // and what File → Open Recent shows in the native menu
+        const file = Menu.getApplicationMenu()?.items.find((i) => i.label === 'File');
+        const recent = file?.submenu?.items.find((i) => i.label === 'Open Recent');
         console.log('SMOKE ' + report);
+        console.log('SMOKE-MENU ' + JSON.stringify(recent?.submenu?.items.map((i) => i.label) ?? null));
         app.exit(0);
       },
       Number(process.env.RIFFROLL_SMOKE) > 1 ? Number(process.env.RIFFROLL_SMOKE) : 3000,

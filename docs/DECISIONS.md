@@ -395,3 +395,12 @@ song is saved before the restart. The release workflow still builds with `--publ
 where to look. The Windows installer was renamed `riff-roll-setup-x.y.z.exe`: `latest.yml` names the file, and
 GitHub would turn the old name's spaces into dots, breaking the download. macOS is excluded (unsigned apps can't
 self-update on macOS); the Help menu item there opens the releases page.
+
+## Open Recent and Open Project Folder (0.3.2)
+
+Electron's `recentDocuments` menu role only works on macOS, so on Windows File → Open Recent did nothing. The menu
+is now built by the app: the page (which knows song titles and what was opened) sends the ten most recent songs to
+the main process (`recent:set`), which rebuilds the native menu; it updates on start, after opening, saving and
+deleting. A song you save counts as recently opened (new songs, imports and the example included), matching what
+the server already did. The in-app File menu shows the five most recent too. "Open Project Folder" (native File
+menu, in-app File menu and the launch screen menu, desktop only) opens the songs folder in Explorer/Finder.

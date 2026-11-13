@@ -1,8 +1,13 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron';
 import { autoCheckEnabled, checkForUpdatesNow, setAutoCheck, updatesSupported } from './updater';
 
+export interface RecentSong {
+  id: string;
+  title: string;
+}
+
 /** Native menu. Items forward a command string to the renderer, which owns all app logic. */
-export function buildMenu(): Menu {
+export function buildMenu(recent: RecentSong[] = []): Menu {
   const send = (cmd: string) => () => BrowserWindow.getFocusedWindow()?.webContents.send('menu:command', cmd);
   const isMac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
@@ -12,7 +17,21 @@ export function buildMenu(): Menu {
       submenu: [
         { label: 'New Song', accelerator: 'CmdOrCtrl+N', click: send('file:new') },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: send('file:open') },
-        { role: 'recentDocuments', submenu: [{ role: 'clearRecentDocuments' }] },
+        {
+          label: 'Open Recent',
+          submenu: recent.length
+            ? [
+                ...recent.map((r, i) => ({
+                  label: `${i < 9 ? `&${i + 1} ` : ''}${r.title.replace(/&/g, '&&') || 'Untitled'}`,
+                  click: send(`project:open:${r.id}`),
+                })),
+                { type: 'separator' as const },
+                { label: 'Clear Recently Opened', click: send('recent:clear') },
+              ]
+            : [{ label: 'No recent songs', enabled: false }],
+        },
+        { label: 'All Songs', click: send('file:home') },
+        { label: 'Open Project Folder', click: send('file:open-folder') },
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: send('file:save') },
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: send('file:save-as') },

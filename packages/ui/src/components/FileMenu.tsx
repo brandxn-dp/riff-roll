@@ -9,6 +9,9 @@ import {
   exportRiff,
   exportWav,
   goHome,
+  openProject,
+  openProjectFolder,
+  recentSongs,
   newProject,
   openFromDisk,
   saveCopy,
@@ -31,6 +34,13 @@ export function FileMenu() {
   const access = useStore((s) => s.doc.access);
   const accounts = useStore((s) => s.auth.accounts);
   const st = useStore.getState();
+  const [recent, setRecent] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => {
+    if (open)
+      void recentSongs(5)
+        .then(setRecent)
+        .catch(() => setRecent([]));
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
@@ -58,7 +68,27 @@ export function FileMenu() {
         <div className="menu" role="menu">
           {item('New song', newProject, 'Ctrl+N')}
           {item('All songs', goHome, 'Ctrl+O')}
+          {recent.length > 0 && (
+            <>
+              <div className="menu-label">Open recent</div>
+              {recent.map((r) => (
+                <button
+                  key={r.id}
+                  role="menuitem"
+                  className="recent-item"
+                  onClick={() => {
+                    setOpen(false);
+                    run(() => openProject(r.id))();
+                  }}
+                >
+                  <span>{r.title}</span>
+                </button>
+              ))}
+              <hr />
+            </>
+          )}
           {item('Import from disk…', openFromDisk)}
+          {window.riffroll && item('Open project folder', openProjectFolder)}
           {access !== 'view' && item('Save', () => saveProject(), 'Ctrl+S')}
           {item('Save a copy', saveCopy)}
           {accounts && access === 'owner' && item('Share…', shareCurrentSong)}

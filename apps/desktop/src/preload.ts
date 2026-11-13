@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('riffroll', {
     load: (id: string) => ipcRenderer.invoke('projects:load', id),
     save: (id: string, data: Uint8Array) => ipcRenderer.invoke('projects:save', id, data),
     remove: (id: string) => ipcRenderer.invoke('projects:remove', id),
+    openFolder: () => ipcRenderer.invoke('projects:open-folder'),
+    setRecent: (list: { id: string; title: string }[]) => ipcRenderer.send('recent:set', list),
   },
   instruments: {
     putFile: (id: string, rel: string, data: Uint8Array) =>

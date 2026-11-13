@@ -24,6 +24,13 @@ export function noteLocal(id: string, patch: { title?: string; openedAt?: string
   m[id] = { ...m[id], ...patch };
   write(m);
 }
+/** Clear "recently opened" for every song (titles stay). */
+export function clearOpenedLocal() {
+  const m = read();
+  for (const k of Object.keys(m)) delete m[k].openedAt;
+  write(m);
+}
+
 export function forgetLocal(id: string) {
   const m = read();
   delete m[id];
