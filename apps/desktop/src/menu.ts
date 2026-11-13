@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron';
+import { autoCheckEnabled, checkForUpdatesNow, setAutoCheck, updatesSupported } from './updater';
 
 /** Native menu. Items forward a command string to the renderer, which owns all app logic. */
 export function buildMenu(): Menu {
@@ -51,7 +52,21 @@ export function buildMenu(): Menu {
     },
     {
       label: 'Help',
-      submenu: [{ label: 'About / Credits', click: send('help:about') }],
+      submenu: [
+        { label: 'Check for Updates…', click: () => void checkForUpdatesNow() },
+        ...(updatesSupported()
+          ? [
+              {
+                label: 'Check for Updates Automatically',
+                type: 'checkbox' as const,
+                checked: autoCheckEnabled(),
+                click: (item: Electron.MenuItem) => setAutoCheck(item.checked),
+              },
+            ]
+          : []),
+        { type: 'separator' },
+        { label: 'About / Credits', click: send('help:about') },
+      ],
     },
   ];
   return Menu.buildFromTemplate(template);

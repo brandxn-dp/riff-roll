@@ -25,6 +25,8 @@ fileAssociations:
 asar: true
 win:
   target: [nsis]
+  # no spaces: the update info (latest.yml) names this file, and GitHub would rename spaces to dots
+  artifactName: riff-roll-setup-${version}.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -49,3 +51,10 @@ linux:
   maintainer: Riff Roll contributors
 deb:
   packageName: riff-roll
+# where the app looks for updates (electron-updater). The release workflow uploads the installers and the
+# latest*.yml / *.blockmap update info to the GitHub release itself, so builds use --publish never.
+publish:
+  provider: github
+  owner: brandxn-dp
+  repo: riff-roll
+  releaseType: release

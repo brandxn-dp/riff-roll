@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { loadWindowState, trackWindowState } from './window-state';
 import { buildMenu } from './menu';
+import { initUpdater } from './updater';
 import {
   finalizeUserInstrument,
   mergedIndex,
@@ -224,6 +225,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     Menu.setApplicationMenu(buildMenu());
     await createWindow(fileArg);
+    if (!process.env.RIFFROLL_SMOKE) initUpdater();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

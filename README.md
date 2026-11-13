@@ -155,9 +155,15 @@ Installers are attached to each GitHub release:
 
 | OS | File |
 |---|---|
-| Windows | `Riff.Roll.Setup.x.y.z.exe` (NSIS) |
+| Windows | `riff-roll-setup-x.y.z.exe` (NSIS; 0.3.0 and older: `Riff.Roll.Setup.x.y.z.exe`) |
 | macOS | `Riff.Roll-x.y.z-universal.dmg` |
 | Linux | `riff-roll-x.y.z-x86_64.AppImage`, `riff-roll-x.y.z-amd64.deb` |
+
+**Updates (Windows, Linux AppImage):** from 0.3.1 on, the installed app checks GitHub for a new release when it
+starts (and every few hours), downloads it in the background and asks to restart when it is ready; "Later" installs it
+when you quit. **Help → Check for Updates…** checks on demand, and **Help → Check for Updates Automatically** turns
+the automatic check off. Versions 0.3.0 and older have no updater: install 0.3.1 once by hand. macOS builds are
+unsigned, so macOS can't install updates by itself; download new versions from the releases page.
 
 The instruments are bundled, so the app works offline. It also has native menus and open/save dialogs, recent
 files, `.riff` file association, remembered window size and position, and autosave. Songs are stored in the app data
@@ -179,7 +185,7 @@ pnpm desktop:build
 
 `corepack enable` provides the pinned pnpm version (run that terminal as administrator if it complains about
 permissions, or use `npm install -g pnpm@10` instead). `pnpm fetch-instruments` downloads the default sample packs
-(about 160 MB, a few minutes) so they are bundled into the installer. The installer is written to `apps/desktop/release/Riff Roll Setup x.y.z.exe`. Windows SmartScreen
+(about 160 MB, a few minutes) so they are bundled into the installer. The installer is written to `apps/desktop/release/riff-roll-setup-x.y.z.exe`. Windows SmartScreen
 warns about an unknown publisher because the installer isn't code-signed: click **More info → Run anyway**. To
 update later: `git pull`, `pnpm install`, `pnpm desktop:build`. Builds for macOS must be made on a Mac and Linux
 builds on Linux (or let the release workflow build all three).

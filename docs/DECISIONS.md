@@ -383,3 +383,15 @@ in the browser.
 - **Playback fixes**: a looping sample (SoundFont pianos, organs, pads) no longer "ends" at the end of its file (a
   note was cut after ~0.05 s); a failed or empty instrument list is retried instead of leaving every track on the
   fallback sound for the session, and a track on the fallback sound tries its real instrument again.
+
+## Desktop auto-update (0.3.1)
+
+electron-updater with the GitHub provider: the installed app reads `latest.yml` (Windows) / `latest-linux.yml`
+(AppImage) from the newest GitHub release, downloads the installer in the background (taskbar progress; `.blockmap`
+files allow partial downloads) and asks to restart; "Later" installs on quit (`autoInstallOnAppQuit`). Checks run
+8 s after start and every 6 hours unless switched off in the Help menu (stored in `updates.json` in app data). The
+song is saved before the restart. The release workflow still builds with `--publish never` and uploads everything
+(installers + update info) with one action, so the `publish` section in electron-builder.yml only tells the app
+where to look. The Windows installer was renamed `riff-roll-setup-x.y.z.exe`: `latest.yml` names the file, and
+GitHub would turn the old name's spaces into dots, breaking the download. macOS is excluded (unsigned apps can't
+self-update on macOS); the Help menu item there opens the releases page.
