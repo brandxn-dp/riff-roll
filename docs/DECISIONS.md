@@ -451,3 +451,23 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
 - **Palettes**: 8 string colours (roles 8th string … high e) per palette; drum and new-track colours are drawn from
   them so everything matches. Applied by mutating the shared tables (ROLE_COLORS, TRACK_COLORS, drum colours) and
   repainting. Piano roll notes can be coloured by string, track, velocity or pitch class.
+
+## Bread's drum kit, palm mutes, partial tempo/metre over MCP (0.3.5)
+
+- **Default drum kit: Bread Bread's Drum Kit v1.03.1** (Polyphone, public domain, General MIDI). Polyphone only
+  serves files to signed-in members, so the build can't download the .sf2. `scripts/build-sf2-kit.ts` converts its
+  "Drum Kit" preset once into a Riff Roll drum pack (SFZ + WAV on the riffroll-drums-v1 keymap): every region pinned
+  to its key with the pitch the kit gave it, one-shot, fast choke. Pieces the kit lacks are made from its own samples:
+  cross-stick (rimshot, higher, short), half-open hi-hat (open hat, short, same choke group), crash chokes (grabbed
+  crashes), china (crash 2 tuned down), splash (crash 1 tuned up, shorter). The zipped pack is a release asset of this
+  repository (tag `instruments-1`), pinned by sha256 in the manifest. New drum tracks use it; songs that chose Big
+  Rusty Drums keep it (it is still installed).
+- **Palm mute**: no muted samples exist in the packs, so the open note is shaped: a lowpass that starts bright (keeps
+  the pick attack) and closes within ~30 ms to a few harmonics above the note, a small low-mid peak for the "chug",
+  and an amplitude that drops to ~45 % in ~40 ms and is nearly gone by ~0.3 s whatever the written length. The old
+  version low-passed at a fixed 950 Hz from the first sample (no attack) and held at 18 % for the whole note.
+- **MCP**: `set_tempo` and `set_time_signature` change a bar range and restore the previous value after it (or run to
+  the end), can ramp tempo, and remove a change; `set_song` tempo/time signature now mean the whole song. Time
+  signature changes keep notes at their times (like the editor), which the tool description tells the model.
+- **Velocity lane resize**: the drag lived inside an effect that re-ran on every size change, so a drag stopped after
+  one step; it now lives in a ref, and uses screen coordinates (the panel grows upward as the lane grows).

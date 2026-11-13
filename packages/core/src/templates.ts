@@ -46,7 +46,7 @@ export function makeTrack(type: TrackType, name: string, color: string, opts: Pa
         : type === 'bass'
           ? 'bass-yr-picked'
           : type === 'drums'
-            ? 'drums-big-rusty'
+            ? 'drums-bread'
             : '', // other: the first installed instrument of that kind
     tones,
     pedal: { mode: 'simple', startTone: toneA, toggle: [toneA, toneB], stomps: [] },

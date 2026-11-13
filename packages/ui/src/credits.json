@@ -22,6 +22,13 @@
       "attribution": "Finger Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication)."
     },
     {
+      "name": "Bread Bread's Drum Kit",
+      "author": "Bananaslicedbread",
+      "license": "Public domain",
+      "url": "https://www.polyphone.io/en/soundfonts/unpitched-percussion/846-bread-bread-s-drum-kit-v1-03-1",
+      "attribution": "Bread Bread's Drum Kit v1.03.1 by Bananaslicedbread, shared on Polyphone as public domain. Converted to Riff Roll's drum keymap with scripts/build-sf2-kit.ts (cross-stick, half-open hi-hat, cymbal chokes, china and splash are made from the kit's own samples)."
+    },
+    {
       "name": "Big Rusty Drums",
       "author": "Karoryfer Samples",
       "license": "CC0-1.0",

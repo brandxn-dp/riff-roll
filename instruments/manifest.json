@@ -44,6 +44,23 @@
       "default": true
     },
     {
+      "id": "drums-bread",
+      "name": "Bread Bread's Drum Kit",
+      "role": "drums",
+      "url": "https://github.com/brandxn-dp/riff-roll/releases/download/instruments-1/drums-bread.zip",
+      "sha256": "96e0ffbf8b243d099bfd7786c163a1d1fe5dfc1502cc454908e86160c18a2976",
+      "format": "zip",
+      "sfz": "riffroll-kit.sfz",
+      "license": "Public domain",
+      "author": "Bananaslicedbread",
+      "homepage": "https://www.polyphone.io/en/soundfonts/unpitched-percussion/846-bread-bread-s-drum-kit-v1-03-1",
+      "attribution": "Bread Bread's Drum Kit v1.03.1 by Bananaslicedbread, shared on Polyphone as public domain. Converted to Riff Roll's drum keymap with scripts/build-sf2-kit.ts (cross-stick, half-open hi-hat, cymbal chokes, china and splash are made from the kit's own samples).",
+      "default": true,
+      "meta": {
+        "keymap": "riffroll-drums-v1"
+      }
+    },
+    {
       "id": "drums-big-rusty",
       "name": "Big Rusty Drums",
       "role": "drums",

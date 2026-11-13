@@ -27,7 +27,7 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Sound**: SFZ sampler (velocity layers, round robins, choke groups) with CC0 instruments:
   - FreePats FSBS DI guitar, played through an amp sim (gate, drive, two-stage amp, tone stack, cab IR, effects)
   - FreePats Yamaha bass
-  - Karoryfer Big Rusty Drums
+  - Bread Bread's Drum Kit (the default kit; public domain) and Karoryfer Big Rusty Drums
 - **Song structure**: sections with jump-to chips, tempo changes (including gradual ones), time-signature and key
   changes, repeats with alternate endings, a loop region, a metronome with count-in, playback at 50–150 % speed
   without changing pitch, and a minimap.
@@ -93,11 +93,14 @@ The settings page shows ready-to-copy setup for both clients:
 claude mcp add --transport http riff-roll http://127.0.0.1:3917/mcp --header "Authorization: Bearer <token>"
 ```
 
+Tempo and time signature can change for part of a song (`set_tempo`, `set_time_signature` with `from_bar` / `to_bar`;
+after the range they go back to what they were).
+
 Claude Desktop uses `npx mcp-remote` in `claude_desktop_config.json` (needs Node.js). The claude.ai website can
 only reach servers on a public https address.
 
 Tools: `get_song`, `get_notes`, `get_tab`, `add_notes`, `add_drum_hits`, `edit_notes`, `delete_notes`,
-`set_song`, `set_sections`, `add_track`, `update_track`, `show`, `playback`, `undo`, `list_songs`, `open_song`,
+`set_song`, `set_tempo`, `set_time_signature`, `set_sections`, `add_track`, `update_track`, `show`, `playback`, `undo`, `list_songs`, `open_song`,
 `new_song`.
 
 ## Run with Docker
@@ -270,5 +273,5 @@ Third-party licences are listed in `THIRD_PARTY_NOTICES.md` and in the app under
 
 ## Licences of bundled sounds
 
-All default instruments are CC0. See `THIRD_PARTY_NOTICES.md`; it is generated from `instruments/manifest.json`. The
+All default instruments are CC0 or public domain. See `THIRD_PARTY_NOTICES.md`; it is generated from `instruments/manifest.json`. The
 cabinet impulse responses are synthesised by the app, so no third-party IR files are included.

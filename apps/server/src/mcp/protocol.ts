@@ -151,8 +151,8 @@ export const TOOLS = [
   {
     name: 'set_song',
     description:
-      'Change song settings: title, artist, tempo (bpm, from the start), time_signature ("4/4", "7/8"; whole ' +
-      'song), key ("E minor", "A major", "F# minor"), scale (major, minor, dorian, phrygian, lydian, mixolydian, ' +
+      'Change song settings: title, artist, tempo (bpm for the whole song; set_tempo does part of it), ' +
+      'time_signature ("4/4", "7/8"; whole song, removing other changes; set_time_signature does part of it), key ("E minor", "A major", "F# minor"), scale (major, minor, dorian, phrygian, lydian, mixolydian, ' +
       'locrian, harmonic minor, melodic minor, major pentatonic, minor pentatonic, blues…), bars (song length).',
     inputSchema: {
       type: 'object',
@@ -164,6 +164,41 @@ export const TOOLS = [
         key: { type: 'string' },
         scale: { type: 'string' },
         bars: { type: 'number' },
+      },
+    },
+  },
+  {
+    name: 'set_tempo',
+    description:
+      'Tempo for part of the song: bpm from from_bar (default 1) up to and including to_bar, after which the ' +
+      'tempo goes back to what it was (leave to_bar out to keep the new tempo to the end). ramp: true glides ' +
+      'gradually from the previous tempo to this one, arriving at from_bar. remove: true deletes the tempo change ' +
+      'at from_bar. get_song lists the tempo changes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        bpm: { type: 'number' },
+        from_bar: bar('First bar'),
+        to_bar: bar('Last bar, inclusive'),
+        ramp: { type: 'boolean' },
+        remove: { type: 'boolean' },
+      },
+    },
+  },
+  {
+    name: 'set_time_signature',
+    description:
+      'Time signature ("7/8", "6/8", "3/4") for part of the song: from from_bar (default 1) up to and including ' +
+      'to_bar, then back to the previous one (leave to_bar out to keep it to the end). remove: true deletes the ' +
+      'change at from_bar. Notes keep their positions in time, so bar lines after the change move: set time ' +
+      'signatures before writing notes in those bars, or rewrite them after.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        signature: { type: 'string' },
+        from_bar: bar('First bar'),
+        to_bar: bar('Last bar, inclusive'),
+        remove: { type: 'boolean' },
       },
     },
   },

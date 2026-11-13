@@ -96,6 +96,7 @@ export function LowerPanel({
   const cvRef = useRef<HTMLCanvasElement>(null);
   const scRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<Drag | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
   const mobile = useStore((s) => s.layout === 'mobile');
   LS = mobile ? 21 : 15;
@@ -125,7 +126,8 @@ export function LowerPanel({
       sc = scRef.current!,
       sizer = sizerRef.current!,
       wrap = wrapRef.current!;
-    let drag: Drag | null = null;
+    // the drag outlives this effect: resizing the velocity lane re-runs it mid-drag
+    const d = dragRef;
     const pedY = pedY0,
       tabY = tabY0;
 
@@ -186,12 +188,12 @@ export function LowerPanel({
           c.fillRect(x - 2, VEL_Y + VEL_H - vh, 6, 2);
           c.globalAlpha = 1;
         }
-        if (drag?.mode === 'vline') {
+        if (d.current?.mode === 'vline') {
           c.strokeStyle = COL.head;
           c.lineWidth = 1.5;
           c.beginPath();
-          c.moveTo(drag.x0, drag.y0);
-          c.lineTo(drag.x1, drag.y1);
+          c.moveTo(d.current.x0, d.current.y0);
+          c.lineTo(d.current.x1, d.current.y1);
           c.stroke();
         }
       }
@@ -367,7 +369,8 @@ export function LowerPanel({
         return;
       }
       if (onVelEdge(ly)) {
-        drag = { mode: 'velH', y0: ly, h0: VEL_H };
+        // screen coordinates: the panel grows upward as the lane grows, so panel coordinates would run away
+        d.current = { mode: 'velH', y0: e.clientY, h0: VEL_H };
         sc.setPointerCapture(e.pointerId);
         return;
       }
@@ -383,7 +386,7 @@ export function LowerPanel({
         }
         if (s) {
           st.begin('Move stomp');
-          drag = { mode: 'stomp', id: s.id, x0: lx, moved: false, origTick: s.tick };
+          d.current = { mode: 'stomp', id: s.id, x0: lx, moved: false, origTick: s.tick };
           sc.setPointerCapture(e.pointerId);
         } else {
           pedalClick(t, lx);
@@ -394,7 +397,7 @@ export function LowerPanel({
         if (e.altKey && e.button === 0) {
           // Alt+drag: draw a velocity line (a ramp) across the notes under it
           st.begin('Draw velocity');
-          drag = { mode: 'vline', x0: lx, y0: ly, x1: lx, y1: ly };
+          d.current = { mode: 'vline', x0: lx, y0: ly, x1: lx, y1: ly };
           sc.setPointerCapture(e.pointerId);
           return;
         }
@@ -412,7 +415,7 @@ export function LowerPanel({
         if (best) {
           const ids = st.selection.has(best.id) ? [...st.selection] : [best.id];
           st.begin('Change velocity');
-          drag = { mode: 'vel', ids, y0: ly };
+          d.current = { mode: 'vel', ids, y0: ly };
           sc.setPointerCapture(e.pointerId);
           setVel(t, ids, ly);
         }
@@ -486,12 +489,12 @@ export function LowerPanel({
     }
 
     const onMove = (e: PointerEvent) => {
-      if (!drag) {
+      if (!d.current) {
         sc.style.cursor = onVelEdge(local(e).ly) ? 'row-resize' : '';
         return;
       }
-      if (drag.mode === 'velH') {
-        const h = Math.round(Math.max(20, Math.min(140, drag.h0 + local(e).ly - drag.y0)));
+      if (d.current.mode === 'velH') {
+        const h = Math.round(Math.max(20, Math.min(140, d.current.h0 + e.clientY - d.current.y0)));
         if (h !== VEL_H) useStore.getState().setLanes({ velH: h });
         return;
       }
@@ -499,21 +502,21 @@ export function LowerPanel({
       const t = currentTrack(st);
       if (!t) return;
       const { lx, ly } = local(e);
-      if (drag.mode === 'vel') setVel(t, drag.ids, ly);
-      else if (drag.mode === 'vline') {
-        drag.x1 = lx;
-        drag.y1 = Math.max(VEL_Y, Math.min(VEL_Y + VEL_H, ly));
-        drawVelLine(t, drag);
+      if (d.current.mode === 'vel') setVel(t, d.current.ids, ly);
+      else if (d.current.mode === 'vline') {
+        d.current.x1 = lx;
+        d.current.y1 = Math.max(VEL_Y, Math.min(VEL_Y + VEL_H, ly));
+        drawVelLine(t, d.current);
       } else {
-        if (Math.abs(lx - drag.x0) > 3) drag.moved = true;
-        if (!drag.moved) return;
+        if (Math.abs(lx - d.current.x0) > 3) d.current.moved = true;
+        if (!d.current.moved) return;
         const a = axis();
         const tick = Math.max(
           st.snap,
           Math.min(songEnd(st.song) - st.snap, snapTick(xToTick(a, lx), st.snap)),
         );
-        if (!t.pedal.stomps.some((s) => s.tick === tick && s.id !== (drag as { id: string }).id))
-          st.exec(updateStomp(t.id, drag.id, { tick }));
+        if (!t.pedal.stomps.some((s) => s.tick === tick && s.id !== (d.current as { id: string }).id))
+          st.exec(updateStomp(t.id, d.current.id, { tick }));
       }
     };
     const onUp = (e: PointerEvent) => {
@@ -533,12 +536,12 @@ export function LowerPanel({
         tap = null;
         return;
       }
-      if (drag?.mode === 'stomp' && !drag.moved && t) {
+      if (d.current?.mode === 'stomp' && !d.current.moved && t) {
         // a click (no drag) on a stomp removes it
         st.cancel();
-        st.exec(removeStomp(t.id, drag.id));
-      } else if (drag && drag.mode !== 'velH') st.commit();
-      drag = null;
+        st.exec(removeStomp(t.id, d.current.id));
+      } else if (d.current && d.current.mode !== 'velH') st.commit();
+      d.current = null;
     };
     const onScroll = () => {
       useStore.getState().set({ scrollX: sc.scrollLeft });

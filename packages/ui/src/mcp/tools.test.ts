@@ -113,3 +113,48 @@ describe('MCP tools', () => {
     expect((await call('get_song')).text).toMatch(/No song is open/);
   });
 });
+
+describe('MCP tempo and time signature for part of a song', () => {
+  const bar = (n: number) => (n - 1) * 4 * PPQ; // in 4/4
+
+  it('changes the tempo for a bar range and goes back after it', async () => {
+    await call('set_song', { tempo: 120, bars: 16 });
+    const { data } = await call('set_tempo', { bpm: 90, from_bar: 5, to_bar: 8 });
+    expect(data.tempo).toEqual([
+      { bar: 1, beat: 1, bpm: 120 },
+      { bar: 5, beat: 1, bpm: 90 },
+      { bar: 9, beat: 1, bpm: 120 },
+    ]);
+    expect(useStore.getState().history.undoLabel).toBe('Claude: Tempo');
+    // a gradual change into bar 13, kept to the end
+    await call('set_tempo', { bpm: 160, from_bar: 13, ramp: true });
+    const t = useStore.getState().song.tempos;
+    expect(t.find((p) => p.tick === bar(9))).toMatchObject({ bpm: 120, ramp: true });
+    expect(t.at(-1)).toEqual({ tick: bar(13), bpm: 160 });
+    await call('set_tempo', { from_bar: 5, remove: true });
+    expect(useStore.getState().song.tempos.some((p) => p.tick === bar(5))).toBe(false);
+    expect((await call('set_tempo', { from_bar: 1, remove: true })).error).toBe(true);
+  });
+
+  it('changes the time signature for a bar range and goes back after it', async () => {
+    await call('set_song', { bars: 16 });
+    const { data } = await call('set_time_signature', { signature: '7/8', from_bar: 5, to_bar: 6 });
+    expect(data.time_signatures).toEqual([
+      { bar: 1, sig: '4/4' },
+      { bar: 5, sig: '7/8' },
+      { bar: 7, sig: '4/4' },
+    ]);
+    // to the end; a range over the same signature again doesn't add duplicates
+    await call('set_time_signature', { signature: '3/4', from_bar: 10 });
+    await call('set_time_signature', { signature: '3/4', from_bar: 12, to_bar: 13 });
+    expect(useStore.getState().song.timeSigs.map((s) => `${s.bar + 1}:${s.num}/${s.den}`)).toEqual([
+      '1:4/4',
+      '5:7/8',
+      '7:4/4',
+      '10:3/4',
+    ]);
+    await call('set_time_signature', { from_bar: 5, remove: true });
+    expect(useStore.getState().song.timeSigs.map((s) => s.bar + 1)).toEqual([1, 7, 10]);
+    expect((await call('set_time_signature', { signature: '5/5' })).error).toBe(true);
+  });
+});

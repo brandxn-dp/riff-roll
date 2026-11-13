@@ -214,15 +214,37 @@ export class Sampler {
       env.gain.setTargetAtTime((peak * a.sustain) / 100, t0 + attack + a.hold, a.decay / 4);
     }
     let node: AudioNode = src;
-    if (o.palmMute || o.dead) {
-      // no dedicated samples in the default pack: short envelope + low-pass, which is how a palm mute sounds
+    if (o.dead) {
+      // dead note: a muffled click with no pitch to speak of
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = o.dead ? 1400 : 950;
+      lp.frequency.value = 1400;
       lp.Q.value = 0.6;
       node.connect(lp);
       node = lp;
-      env.gain.setTargetAtTime(o.dead ? 0 : peak * 0.18, t0 + attack, o.dead ? 0.012 : 0.07);
+      env.gain.setTargetAtTime(0, t0 + attack, 0.012);
+    } else if (o.palmMute) {
+      // No palm-muted samples in the packs, so shape the open note into one. The side of the picking hand damps
+      // the string: the pick attack still comes through bright, then the upper harmonics die within a few
+      // tens of milliseconds and the whole note within a few hundred, leaving the low-mid "chug" that the amp
+      // turns into a tight thud.
+      const f0 = 440 * Math.pow(2, (o.pitch - 69) / 12);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.Q.value = 1.2; // a small bump at the corner: the thump
+      lp.frequency.setValueAtTime(Math.min(6000, Math.max(2200, f0 * 24)), t0);
+      lp.frequency.setTargetAtTime(Math.min(1500, Math.max(420, f0 * 5)), t0 + 0.006, 0.03);
+      const body = ctx.createBiquadFilter();
+      body.type = 'peaking';
+      body.frequency.value = Math.min(260, Math.max(100, f0 * 2));
+      body.Q.value = 0.8;
+      body.gain.value = 4;
+      node.connect(lp);
+      lp.connect(body);
+      node = body;
+      // a punchy start, mostly gone after ~0.3 s whatever the written length
+      env.gain.setTargetAtTime(peak * 0.45, t0 + attack, 0.04);
+      env.gain.setTargetAtTime(peak * 0.04, t0 + attack + 0.08, 0.13);
     }
     if (o.harmonic) {
       const hp = ctx.createBiquadFilter();

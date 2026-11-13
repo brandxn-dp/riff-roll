@@ -21,7 +21,8 @@
     "desktop:dev": "pnpm --filter @riffroll/desktop dev",
     "desktop:build": "pnpm --filter @riffroll/desktop dist",
     "fetch-instruments": "tsx scripts/fetch-instruments.ts",
-    "notices": "tsx scripts/gen-notices.ts"
+    "notices": "tsx scripts/gen-notices.ts",
+    "build-sf2-kit": "tsx scripts/build-sf2-kit.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

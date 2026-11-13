@@ -24,6 +24,7 @@ import {
   removeNotes,
   removeTrack,
   setBars,
+  setTempos,
   setTimeSigs,
   setTuning,
   trackFingering,
@@ -37,6 +38,8 @@ import {
   type Note,
   type Song,
   type Techniques,
+  type TempoPoint,
+  type TimeSig,
   type Track,
   type TrackType,
 } from '@riffroll/core';
@@ -180,6 +183,17 @@ function parseKey(s: string): Song['keySig'] {
     if (score < bestScore) [best, bestScore] = [f, score];
   }
   return { fifths: best, minor };
+}
+
+/** The bpm playing at a tick (inside a gradual change, part way between its two tempos). */
+function bpmAt(tempos: TempoPoint[], tick: number): number {
+  let i = 0;
+  while (i + 1 < tempos.length && tempos[i + 1].tick <= tick) i++;
+  const p = tempos[i],
+    next = tempos[i + 1];
+  if (!p) return 120;
+  if (!p.ramp || !next) return p.bpm;
+  return Math.round(p.bpm + ((next.bpm - p.bpm) * (tick - p.tick)) / (next.tick - p.tick));
 }
 
 // ---------------------------------------------------------------- the tools
@@ -421,7 +435,6 @@ const tools: Record<string, (a: Args) => unknown | Promise<unknown>> = {
 
   set_song(a) {
     needSong();
-    const song = st().song;
     const cmds: Command[] = [];
     const patch: Partial<Song> = {};
     if (typeof a.title === 'string') patch.title = a.title.slice(0, 200);
@@ -429,9 +442,8 @@ const tools: Record<string, (a: Args) => unknown | Promise<unknown>> = {
     const bpm = num(a.tempo);
     if (bpm != null) {
       if (bpm < 20 || bpm > 400) bad('Tempo must be 20–400 bpm.');
-      patch.tempos = song.tempos.length
-        ? song.tempos.map((t, i) => (i === 0 ? { ...t, bpm } : t))
-        : [{ tick: 0, bpm }];
+      // the whole song (set_tempo changes part of it)
+      patch.tempos = [{ tick: 0, bpm }];
     }
     if (typeof a.key === 'string') patch.keySig = parseKey(a.key);
     if (typeof a.scale === 'string') {
@@ -453,6 +465,86 @@ const tools: Record<string, (a: Args) => unknown | Promise<unknown>> = {
     if (!cmds.length) bad('Nothing to change.');
     run('Song settings', cmds);
     return tools.get_song({});
+  },
+
+  set_tempo(a) {
+    needSong();
+    const song = st().song;
+    const bm = barMap(song);
+    const from = Math.round(num(a.from_bar) ?? 1);
+    if (from < 1 || from > song.bars) bad(`from_bar must be 1–${song.bars}.`);
+    const at = bm.barStart(from - 1);
+    let tempos: TempoPoint[] = [...song.tempos].sort((x, y) => x.tick - y.tick);
+    if (!tempos.length || tempos[0].tick > 0) tempos.unshift({ tick: 0, bpm: tempos[0]?.bpm ?? 120 });
+    const summary = () => ({
+      tempo: st().song.tempos.map((t) => ({
+        ...where(t.tick),
+        bpm: t.bpm,
+        ...(t.ramp ? { ramp: true } : {}),
+      })),
+    });
+    if (a.remove === true) {
+      if (at === 0) bad('The tempo at bar 1 can’t be removed; set it instead.');
+      if (!tempos.some((t) => t.tick === at)) bad(`There’s no tempo change at bar ${from}.`);
+      run('Remove tempo change', [setTempos(tempos.filter((t) => t.tick !== at))]);
+      return summary();
+    }
+    const bpm = num(a.bpm) ?? bad('Give bpm.');
+    if (bpm < 20 || bpm > 400) bad('Tempo must be 20–400 bpm.');
+    const toBar = num(a.to_bar);
+    if (toBar != null && toBar < from) bad('to_bar comes before from_bar.');
+    // the change covers from_bar … to_bar, then the tempo goes back to what was playing there
+    const end = toBar != null && toBar < song.bars ? bm.barStart(Math.round(toBar)) : null;
+    const back =
+      end != null ? (tempos.find((t) => t.tick === end) ?? { tick: end, bpm: bpmAt(tempos, end) }) : null;
+    tempos = tempos.filter((t) => t.tick < at || (end != null && t.tick > end));
+    tempos.push({ tick: at, bpm });
+    if (back && back.bpm !== bpm) tempos.push({ ...back, ramp: back.ramp });
+    tempos.sort((x, y) => x.tick - y.tick);
+    if (a.ramp === true) {
+      const prev = [...tempos].reverse().find((t) => t.tick < at);
+      if (!prev) bad('A ramp needs a tempo before from_bar to glide from.');
+      tempos = tempos.map((t) => (t === prev ? { ...t, ramp: true } : t));
+    }
+    run('Tempo', [setTempos(tempos)]);
+    return summary();
+  },
+
+  set_time_signature(a) {
+    needSong();
+    const song = st().song;
+    const from = Math.round(num(a.from_bar) ?? 1);
+    if (from < 1 || from > song.bars) bad(`from_bar must be 1–${song.bars}.`);
+    const f = from - 1;
+    let sigs: TimeSig[] = [...song.timeSigs].sort((x, y) => x.bar - y.bar);
+    if (!sigs.length || sigs[0].bar > 0) sigs.unshift({ bar: 0, num: 4, den: 4 });
+    const sigAt = (bar: number) => [...sigs].reverse().find((x) => x.bar <= bar)!;
+    const summary = () => ({
+      time_signatures: st().song.timeSigs.map((t) => ({ bar: t.bar + 1, sig: `${t.num}/${t.den}` })),
+      bars: st().song.bars,
+    });
+    if (a.remove === true) {
+      if (f === 0) bad('The time signature at bar 1 can’t be removed; set it instead.');
+      if (!sigs.some((x) => x.bar === f)) bad(`There’s no time signature change at bar ${from}.`);
+      run('Remove time signature', [setTimeSigs(sigs.filter((x) => x.bar !== f))]);
+      return summary();
+    }
+    const m = /^(\d{1,2})\s*\/\s*(1|2|4|8|16|32)$/.exec(String(a.signature ?? '').trim());
+    if (!m || Number(m[1]) < 1) return bad('signature like "4/4", "6/8" or "7/8".');
+    const sig = { num: Number(m[1]), den: Number(m[2]) };
+    const toBar = num(a.to_bar);
+    if (toBar != null && toBar < from) bad('to_bar comes before from_bar.');
+    const to = toBar != null && toBar < song.bars ? Math.round(toBar) : null; // 0-based bar after the range
+    const back = to != null ? (sigs.find((x) => x.bar === to) ?? { ...sigAt(to), bar: to }) : null;
+    sigs = sigs.filter((x) => x.bar < f || (to != null && x.bar > to));
+    sigs.push({ bar: f, ...sig });
+    if (back) sigs.push(back);
+    // drop changes that don't change anything
+    sigs = sigs
+      .sort((x, y) => x.bar - y.bar)
+      .filter((x, i, all) => i === 0 || x.num !== all[i - 1].num || x.den !== all[i - 1].den);
+    run('Time signature', [setTimeSigs(sigs)]);
+    return summary();
   },
 
   set_sections(a) {

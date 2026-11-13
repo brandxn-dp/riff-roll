@@ -10,6 +10,8 @@ Generated from `instruments/manifest.json` by `pnpm notices`. Do not edit by han
   Picked Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication).
 - **Yamaha RBX Bass (finger)** by FreePats project — CC0-1.0 — https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html
   Finger Bass YR by the FreePats project, released under CC0 1.0 (public domain dedication).
+- **Bread Bread's Drum Kit** by Bananaslicedbread — Public domain — https://www.polyphone.io/en/soundfonts/unpitched-percussion/846-bread-bread-s-drum-kit-v1-03-1
+  Bread Bread's Drum Kit v1.03.1 by Bananaslicedbread, shared on Polyphone as public domain. Converted to Riff Roll's drum keymap with scripts/build-sf2-kit.ts (cross-stick, half-open hi-hat, cymbal chokes, china and splash are made from the kit's own samples).
 - **Big Rusty Drums** by Karoryfer Samples — CC0-1.0 — https://github.com/sfzinstruments/karoryfer.big-rusty-drums
   Big Rusty Drums by Karoryfer Samples, released under CC0 1.0 (public domain dedication).
 
