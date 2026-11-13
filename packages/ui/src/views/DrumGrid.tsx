@@ -8,7 +8,6 @@ import {
   updateHits,
   type DrumHit,
   type DrumLane,
-  type DrumPiece,
   type Track,
 } from '@riffroll/core';
 import { ZOOMS_Y, barMap, currentTrack, songEnd, useStore } from '../store';
@@ -28,25 +27,14 @@ import {
 } from '../canvas';
 import { previewDrum } from '../audio-bridge';
 import { seek } from '../transport';
+import { DRUM_COL } from '../palettes';
 
 let LW = 132; // label gutter (96 on phones)
 let RH = 20; // lane height (28 on phones)
 const VEL_H = 54;
 
-const PIECE_COL: Record<DrumPiece, string> = {
-  kick: '#ff5a5a',
-  snare: '#ff9a3c',
-  hihat: '#47bfee',
-  ride: '#f3cf48',
-  crash1: '#f3cf48',
-  crash2: '#f3cf48',
-  china: '#f3cf48',
-  splash: '#f3cf48',
-  tom1: '#5fd17c',
-  tom2: '#5fd17c',
-  tom3: '#5fd17c',
-  tom4: '#5fd17c',
-};
+/** drum colours follow the note palette (Settings → Appearance) */
+const PIECE_COL = DRUM_COL;
 
 const laneIndex = new Map(DRUM_LANES.map((l, i) => [l.id, i]));
 const hitLane = (h: DrumHit) => `${h.piece}:${h.articulation}`;

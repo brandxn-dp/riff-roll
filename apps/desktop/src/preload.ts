@@ -25,6 +25,18 @@ contextBridge.exposeInMainWorld('riffroll', {
   readPath: (p: string) => ipcRenderer.invoke('file:read-path', p),
   /** interface size (Settings → General), 1 = 100 % */
   setZoom: (f: number) => webFrame.setZoomFactor(Math.max(0.5, Math.min(2, Number(f) || 1))),
+  /** Settings → Claude: the local MCP endpoint, and tool calls for the page to run */
+  mcp: {
+    state: () => ipcRenderer.invoke('mcp:state'),
+    set: (p: { enabled?: boolean; port?: number }) => ipcRenderer.invoke('mcp:set', p),
+    regenerate: () => ipcRenderer.invoke('mcp:regenerate'),
+    onCall: (fn: (c: { id: string; name: string; args: Record<string, unknown> }) => void) => {
+      const h = (_e: unknown, c: { id: string; name: string; args: Record<string, unknown> }) => fn(c);
+      ipcRenderer.on('mcp:call', h);
+      return () => ipcRenderer.removeListener('mcp:call', h);
+    },
+    result: (id: string, result: unknown) => ipcRenderer.send('mcp:result', id, result),
+  },
   updates: {
     state: () => ipcRenderer.invoke('updates:state'),
     setAuto: (on: boolean) => ipcRenderer.invoke('updates:set-auto', on),

@@ -6,6 +6,7 @@
 import { COL } from './canvas';
 import { useStore } from './store';
 import { useSettings, type AccentId, type ThemeId } from './settings';
+import { applyPalette } from './palettes';
 
 interface Palette {
   label: string;
@@ -154,6 +155,8 @@ export function applyTheme() {
   const accent = ACCENTS[s.accent].color;
   const d = p.dark;
 
+  applyPalette();
+
   // ---- canvas colours (mutated in place: the editors read COL on every frame)
   const rowW = d ? mix(p.bg, p.panel, 0.7) : p.panel;
   Object.assign(COL, {
@@ -227,7 +230,14 @@ export function applyTheme() {
 export function installTheme(): () => void {
   applyTheme();
   const off = useSettings.subscribe((s, prev) => {
-    if (s.theme !== prev.theme || s.accent !== prev.accent || s.notationPaper !== prev.notationPaper)
+    if (
+      s.theme !== prev.theme ||
+      s.accent !== prev.accent ||
+      s.notationPaper !== prev.notationPaper ||
+      s.notePalette !== prev.notePalette ||
+      s.customStrings !== prev.customStrings ||
+      s.noteColors !== prev.noteColors
+    )
       applyTheme();
   });
   const mq = window.matchMedia?.('(prefers-color-scheme: dark)');

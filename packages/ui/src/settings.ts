@@ -16,6 +16,12 @@ export interface Settings {
   notationPaper: 'theme' | 'light';
   /** desktop app interface size in percent */
   uiScale: number;
+  /** note colour palette (palettes.ts) or 'custom' */
+  notePalette: string;
+  /** custom palette: 8 string colours, 8th string … high e */
+  customStrings: string[];
+  /** what colours piano roll notes */
+  noteColors: 'string' | 'track' | 'velocity' | 'pitch';
   followPlayhead: boolean;
   /** play notes as you place, select or move them */
   previewNotes: boolean;
@@ -42,6 +48,9 @@ export const DEFAULT_SETTINGS: Settings = {
   accent: 'blue',
   notationPaper: 'theme',
   uiScale: 100,
+  notePalette: 'classic',
+  customStrings: [],
+  noteColors: 'string',
   followPlayhead: true,
   previewNotes: true,
   defaultSnap: PPQ / 4,
@@ -105,7 +114,15 @@ export const useSettings = create<SettingsState>((set, get) => {
       else if (part === 'keys') set({ keys: {} });
       else if (part === 'audio') set({ audio: { ...d.audio } });
       else if (part === 'appearance')
-        set({ theme: d.theme, accent: d.accent, notationPaper: d.notationPaper, uiScale: d.uiScale });
+        set({
+          theme: d.theme,
+          accent: d.accent,
+          notationPaper: d.notationPaper,
+          uiScale: d.uiScale,
+          notePalette: d.notePalette,
+          customStrings: [],
+          noteColors: d.noteColors,
+        });
       else
         set({
           followPlayhead: d.followPlayhead,

@@ -47,6 +47,7 @@ import {
 import { pedalSegments } from '@riffroll/core';
 import { preview } from '../audio-bridge';
 import { seek } from '../transport';
+import { noteFill } from '../palettes';
 import { techCode } from './tabDraw';
 
 let RH = 18; // row height (24 in the mobile layout: finger-sized)
@@ -242,8 +243,8 @@ export function PianoRoll() {
           nh = RH - 2;
         if (y > h || y + nh < RULER_H) continue;
         const pos = fing.get(n.id);
-        // guitar/bass notes take their string's colour; other instruments the track colour
-        const col = !fretted ? t.color : pos ? stringColor(t.type, nStr, pos.string) : COL.unplayable;
+        // by string (guitar/bass; others the track colour), track, velocity or pitch: Settings → Appearance
+        const col = noteFill(t, n, pos?.string);
         c.globalAlpha = 0.55 + (0.45 * n.velocity) / 127;
         c.fillStyle = col;
         rr(c, x, y, nw, nh, 3);

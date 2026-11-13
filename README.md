@@ -67,7 +67,38 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
 - **Lanes**: the velocity and pedal lanes under the piano roll can each be hidden and resized (Lanes menu, or drag
   their edges); the bar count can be typed, and **＋ Bars** in the global view inserts 1, 2, 4, 8 or 16 bars.
 
+- **Note colour palettes** (Settings → Appearance): Classic, Pastel, Neon, Colour-blind safe, Ocean, Sunset, One
+  colour or your own; strings, drums and new tracks follow it. Piano roll notes can be coloured by string, track,
+  velocity or pitch.
+- **Connect Claude** (Settings → Claude): an MCP endpoint so Claude Code or Claude Desktop can read and edit the
+  open song (see below).
+
 Press **?** in the app for the keyboard cheat sheet.
+
+## Connect Claude (MCP)
+
+Riff Roll speaks the [Model Context Protocol](https://modelcontextprotocol.io), so Claude can work on the song open
+in the editor: read notes and tab, write riffs (by pitch or string and fret, with techniques), program drums, change
+tempo, key, time signature and sections, add or change tracks, play and stop. Every change shows up live and is one
+undo step ("Claude: …").
+
+- **Desktop app**: Settings → Claude → switch it on. The endpoint is `http://127.0.0.1:3917/mcp` (the port can be
+  changed), reachable only from this computer and protected by the token shown there.
+- **Docker server**: Settings → Claude → Make a token (per user; shown once). The endpoint is
+  `https://your-server/mcp`; Claude works on the song in your most recently used Riff Roll tab, so keep one open.
+
+The settings page shows ready-to-copy setup for both clients:
+
+```bash
+claude mcp add --transport http riff-roll http://127.0.0.1:3917/mcp --header "Authorization: Bearer <token>"
+```
+
+Claude Desktop uses `npx mcp-remote` in `claude_desktop_config.json` (needs Node.js). The claude.ai website can
+only reach servers on a public https address.
+
+Tools: `get_song`, `get_notes`, `get_tab`, `add_notes`, `add_drum_hits`, `edit_notes`, `delete_notes`,
+`set_song`, `set_sections`, `add_track`, `update_track`, `show`, `playback`, `undo`, `list_songs`, `open_song`,
+`new_song`.
 
 ## Run with Docker
 

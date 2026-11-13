@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
+import { ClaudeSettings } from './ClaudeSettings';
 import { NOTE_LENS, SNAPS, currentTrack, useStore } from '../store';
 import { useSettings, type AccentId, type Latency, type ThemeId } from '../settings';
 import { ACCENTS, THEMES } from '../theme';
+import { NOTE_PALETTES, ROLE_LABELS, currentPalette, pitchColors, trackColors } from '../palettes';
+import { cmd } from '@riffroll/core';
 import { ACTIONS, bindingsOf, comboOf, conflicts, niceCombo } from '../keymap';
 import { setLayoutPref } from '../device';
 import { ensureEngine, getEngine, restartAudio, setOutputDevice } from '../audio-setup';
@@ -10,7 +13,7 @@ import { testPreview } from '../audio-bridge';
 import { adminStats, setServerSignup, signOut, signOutEverywhere, type AdminStats } from '../account';
 import { openProjectFolder } from '../files/actions';
 
-type Tab = 'general' | 'editor' | 'appearance' | 'audio' | 'shortcuts' | 'account' | 'server';
+type Tab = 'general' | 'editor' | 'appearance' | 'audio' | 'shortcuts' | 'claude' | 'account' | 'server';
 
 function Row({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -286,9 +289,111 @@ function Appearance() {
           <option value="light">Always black on white</option>
         </select>
       </Row>
-      <p className="mute small">
-        Track and string colours are part of the song, so they stay the same in every theme.
-      </p>
+      <NoteColours />
+    </>
+  );
+}
+
+/** String / drum / track colour palettes and what colours the notes. */
+function NoteColours() {
+  const s = useSettings();
+  const pal = currentPalette();
+  const custom = s.notePalette === 'custom';
+  const pick = (id: string) =>
+    s.update(
+      id === 'custom'
+        ? {
+            notePalette: 'custom',
+            customStrings: s.customStrings.length === 8 ? s.customStrings : [...pal.strings],
+          }
+        : { notePalette: id },
+    );
+  const swatches = (strings: string[]) => (
+    <span className="pal-swatch" aria-hidden="true">
+      {strings.slice(2).map((c, i) => (
+        <i key={i} style={{ background: c }} />
+      ))}
+    </span>
+  );
+  return (
+    <>
+      <h3 className="set-h">Note colours</h3>
+      <div className="pal-grid" role="radiogroup" aria-label="Note colour palette">
+        {Object.entries(NOTE_PALETTES).map(([id, p]) => (
+          <button
+            key={id}
+            role="radio"
+            aria-checked={s.notePalette === id}
+            className="theme-card"
+            onClick={() => pick(id)}
+          >
+            {swatches(p.strings)}
+            <span>{p.label}</span>
+          </button>
+        ))}
+        <button role="radio" aria-checked={custom} className="theme-card" onClick={() => pick('custom')}>
+          {swatches(custom ? s.customStrings : pal.strings)}
+          <span>Custom…</span>
+        </button>
+      </div>
+      {custom && (
+        <div className="pal-custom">
+          {ROLE_LABELS.map((label, i) => (
+            <label key={label} className="pal-pick">
+              <input
+                type="color"
+                value={s.customStrings[i] ?? '#888888'}
+                onChange={(e) => {
+                  const next = [...s.customStrings];
+                  next[i] = e.target.value;
+                  s.update({ customStrings: next });
+                }}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <Row
+        label="Colour piano roll notes by"
+        hint="Strings use the palette; drums always do. Tab numbers keep their string colours."
+      >
+        <select
+          value={s.noteColors}
+          onChange={(e) => s.update({ noteColors: e.target.value as typeof s.noteColors })}
+        >
+          <option value="string">String (guitar and bass)</option>
+          <option value="track">Track colour</option>
+          <option value="velocity">Velocity (soft → loud)</option>
+          <option value="pitch">Pitch (C, C#, D …)</option>
+        </select>
+        {s.noteColors === 'pitch' && (
+          <span className="pal-swatch wide" aria-hidden="true">
+            {pitchColors().map((c, i) => (
+              <i key={i} style={{ background: c }} />
+            ))}
+          </span>
+        )}
+      </Row>
+      <Row
+        label="Track colours"
+        hint="New tracks get the palette’s colours. This recolours the open song (undo works)."
+      >
+        <button
+          className="btn"
+          onClick={() => {
+            const cols = trackColors();
+            useStore.getState().exec(
+              cmd('Track colours', (song) => ({
+                ...song,
+                tracks: song.tracks.map((t, i) => ({ ...t, color: cols[i % cols.length] })),
+              })),
+            );
+          }}
+        >
+          Use the palette for this song’s tracks
+        </button>
+      </Row>
     </>
   );
 }
@@ -747,6 +852,7 @@ export function Settings() {
     ['appearance', 'Appearance'],
     ['audio', 'Audio'],
     ['shortcuts', 'Shortcuts'],
+    ['claude', 'Claude'],
     ...(accounts && user ? ([['account', 'Account']] as [Tab, string][]) : []),
     ...(accounts && user?.admin ? ([['server', 'Server admin']] as [Tab, string][]) : []),
   ];
@@ -768,6 +874,7 @@ export function Settings() {
           {cur === 'appearance' && <Appearance />}
           {cur === 'audio' && <Audio />}
           {cur === 'shortcuts' && <Shortcuts />}
+          {cur === 'claude' && <ClaudeSettings />}
           {cur === 'account' && <Account />}
           {cur === 'server' && <Server />}
         </div>

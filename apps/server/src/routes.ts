@@ -7,6 +7,8 @@ import { riffTitle } from './riff-title.js';
 import { Accounts, HttpError, SESSION_DAYS, publicUser, type User } from './accounts.js';
 import type { ServerOptions } from './app.js';
 import { mergedIndex } from './instruments/user.js';
+import { McpRelay } from './mcp/relay.js';
+import { handleBody } from './mcp/protocol.js';
 
 const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
 const COOKIE = 'rr_session';
@@ -76,6 +78,8 @@ export async function registerAccounts(app: FastifyInstance, opts: ServerOptions
     app.log.warn(`server-settings.json unreadable: ${(e as Error).message}`);
   }
   const signupOpen = () => serverSettings.signup ?? !!opts.openSignup;
+  const relay = new McpRelay();
+  app.addHook('onClose', async () => relay.closeAll());
   const projectFile = (id: string) => path.join(opts.projectsDir, `${id}.riff`);
 
   /** .riff files on disk that the library doesn't know yet, with their titles. */
@@ -234,6 +238,47 @@ export async function registerAccounts(app: FastifyInstance, opts: ServerOptions
   app.delete<{ Params: { id: string } }>('/api/users/:id', async (req) => {
     const a = admin(req);
     await accounts.deleteUser(req.params.id, a.id);
+    return { ok: true };
+  });
+
+  // ---------------- Claude (MCP) ----------------
+  // Claude → POST /mcp with the user's token → their open tab runs the tool → result back to Claude
+  app.post('/mcp', async (req, reply) => {
+    const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+    const user = accounts.mcpUser(token || undefined);
+    if (!user) {
+      reply.header('www-authenticate', 'Bearer');
+      return reply.code(401).send({ error: 'Missing or wrong token (Riff Roll → Settings → Claude).' });
+    }
+    const out = await handleBody(req.body, (name, args) => relay.call(user.id, name, args), {
+      version: opts.version ?? '0',
+    });
+    if (!out) return reply.code(202).send();
+    return out;
+  });
+  app.get('/mcp', async (_req, reply) => reply.code(405).header('allow', 'POST').send());
+
+  app.get('/api/mcp/token', async (req) => ({
+    token: accounts.mcpTokenInfo(me(req).id),
+    tabs: relay.connected(me(req).id),
+  }));
+  app.post('/api/mcp/token', async (req) => ({ token: await accounts.createMcpToken(me(req).id) }));
+  app.delete('/api/mcp/token', async (req) => {
+    await accounts.revokeMcpToken(me(req).id);
+    return { ok: true };
+  });
+  // the open tab: event stream of calls, results back, "this tab is the one I'm using"
+  app.get('/api/mcp/live', (req, reply) => {
+    reply.hijack();
+    const conn = relay.open(me(req).id, reply.raw);
+    req.raw.on('close', () => relay.close(conn));
+  });
+  app.post('/api/mcp/result', async (req) => {
+    const b = body(req);
+    return { ok: relay.result(me(req).id, String(b.id ?? ''), b.result) };
+  });
+  app.post('/api/mcp/active', async (req) => {
+    relay.touch(String(body(req).conn ?? ''), me(req).id);
     return { ok: true };
   });
 

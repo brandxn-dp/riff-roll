@@ -48,7 +48,8 @@ export async function buildServer(opts: ServerOptions): Promise<FastifyInstance>
   if (opts.basicAuth) {
     const expected = 'Basic ' + Buffer.from(opts.basicAuth).toString('base64');
     app.addHook('onRequest', async (req, reply) => {
-      if (req.url === '/api/health') return;
+      // /mcp has its own token (Claude can't send two Authorization headers)
+      if (req.url === '/api/health' || req.url.split('?')[0] === '/mcp') return;
       const got = req.headers.authorization ?? '';
       if (!safeEqual(got, expected)) {
         reply.header('WWW-Authenticate', 'Basic realm="Riff Roll"').code(401).send('Authentication required');

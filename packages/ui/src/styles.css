@@ -2811,3 +2811,96 @@ body.resizing {
     display: none;
   }
 }
+
+/* note colour palettes */
+.pal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.pal-swatch {
+  display: flex;
+  height: 22px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pal-swatch i {
+  flex: 1;
+}
+.pal-swatch.wide {
+  width: 180px;
+}
+.pal-custom {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px 10px;
+  margin: 10px 0 2px;
+}
+.pal-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.pal-pick input {
+  width: 30px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: none;
+}
+
+/* Settings → Claude */
+.mcp-snippet {
+  margin: 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--deep);
+  overflow: hidden;
+}
+.mcp-snippet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--mute);
+}
+.mcp-snippet pre {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+.mcp-url {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--raise);
+  word-break: break-all;
+}
+.mcp-port {
+  width: 80px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  padding: 0 6px;
+}
+.mcp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line-hi);
+}
+.mcp-dot.on {
+  background: #43b562;
+  box-shadow: 0 0 6px #43b562;
+}

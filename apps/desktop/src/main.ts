@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { loadWindowState, trackWindowState } from './window-state';
 import { buildMenu, type RecentSong } from './menu';
+import { initMcp } from './mcp';
 import { autoCheckEnabled, checkForUpdatesNow, initUpdater, setAutoCheck, updatesSupported } from './updater';
 import {
   finalizeUserInstrument,
@@ -247,6 +248,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     registerAppProtocol();
     registerIpc();
+    initMcp();
     ipcMain.handle('file:read-path', async (_e, p: string) => {
       if (!p.endsWith('.riff')) throw new Error('only .riff files');
       return { path: p, name: path.basename(p), data: new Uint8Array(await readFile(p)) };

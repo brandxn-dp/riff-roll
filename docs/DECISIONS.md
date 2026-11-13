@@ -429,3 +429,25 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
 - **Lanes**: velocity and pedal lanes hide separately and their sizes are remembered per device; the splitter above
   the lower panel sets the tab line spacing (the piano roll takes the rest). Drum lanes stretch to fill the editor
   (up to 2.5× their zoom height) instead of leaving empty space.
+
+## Claude over MCP, note palettes (0.3.4)
+
+- **The editor runs the tools.** Tool calls are executed in the page against the live store
+  (packages/ui/src/mcp/tools.ts), not on files: changes appear instantly, share the user's undo history (one step
+  per call, "Claude: …"), autosave, and never race the user's own saves. The desktop main process and the server
+  only carry calls in and results out. Tool definitions and the JSON-RPC handling live in
+  apps/server/src/mcp/protocol.ts (the server can't import the TypeScript core at runtime; the desktop bundles it);
+  a UI test checks that every listed tool is implemented.
+- **Transport**: stateless streamable HTTP, POST `/mcp` answered with plain JSON (no sessions, no SSE towards the
+  client), which Claude Code supports directly and Claude Desktop through `mcp-remote`.
+- **Desktop**: off by default; binds 127.0.0.1 only, needs a bearer token (kept in `mcp.json` in app data), and
+  refuses requests with a non-local Origin (DNS rebinding). Calls reach the page over IPC.
+- **Server**: per-user tokens (only a sha-256 is stored, shown once, revocable, removed with the user). Each signed-in
+  tab holds an event stream (`/api/mcp/live`); a call goes to the user's most recently used tab and the result comes
+  back by POST. No tab open → a clear error for Claude. `/mcp` is exempt from HTTP basic auth (it has its own
+  token).
+- **Positions for the model** are bar/beat (1-based, beats in quarter notes) and lengths in quarter notes, with ticks
+  as an option; on guitar/bass, string 1 is the highest string as in tab. Errors come back as readable tool errors.
+- **Palettes**: 8 string colours (roles 8th string … high e) per palette; drum and new-track colours are drawn from
+  them so everything matches. Applied by mutating the shared tables (ROLE_COLORS, TRACK_COLORS, drum colours) and
+  repainting. Piano roll notes can be coloured by string, track, velocity or pitch class.

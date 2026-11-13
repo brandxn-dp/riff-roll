@@ -46,6 +46,8 @@ export interface SongEntry {
 interface AccountsFile {
   users: User[];
   sessions: Record<string, Session>;
+  /** Claude (MCP) access tokens: sha-256 of the token → owner. One per user. */
+  mcp: Record<string, { userId: string; createdAt: string }>;
 }
 interface LibraryFile {
   songs: Record<string, SongEntry>;
@@ -116,6 +118,7 @@ export class Accounts {
     const acc = await JsonFile.load<AccountsFile>(path.join(dir, 'accounts.json'), {
       users: [],
       sessions: {},
+      mcp: {},
     });
     const lib = await JsonFile.load<LibraryFile>(path.join(dir, 'library.json'), { songs: {}, recent: {} });
     return new Accounts(acc, lib);
@@ -219,6 +222,8 @@ export class Accounts {
       }
     }
     delete this.lib.data.recent[userId];
+    for (const [k, t] of Object.entries(this.acc.data.mcp))
+      if (t.userId === userId) delete this.acc.data.mcp[k];
     await Promise.all([this.acc.save(), this.lib.save()]);
   }
 
@@ -241,6 +246,31 @@ export class Accounts {
     if (!s || s.expires < Date.now()) return null;
     return this.user(s.userId) ?? null;
   }
+  // ---------------- Claude (MCP) tokens ----------------
+  /** A new token for a user (replaces their old one). Only its hash is kept; the token is shown once. */
+  async createMcpToken(userId: string): Promise<string> {
+    if (!this.user(userId)) throw new HttpError(404, 'No such user.');
+    await this.revokeMcpToken(userId, false);
+    const token = 'rr_' + randomBytes(24).toString('base64url');
+    this.acc.data.mcp[Accounts.tokenKey(token)] = { userId, createdAt: new Date().toISOString() };
+    await this.acc.save();
+    return token;
+  }
+  mcpTokenInfo(userId: string): { createdAt: string } | null {
+    const t = Object.values(this.acc.data.mcp).find((x) => x.userId === userId);
+    return t ? { createdAt: t.createdAt } : null;
+  }
+  async revokeMcpToken(userId: string, persist = true) {
+    for (const [k, t] of Object.entries(this.acc.data.mcp))
+      if (t.userId === userId) delete this.acc.data.mcp[k];
+    if (persist) await this.acc.save();
+  }
+  mcpUser(token: string | undefined): User | null {
+    if (!token) return null;
+    const t = this.acc.data.mcp[Accounts.tokenKey(token)];
+    return t ? (this.user(t.userId) ?? null) : null;
+  }
+
   /** Sign a user out on every device. */
   async endSessionsOf(userId: string) {
     if (!this.user(userId)) throw new HttpError(404, 'No such user.');

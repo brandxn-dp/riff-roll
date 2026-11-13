@@ -42,6 +42,7 @@ function Techs({ track, notes, mobile }: { track: Track; notes: Note[]; mobile: 
 }
 
 export function Inspector() {
+  useStore((s) => s.themeRev); // string colours follow the palette
   const mobile = useStore((s) => s.layout === 'mobile');
   const song = useStore((s) => s.song);
   const track = useStore((s) => currentTrack(s));

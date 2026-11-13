@@ -34,6 +34,7 @@ import { MobileApp } from './components/mobile/MobileApp';
 import { installLayoutWatcher } from './device';
 import { Settings } from './components/Settings';
 import { installTheme } from './theme';
+import { installMcp } from './mcp/connect';
 import { useSettings } from './settings';
 
 export function App() {
@@ -62,9 +63,11 @@ export function App() {
     const offKeys = installShortcuts();
     const offLayout = installLayoutWatcher();
     const offTheme = installTheme();
+    const offMcp = installMcp();
     return () => {
       offLayout();
       offTheme();
+      offMcp();
       offFiles();
       offMidi();
       offKeys();
