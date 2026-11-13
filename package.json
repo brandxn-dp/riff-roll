@@ -1,7 +1,7 @@
 {
   "name": "riff-roll",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "description": "Songwriting app for rock bands: piano roll to tab, pedal stomps, sampled playback.",
   "packageManager": "pnpm@10.12.1",
