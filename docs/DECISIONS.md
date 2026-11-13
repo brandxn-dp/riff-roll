@@ -404,3 +404,28 @@ the main process (`recent:set`), which rebuilds the native menu; it updates on s
 deleting. A song you save counts as recently opened (new songs, imports and the example included), matching what
 the server already did. The in-app File menu shows the five most recent too. "Open Project Folder" (native File
 menu, in-app File menu and the launch screen menu, desktop only) opens the songs folder in Explorer/Finder.
+
+## Settings, themes, keymap, admin panel (0.3.3)
+
+- **Settings live per device** (`riffroll.settings` in localStorage): they describe this screen, these speakers and
+  this keyboard, not the song or the account, so they are not synced through the server.
+- **Themes**: one palette (bg, panel, raise, line, ink, mute, tone colours) drives both the CSS variables and the
+  canvas colour table `COL`, which theme.ts mutates in place; the canvases repaint on a `themeRev` bump. The other
+  canvas colours (key rows, beat lines, selection) are mixed from the palette, so a new theme is ten colours.
+  Track/string colours are song data and stay as they are. alphaTab takes its colours once, so the notation view is
+  rebuilt when the theme changes; it can also stay black-on-white regardless of theme.
+- **Audio "driver" settings**: web audio can only pick an output device (`AudioContext.setSinkId`, Chromium and
+  Electron), a latency hint and a sample rate. Latency and rate are fixed when the AudioContext is made, so changing
+  them restarts the engine. ASIO is not available to Chromium; the settings page says so and how to get low latency
+  through WASAPI instead.
+- **Keymap**: rebindable actions (keymap.ts) with default combos; overrides are stored per action. Combos are
+  "Ctrl+Shift+Z" with Ctrl meaning Cmd on a Mac and shifted symbols written as the symbol ("?"). Binding a combo
+  that another action uses moves it. Tab entry keys, mouse gestures and the global view's bar keys stay fixed; the
+  cheat sheet lists both. The arrow keys move notes even while the tab cursor is active when Shift or Ctrl is held
+  and notes are selected (plain arrows still move the cursor, as in Guitar Pro).
+- **Admin panel**: `GET /api/admin/stats` (counts from the library, live sessions, memory, version) and
+  `PUT /api/admin/settings` for a runtime sign-up switch saved in `server-settings.json` (`null` goes back to
+  `RIFFROLL_SIGNUP`); `POST /api/users/:id/sign-out` ends someone's sessions. All admin-only.
+- **Lanes**: velocity and pedal lanes hide separately and their sizes are remembered per device; the splitter above
+  the lower panel sets the tab line spacing (the piano roll takes the rest). Drum lanes stretch to fill the editor
+  (up to 2.5× their zoom height) instead of leaving empty space.

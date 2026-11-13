@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildServer } from './app.js';
 import { fetchInstruments, installedIds, readManifest, type FetchProgress } from './instruments/fetch.js';
@@ -15,6 +15,13 @@ const instrumentsDir = process.env.INSTRUMENTS_DIR ?? path.join(repoRoot, 'instr
 const bundledDir = process.env.BUNDLED_INSTRUMENTS_DIR;
 const manifestPath = process.env.MANIFEST_PATH ?? path.join(repoRoot, 'instruments/manifest.json');
 
+let version: string | undefined;
+try {
+  version = JSON.parse(readFileSync(path.join(here, '../package.json'), 'utf8')).version;
+} catch {
+  /* not fatal */
+}
+
 let status: FetchProgress = { state: 'ready', done: [] };
 
 const app = await buildServer({
@@ -26,6 +33,7 @@ const app = await buildServer({
   resetPassword: process.env.RIFFROLL_RESET_PASSWORD || undefined,
   logger: true,
   instrumentStatus: () => status,
+  version,
 });
 
 await app.listen({ port, host });

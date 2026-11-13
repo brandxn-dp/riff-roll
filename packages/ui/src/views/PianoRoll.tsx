@@ -340,7 +340,7 @@ export function PianoRoll() {
         if (x > w || x < KEYS_W - 200) continue;
         c.font = '700 12px ' + DISP;
         const lw = c.measureText(sec.name.toUpperCase()).width;
-        c.fillStyle = '#3b4250';
+        c.fillStyle = COL.chip;
         rr(c, x + 22, 3, lw + 10, RULER_H - 9, 3);
         c.fill();
         c.fillStyle = COL.ink;
@@ -360,7 +360,7 @@ export function PianoRoll() {
           lx1 = tickToX(a, st.song.loop.end);
         c.fillStyle = 'rgba(95,209,124,0.22)';
         c.fillRect(lx0, 0, lx1 - lx0, RULER_H - 3);
-        c.fillStyle = '#5fd17c';
+        c.fillStyle = COL.ok;
         c.fillRect(lx0, 0, 3, RULER_H - 3);
         c.fillRect(lx1 - 3, 0, 3, RULER_H - 3);
         // grab handles at the edges
@@ -390,14 +390,14 @@ export function PianoRoll() {
         const p = range.hi - r,
           y = gy0 + r * RH,
           bk = BLACK[p % 12];
-        c.fillStyle = bk ? '#14161b' : '#262a33';
+        c.fillStyle = bk ? COL.keyBlack : COL.keyWhite;
         c.fillRect(0, y, KEYS_W - 1, RH - 1);
         if (!keyChromatic && inScale(p, keyScale)) {
           c.fillStyle = p % 12 === keyScale.tonic ? COL.dist : 'rgba(138,164,200,0.7)';
           c.fillRect(0, y + 1, 2, RH - 3);
         }
         c.font = (p % 12 === 0 ? '600 ' : '500 ') + '10px ' + MONO;
-        c.fillStyle = bk ? COL.mute : p % 12 === 0 ? COL.ink : '#b9bfcb';
+        c.fillStyle = bk ? COL.keyBlackInk : p % 12 === 0 ? COL.ink : COL.keyInk;
         c.fillText(pitchName(p), 5, y + RH / 2);
         for (let s = 0; s < open.length; s++)
           if (open[s] === p) {
@@ -490,6 +490,8 @@ export function PianoRoll() {
       const t = currentTrack(st);
       if (!t) return;
       const p = pt(e);
+      // working in the roll: arrow keys belong to the selected notes, not the tab cursor
+      if (st.tabCursor && p.ly >= RULER_H) st.set({ tabCursor: null });
       if (e.pointerType === 'touch') {
         tapStart = {
           x: e.clientX,

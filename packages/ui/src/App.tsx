@@ -32,6 +32,9 @@ import { installShortcuts } from './shortcuts';
 import { installAudio } from './audio-setup';
 import { MobileApp } from './components/mobile/MobileApp';
 import { installLayoutWatcher } from './device';
+import { Settings } from './components/Settings';
+import { installTheme } from './theme';
+import { useSettings } from './settings';
 
 export function App() {
   const [storage, setStorage] = useState<StorageAdapter | null>(null);
@@ -43,8 +46,13 @@ export function App() {
   const screen = useStore((s) => s.screen);
   const user = useStore((s) => s.user);
   const paletteOpen = useStore((s) => s.palette);
+  const themeRev = useStore((s) => s.themeRev);
+  const uiScale = useSettings((s) => s.uiScale);
+  // desktop app: interface size (Settings → General)
+  useEffect(() => {
+    window.riffroll?.setZoom?.(uiScale / 100);
+  }, [uiScale]);
   const [palW, setPalW] = usePanelSize('palette');
-  const [rollH, setRollH] = usePanelSize('roll');
 
   useEffect(() => {
     detectStorage().then(setStorage);
@@ -53,8 +61,10 @@ export function App() {
     const offMidi = installMidi();
     const offKeys = installShortcuts();
     const offLayout = installLayoutWatcher();
+    const offTheme = installTheme();
     return () => {
       offLayout();
+      offTheme();
       offFiles();
       offMidi();
       offKeys();
@@ -72,6 +82,7 @@ export function App() {
       {modal === 'about' && <About />}
       {modal === 'tone' && <ToneEditor />}
       {modal === 'instruments' && <Instruments />}
+      {modal === 'settings' && <Settings />}
     </>
   );
   if (screen === 'loading') return <div className="auth-screen" aria-busy="true" />;
@@ -113,7 +124,6 @@ export function App() {
         className="body"
         style={{
           ['--pal-w' as string]: palW ? palW + 'px' : undefined,
-          ['--roll-h' as string]: rollH ? rollH + 'px' : undefined,
         }}
       >
         <EditPalette />
@@ -127,11 +137,12 @@ export function App() {
             onSize={setPalW}
           />
         )}
-        <main className={'main' + (rollH ? ' roll-sized' : '')}>
+        <main className="main">
           <DocBanner />
           <SongBar />
           {view === 'notation' ? (
-            <NotationView />
+            // rebuilt when the theme changes (alphaTab takes its colours once)
+            <NotationView key={'n' + themeRev} />
           ) : trackType === 'drums' ? (
             <DrumGrid />
           ) : (
@@ -140,11 +151,20 @@ export function App() {
               {showRoll && (
                 <Splitter
                   axis="y"
-                  label="Piano roll height"
-                  size={() => measure('.cvwrap.roll', 'height')}
-                  min={120}
-                  max={Math.max(200, window.innerHeight - 260)}
-                  onSize={setRollH}
+                  invert
+                  label="Tab size (the piano roll takes the rest)"
+                  size={() => measure('.cvwrap.lower', 'height')}
+                  min={40}
+                  max={Math.max(200, window.innerHeight - 300)}
+                  onSize={(v) => {
+                    // the tab grows or shrinks (string spacing); the roll fills whatever is left
+                    const st = useStore.getState();
+                    if (v == null) return st.setLanes({ ls: 15 });
+                    const n = Math.max(2, currentTrack(st)?.tuning.strings.length ?? 6);
+                    const cur = measure('.cvwrap.lower', 'height');
+                    const ls = Math.round(Math.max(11, Math.min(32, st.lanes.ls + (v - cur) / (n - 1))));
+                    if (ls !== st.lanes.ls) st.setLanes({ ls });
+                  }}
                 />
               )}
               <LowerPanel showVelocity={showRoll} showTab={showTab} />

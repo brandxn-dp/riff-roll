@@ -20,6 +20,12 @@ export interface EngineOptions {
   gateWorkletUrl?: string;
   onEnded?: () => void;
   onStatus?: (msg: string) => void;
+  /** 'interactive' (lowest latency), 'balanced', 'playback' (fewest dropouts), or seconds */
+  latencyHint?: AudioContextLatencyCategory | number;
+  /** force a sample rate (otherwise the output device's) */
+  sampleRate?: number;
+  /** output device id from enumerateDevices ('' = system default) */
+  sinkId?: string;
 }
 
 const LOOKAHEAD = 0.12; // seconds scheduled ahead of the audio clock
@@ -67,8 +73,19 @@ export class AudioEngine {
   }
 
   static async create(opts: EngineOptions): Promise<AudioEngine> {
-    const ctx = new AudioContext({ latencyHint: 'interactive' });
+    let ctx: AudioContext;
+    try {
+      ctx = new AudioContext({
+        latencyHint: opts.latencyHint ?? 'interactive',
+        ...(opts.sampleRate ? { sampleRate: opts.sampleRate } : {}),
+      });
+    } catch (err) {
+      // an unsupported sample rate: fall back to the device's own
+      console.warn('audio settings not supported, using defaults:', err);
+      ctx = new AudioContext({ latencyHint: opts.latencyHint ?? 'interactive' });
+    }
     const e = new AudioEngine(ctx, opts);
+    if (opts.sinkId) await e.setOutput(opts.sinkId).catch((err) => console.warn('output device:', err));
     if (opts.gateWorkletUrl && ctx.audioWorklet) {
       try {
         await ctx.audioWorklet.addModule(opts.gateWorkletUrl);
@@ -81,6 +98,18 @@ export class AudioEngine {
   }
 
   /** Output latency the user actually hears, in ms. */
+  /** Send the sound to another output device ('' = system default). Chromium / Electron only. */
+  async setOutput(sinkId: string) {
+    const c = this.ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    if (!c.setSinkId) throw new Error('This browser can’t choose an output device.');
+    await c.setSinkId(sinkId);
+  }
+
+  /** What the device is actually running at, for the audio settings. */
+  get info() {
+    return { sampleRate: this.ctx.sampleRate, latencyMs: this.latencyMs, state: this.ctx.state };
+  }
+
   get latencyMs(): number {
     const c = this.ctx as AudioContext & { outputLatency?: number };
     return Math.round(((c.baseLatency ?? 0) + (c.outputLatency ?? 0)) * 1000);

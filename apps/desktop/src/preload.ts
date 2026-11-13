@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 
 // Narrow API: no generic ipcRenderer access is exposed to the page.
 contextBridge.exposeInMainWorld('riffroll', {
@@ -23,6 +23,13 @@ contextBridge.exposeInMainWorld('riffroll', {
       ipcRenderer.invoke('dialog:save', suggested, data, ext),
   },
   readPath: (p: string) => ipcRenderer.invoke('file:read-path', p),
+  /** interface size (Settings → General), 1 = 100 % */
+  setZoom: (f: number) => webFrame.setZoomFactor(Math.max(0.5, Math.min(2, Number(f) || 1))),
+  updates: {
+    state: () => ipcRenderer.invoke('updates:state'),
+    setAuto: (on: boolean) => ipcRenderer.invoke('updates:set-auto', on),
+    check: () => ipcRenderer.invoke('updates:check'),
+  },
   onMenuCommand: (fn: (cmd: string) => void) => {
     const h = (_e: unknown, cmd: string) => fn(cmd);
     ipcRenderer.on('menu:command', h);

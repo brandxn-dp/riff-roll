@@ -215,6 +215,7 @@ function Sheet() {
         {section(
           'App',
           <div className="m-items">
+            {item('Settings', () => st.set({ modal: 'settings' }))}
             {item('Instruments', () => st.set({ modal: 'instruments' }))}
             {item('About & credits', () => st.set({ modal: 'about' }))}
             <label className="field">
@@ -260,6 +261,7 @@ function Toast() {
 
 export function MobileApp({ modals }: { modals: ReactNode }) {
   const view = useStore((s) => s.view);
+  const themeRev = useStore((s) => s.themeRev);
   const type = useStore((s) => currentTrack(s)?.type);
   const tabCursor = useStore((s) => s.tabCursor);
   const editingTab = !!tabCursor && !!type && isFretted(type) && (view === 'split' || view === 'tab');
@@ -270,7 +272,7 @@ export function MobileApp({ modals }: { modals: ReactNode }) {
       <DocBanner />
       <main className="main">
         {view === 'notation' ? (
-          <NotationView />
+          <NotationView key={'n' + themeRev} />
         ) : type === 'drums' ? (
           <DrumGrid />
         ) : (

@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { registerKeyHandler } from '../shortcuts';
+import { registerActions } from '../shortcuts';
 import {
   copyAsciiTab,
   exportMidi,
@@ -45,6 +45,12 @@ const run = (fn: () => unknown) =>
     .then(fn)
     .catch((e) => useStore.getState().set({ status: `Error: ${(e as Error).message}` }));
 
+/** Keyboard actions that only make sense with a song open; false lets the key through elsewhere. */
+const editorOnly = (fn: () => unknown) => () => {
+  if (useStore.getState().screen !== 'editor') return false;
+  run(fn);
+};
+
 /** File keyboard shortcuts, desktop menu commands, autosave and session restore. */
 export function installFileActions(): () => void {
   const offs: (() => void)[] = [];
@@ -52,17 +58,12 @@ export function installFileActions(): () => void {
   offs.push(installAutosave());
 
   offs.push(
-    registerKeyHandler((e) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod || useStore.getState().screen !== 'editor') return false;
-      const k = e.key.toLowerCase();
-      if (k === 's') run(() => saveProject());
-      else if (k === 'o') run(goHome);
-      else if (k === 'n' && !e.shiftKey) run(newProject);
-      else if (k === 'p') run(() => printScore());
-      else if (k === 'c' && e.shiftKey) run(copyAsciiTab);
-      else return false;
-      return true;
+    registerActions({
+      save: editorOnly(() => saveProject()),
+      home: editorOnly(goHome),
+      new: editorOnly(newProject),
+      print: editorOnly(() => printScore()),
+      ascii: editorOnly(copyAsciiTab),
     }),
   );
 
@@ -97,6 +98,7 @@ export function installFileActions(): () => void {
           'edit:redo': st.redo,
           'help:shortcuts': () => st.set({ modal: 'shortcuts' }),
           'help:about': () => st.set({ modal: 'about' }),
+          'app:settings': () => st.set({ modal: 'settings' }),
         };
         if (map[cmd]) run(map[cmd]);
       }),

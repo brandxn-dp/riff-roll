@@ -97,10 +97,15 @@ export function DrumGrid() {
       wrap = wrapRef.current!;
     let drag: Drag | null = null;
     const ppt = () => pxPerTick(useStore.getState().zoom);
-    const gridH = DRUM_LANES.length * RH;
+    const baseRH = RH;
+    let gridH = DRUM_LANES.length * RH;
 
     function layout() {
       const st = useStore.getState();
+      // lanes stretch to fill the editor's height (never smaller than the zoom level's lane height)
+      const fit = Math.floor((sc.clientHeight - RULER_H - VEL_H - 14) / DRUM_LANES.length);
+      RH = Math.max(baseRH, Math.min(baseRH * 2.5, fit));
+      gridH = DRUM_LANES.length * RH;
       sizer.style.width = LW + songEnd(st.song) * ppt() + 40 + 'px';
       sizer.style.height = RULER_H + gridH + VEL_H + 8 + 'px';
       if (Math.abs(sc.scrollLeft - st.scrollX) > 1) sc.scrollLeft = st.scrollX;
@@ -129,7 +134,7 @@ export function DrumGrid() {
       // lane rows
       DRUM_LANES.forEach((l, i) => {
         const y = gy0 + i * RH;
-        c.fillStyle = i === laneRef.current ? '#232833' : i % 2 ? COL.rowB : COL.rowW;
+        c.fillStyle = i === laneRef.current ? COL.laneHi : i % 2 ? COL.rowB : COL.rowW;
         c.fillRect(xOf(0), y, end * p, RH);
         const prev = DRUM_LANES[i - 1];
         c.fillStyle = prev && prev.piece !== l.piece ? COL.cLine : COL.rowLine;
@@ -190,7 +195,7 @@ export function DrumGrid() {
       }
       // velocity strip for the selected lane
       const vy = gy0 + gridH + 8;
-      c.fillStyle = '#16181e';
+      c.fillStyle = COL.sunk;
       c.fillRect(xOf(0), vy, end * p, VEL_H);
       const sel = DRUM_LANES[laneRef.current];
       for (let i = lowerBound(t.hits, t0 - st.snap); i < t.hits.length; i++) {
@@ -225,7 +230,7 @@ export function DrumGrid() {
       if (st.song.loop?.on) {
         c.fillStyle = 'rgba(95,209,124,0.22)';
         c.fillRect(xOf(st.song.loop.start), 0, (st.song.loop.end - st.song.loop.start) * p, RULER_H - 3);
-        c.fillStyle = '#5fd17c';
+        c.fillStyle = COL.ok;
         c.fillRect(xOf(st.song.loop.start), 0, 3, RULER_H - 3);
         c.fillRect(xOf(st.song.loop.end) - 3, 0, 3, RULER_H - 3);
       }
@@ -250,11 +255,11 @@ export function DrumGrid() {
       c.clip();
       DRUM_LANES.forEach((l, i) => {
         const y = gy0 + i * RH;
-        c.fillStyle = i === laneRef.current ? '#2f3542' : '#1f232b';
+        c.fillStyle = i === laneRef.current ? COL.laneLabelHi : COL.laneLabel;
         c.fillRect(0, y, LW - 1, RH - 1);
         c.fillStyle = PIECE_COL[l.piece];
         c.fillRect(0, y, 3, RH - 1);
-        c.fillStyle = i === laneRef.current ? COL.ink : '#b9bfcb';
+        c.fillStyle = i === laneRef.current ? COL.ink : COL.keyInk;
         c.font = '500 12px ' + BODY;
         c.textBaseline = 'middle';
         c.fillText(l.label, 9, y + RH / 2);

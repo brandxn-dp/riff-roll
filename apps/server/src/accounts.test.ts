@@ -165,6 +165,24 @@ describe('accounts', () => {
     expect((await bob.get('/api/projects')).statusCode).toBe(401);
   });
 
+  it('admin panel: stats, sign-up switch, sign a user out everywhere', async () => {
+    expect((await cat.get('/api/admin/stats')).statusCode).toBe(403);
+    const s = (await admin.get('/api/admin/stats')).json();
+    expect(s).toMatchObject({ users: 2, admins: 1, signup: false, songs: 2 });
+    expect(s.perUser.find((u: { username: string }) => u.username === 'ana')).toMatchObject({ songs: 2 });
+    expect((await cat.json('PUT', '/api/admin/settings', { signup: true })).statusCode).toBe(403);
+    expect((await admin.json('PUT', '/api/admin/settings', { signup: true })).json()).toEqual({
+      signup: true,
+    });
+    expect((await post('/api/auth/state', {})).statusCode).toBe(404); // GET only
+    expect((await app.inject({ url: '/api/auth/state' })).json().signup).toBe(true);
+    expect((await post('/api/auth/signup', { username: 'eve', password: 'secret6' })).statusCode).toBe(200);
+    await admin.json('PUT', '/api/admin/settings', { signup: null });
+    expect((await post('/api/auth/signup', { username: 'fay', password: 'secret6' })).statusCode).toBe(403);
+    expect((await admin.json('POST', `/api/users/${catId}/sign-out`)).json().ended).toBeGreaterThan(0);
+    expect((await cat.get('/api/projects')).statusCode).toBe(401);
+  });
+
   it('signing out ends the session', async () => {
     await cat.json('POST', '/api/auth/logout');
     expect((await cat.get('/api/projects')).statusCode).toBe(401);

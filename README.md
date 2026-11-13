@@ -59,6 +59,14 @@ It runs two ways from one codebase: as a **Docker** web app and as a **desktop a
   (their changes save into your song; if two people save over each other, the second one is asked to reload or
   keep a copy). After signing in, a launch screen shows recently opened songs and all your songs.
 
+- **Settings** (File → Settings…, Ctrl+,): themes (Studio, Midnight, Ember, High contrast, Light, Paper, or
+  match the system) with six accent colours; audio output device, latency and sample rate; editable keyboard
+  shortcuts; starting grid and note length, note preview, follow playhead; interface size in the desktop app. Server
+  admins also get a **Server admin** page: version, uptime, users, songs and storage, a sign-up switch, and signing
+  a person out of every device.
+- **Lanes**: the velocity and pedal lanes under the piano roll can each be hidden and resized (Lanes menu, or drag
+  their edges); the bar count can be typed, and **＋ Bars** in the global view inserts 1, 2, 4, 8 or 16 bars.
+
 Press **?** in the app for the keyboard cheat sheet.
 
 ## Run with Docker
@@ -98,8 +106,9 @@ compose project name plus `_projects`; `docker volume ls` lists them.
 
 The first time you open the app it asks you to **create the first account**. That account is an admin, and it
 takes over any songs already on the server. Admins add everyone else under **your name → Manage users** (people
-can't sign themselves up unless you set `RIFFROLL_SIGNUP=open`). Each person sees only their own songs and the
-ones shared with them, even on the same computer or browser.
+can't sign themselves up unless you set `RIFFROLL_SIGNUP=open`, or switch sign-up on under **Settings → Server
+admin**; that switch is saved in `server-settings.json` and overrides the variable). Each person sees only their own
+songs and the ones shared with them, even on the same computer or browser.
 
 Accounts, sessions and sharing live in `accounts.json` and `library.json` next to the songs in the projects
 volume, so the usual backup covers them. Passwords are stored as scrypt hashes; sessions are HttpOnly cookies

@@ -77,7 +77,7 @@ export function drawTabMeta(c: CanvasRenderingContext2D, song: Song, a: TimeAxis
     c.font = '700 12px ' + DISP;
     const label = sec.name.toUpperCase();
     const lw = c.measureText(label).width;
-    c.fillStyle = '#3b4250';
+    c.fillStyle = COL.chip;
     rr(c, x, y - 8, lw + 10, 16, 3);
     c.fill();
     c.fillStyle = COL.ink;
@@ -306,7 +306,7 @@ export function drawTabCursor(
   const y = tabY + (n - 1 - cursor.string) * ls;
   const x = tickToX(a, cursor.tick);
   const wpx = Math.max(10, Math.min(len, songEnd(song) - cursor.tick) * a.ppt);
-  c.strokeStyle = '#8cb4ff';
+  c.strokeStyle = COL.cursor;
   c.lineWidth = 1.5;
   rr(c, x - 1, y - 8, wpx, 16, 3);
   c.stroke();

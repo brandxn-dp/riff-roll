@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  PPQ,
   setBars,
   setLoop,
   setTempos,
@@ -11,15 +10,8 @@ import {
   updateTrack,
   isFretted,
 } from '@riffroll/core';
-import { SNAPS, ZOOMS, ZOOMS_Y, barMap, currentTrack, useStore, type MainView } from '../store';
+import { NOTE_LENS, SNAPS, ZOOMS, ZOOMS_Y, barMap, currentTrack, useStore, type MainView } from '../store';
 import { togglePlay } from '../transport';
-
-const LENS = [
-  { label: '1/16', ticks: PPQ / 4 },
-  { label: '1/8', ticks: PPQ / 2 },
-  { label: '1/4', ticks: PPQ },
-  { label: '1/2', ticks: PPQ * 2 },
-];
 
 export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React.ReactNode }) {
   const song = useStore((s) => s.song);
@@ -38,6 +30,7 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
   useStore((s) => s.historyVersion);
   const st = useStore.getState();
   const [bpmText, setBpmText] = useState<string | null>(null);
+  const [barsText, setBarsText] = useState<string | null>(null);
   const bpm = song.tempos[0]?.bpm ?? 120;
 
   const commitBpm = () => {
@@ -268,7 +261,7 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           // on the desktop the note values live in the edit palette
           <div className="group" role="group" aria-label="New note length">
             <span className="glabel">Note</span>
-            {LENS.map((l) => (
+            {NOTE_LENS.map((l) => (
               <button
                 key={l.label}
                 aria-pressed={noteLen === l.ticks}
@@ -284,7 +277,27 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
           <button aria-label="Fewer bars" onClick={() => st.exec(setBars(song.bars - 1))}>
             −
           </button>
-          <output>{song.bars}</output>
+          <input
+            className="bars-input"
+            type="number"
+            min={1}
+            max={2000}
+            aria-label="Number of bars"
+            value={barsText ?? song.bars}
+            onChange={(e) => setBarsText(e.target.value)}
+            onBlur={() => {
+              const v = Math.round(Number(barsText));
+              if (barsText != null && v >= 1 && v !== song.bars) st.exec(setBars(v));
+              setBarsText(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              if (e.key === 'Escape') {
+                setBarsText(null);
+                (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+          />
           <button aria-label="More bars" onClick={() => st.exec(setBars(song.bars + 1))}>
             +
           </button>

@@ -266,6 +266,53 @@ function TrackRow({ i, onMenu }: { i: number; onMenu: (i: number, x: number, y: 
   );
 }
 
+/** Insert 1/2/4/8/16 empty bars before the selected (or cursor) bar, or add them at the end. */
+function InsertBars() {
+  const [open, setOpen] = useState(false);
+  const add = (n: number, atEnd: boolean) => {
+    const st = useStore.getState();
+    const bar = st.barSel ? Math.min(st.barSel.b0, st.barSel.b1) : barMap(st.song).barAtTick(st.cursor).index;
+    const at = atEnd ? st.song.bars : bar;
+    st.exec(insertBars(at, n, undefined, atEnd ? 'Add bars' : 'Insert bars'));
+    status(
+      atEnd ? `Added ${plural(n, 'bar')} at the end` : `Inserted ${plural(n, 'bar')} before bar ${bar + 1}`,
+    );
+    setOpen(false);
+  };
+  return (
+    <span className="gv-add">
+      <button
+        className="gv-insert"
+        aria-expanded={open}
+        title="Insert empty bars (every track)"
+        onClick={() => setOpen(!open)}
+      >
+        ＋ Bars ▾
+      </button>
+      {open && (
+        <span className="gv-addmenu" role="menu">
+          <span className="menu-label">Insert before the selected bar</span>
+          <span className="gv-chips">
+            {[1, 2, 4, 8, 16].map((n) => (
+              <button key={n} role="menuitem" onClick={() => add(n, false)}>
+                {n}
+              </button>
+            ))}
+          </span>
+          <span className="menu-label">Add at the end</span>
+          <span className="gv-chips">
+            {[1, 2, 4, 8, 16].map((n) => (
+              <button key={n} role="menuitem" onClick={() => add(n, true)}>
+                {n}
+              </button>
+            ))}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 function AddTrack() {
   const [open, setOpen] = useState(false);
   const add = (type: TrackType) => {
@@ -389,14 +436,14 @@ export function GlobalView() {
         const y = RULER + i * RH - sy;
         if (y > h || y + RH < RULER) return;
         if (t.id === st.trackId) {
-          c.fillStyle = '#1d212a';
+          c.fillStyle = COL.cell;
           c.fillRect(0, y, w, RH);
         }
         const f = filledRef.current.get(t.id);
         for (let b = b0; b <= b1; b++) {
           const x = b * CW - sx;
           const has = f?.has(b);
-          c.fillStyle = has ? alpha(t.color, t.mute ? 0.35 : 0.9) : '#262a33';
+          c.fillStyle = has ? alpha(t.color, t.mute ? 0.35 : 0.9) : COL.raise;
           c.fillRect(x + 1, y + 2, CW - 2, RH - 4);
         }
       });
@@ -440,7 +487,7 @@ export function GlobalView() {
         if (x > w || x < -200) continue;
         c.font = '700 10px ' + DISP;
         const tw = c.measureText(sec.name.toUpperCase()).width;
-        c.fillStyle = '#3b4250';
+        c.fillStyle = COL.chip;
         rr(c, x + 1, 2, tw + 8, 11, 2);
         c.fill();
         c.fillStyle = COL.ink;
@@ -594,6 +641,7 @@ export function GlobalView() {
       if (s.song !== prev.song) layout();
       if (
         s.song !== prev.song ||
+        s.themeRev !== prev.themeRev ||
         s.barSel !== prev.barSel ||
         s.cursor !== prev.cursor ||
         s.trackId !== prev.trackId ||
@@ -704,6 +752,7 @@ export function GlobalView() {
         <div className="gv-head">
           <AddTrack />
           <span className="gv-title">Tracks</span>
+          <InsertBars />
           <span className="gv-cols mute" aria-hidden="true">
             M S · Vol · Pan
           </span>

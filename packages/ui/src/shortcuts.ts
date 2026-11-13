@@ -12,6 +12,7 @@ import {
 import { currentTrack, useStore } from './store';
 import { togglePlay } from './transport';
 import { handleTabKey } from './tabEntry';
+import { actionFor } from './keymap';
 
 export interface Shortcut {
   keys: string;
@@ -19,30 +20,18 @@ export interface Shortcut {
   group: string;
 }
 
-/** Listed in the cheat sheet (press ?). FL Studio conventions in the piano roll, Guitar Pro in the tab. */
+/**
+ * Mouse and fixed keys for the cheat sheet (press ?). The rebindable keys come from keymap.ts.
+ * FL Studio conventions in the piano roll, Guitar Pro in the tab.
+ */
 export const SHORTCUTS: Shortcut[] = [
-  { group: 'Transport', keys: 'Space', what: 'Play / stop' },
   { group: 'Transport', keys: 'Click ruler', what: 'Set playback start' },
-  { group: 'Edit', keys: 'Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y', what: 'Undo / redo' },
-  { group: 'Edit', keys: 'Ctrl+C / Ctrl+X / Ctrl+V', what: 'Copy / cut / paste at the start marker' },
-  { group: 'Edit', keys: 'Ctrl+D', what: 'Duplicate selection after itself' },
-  { group: 'Edit', keys: 'Ctrl+A', what: 'Select all' },
-  { group: 'Edit', keys: 'Delete / Backspace', what: 'Delete selection' },
-  { group: 'Edit', keys: 'Q', what: 'Quantize selection (or whole track) to the snap grid' },
-  { group: 'Edit', keys: 'Esc', what: 'Clear selection' },
   { group: 'Piano roll', keys: 'Click', what: 'Add a note at the last-used length (drag to set length)' },
   { group: 'Piano roll', keys: 'Drag note / right edge', what: 'Move / resize' },
   { group: 'Piano roll', keys: 'Alt+drag', what: 'Duplicate and move' },
   { group: 'Piano roll', keys: 'Right-click (drag)', what: 'Delete notes' },
   { group: 'Piano roll', keys: 'Ctrl+drag / Shift+drag', what: 'Box select / add to selection' },
   { group: 'Piano roll', keys: 'Ctrl+click', what: 'Toggle a note in the selection' },
-  { group: 'Piano roll', keys: '← → (Ctrl: bar)', what: 'Move the selected notes one grid step' },
-  {
-    group: 'Piano roll',
-    keys: 'Shift+↑ ↓ / Ctrl+↑ ↓',
-    what: 'Move the selected notes a semitone / an octave',
-  },
-  { group: 'Drum grid', keys: '← → / ↑ ↓', what: 'Move the selected hits one grid step / one lane' },
   { group: 'Piano roll', keys: 'Ctrl+wheel / Alt+wheel', what: 'Zoom horizontally / vertically' },
   {
     group: 'Piano roll',
@@ -96,7 +85,6 @@ export const SHORTCUTS: Shortcut[] = [
   { group: 'Global view', keys: 'Delete / Ctrl+Delete', what: 'Clear the bars / delete them from the song' },
   { group: 'Global view', keys: 'Insert / Ctrl+D', what: 'Insert a bar / duplicate the selected bars' },
   { group: 'Global view', keys: 'Double-click a bar', what: 'Open that track at that bar' },
-  { group: 'Help', keys: '?', what: 'This cheat sheet' },
 ];
 
 const isTyping = (e: KeyboardEvent) => {
@@ -104,6 +92,57 @@ const isTyping = (e: KeyboardEvent) => {
   const tag = el?.tagName?.toLowerCase();
   return tag === 'input' || tag === 'select' || tag === 'textarea' || el?.isContentEditable;
 };
+
+/** FL Studio style moves: ←/→ one grid step (or a bar), ↑/↓ a semitone (drums: a lane), or an octave. */
+function move(dtSteps: number, dtBars: number, semis: number): boolean {
+  const st = useStore.getState();
+  const dt = dtSteps * st.snap + dtBars * st.song.ppq * 4;
+  if (currentTrack(st)?.type === 'drums') return nudgeHits(dt, -Math.sign(semis));
+  return nudge(dt, semis, Math.abs(semis) !== 12);
+}
+
+const toggle = (k: 'globalView' | 'palette') => {
+  const st = useStore.getState();
+  st.set({ [k]: !st[k] });
+};
+const modal = (m: NonNullable<ReturnType<typeof useStore.getState>['modal']>) => {
+  const st = useStore.getState();
+  st.set({ modal: st.modal === m ? null : m });
+};
+
+/** What each keymap action does. Files add theirs (save, open…) with registerActions. */
+const actions: Record<string, () => boolean | void> = {
+  play: togglePlay,
+  undo: () => useStore.getState().undo(),
+  redo: () => useStore.getState().redo(),
+  copy,
+  cut,
+  paste,
+  duplicate,
+  selectAll,
+  delete: deleteSelection,
+  quantize,
+  deselect: () => useStore.getState().select([]),
+  left: () => move(-1, 0, 0),
+  right: () => move(1, 0, 0),
+  barLeft: () => move(0, -1, 0),
+  barRight: () => move(0, 1, 0),
+  up: () => move(0, 0, 1),
+  down: () => move(0, 0, -1),
+  octUp: () => move(0, 0, 12),
+  octDown: () => move(0, 0, -12),
+  globalView: () => toggle('globalView'),
+  palette: () => toggle('palette'),
+  mixer: () => modal('mixer'),
+  settings: () => modal('settings'),
+  help: () => modal('shortcuts'),
+};
+export function registerActions(more: Record<string, () => boolean | void>) {
+  Object.assign(actions, more);
+  return () => {
+    for (const k of Object.keys(more)) if (actions[k] === more[k]) delete actions[k];
+  };
+}
 
 /** Extra handlers views can register (e.g. the tab editor's keyboard entry) — return true if handled. */
 const handlers: ((e: KeyboardEvent) => boolean)[] = [];
@@ -116,39 +155,28 @@ export function registerKeyHandler(h: (e: KeyboardEvent) => boolean) {
 }
 
 export function installShortcuts() {
+  // after choosing from a menu (snap, view, ghost…) hand the keyboard back to the editor, so arrows and
+  // shortcuts don't keep changing that menu
+  const onChange = (e: Event) => {
+    const el = e.target as HTMLElement;
+    if (el?.tagName === 'SELECT' && !el.closest('.modal')) setTimeout(() => el.blur(), 0);
+  };
+  document.addEventListener('change', onChange, true);
   const onKey = (e: KeyboardEvent) => {
     if (isTyping(e)) return;
     const st = useStore.getState();
     if (st.modal && e.key === 'Escape') return st.set({ modal: null });
     for (const h of handlers) if (h(e)) return e.preventDefault();
     if (e.code !== 'Space' && handleTabKey(e)) return e.preventDefault();
-    const mod = e.ctrlKey || e.metaKey;
-    const k = e.key.toLowerCase();
-    let handled = true;
-    if (e.code === 'Space') togglePlay();
-    else if (mod && k === 'z' && !e.shiftKey) st.undo();
-    else if (mod && ((k === 'z' && e.shiftKey) || k === 'y')) st.redo();
-    else if (mod && k === 'c') copy();
-    else if (mod && k === 'x') cut();
-    else if (mod && k === 'v') paste();
-    else if (mod && k === 'd') duplicate();
-    else if (mod && k === 'a') selectAll();
-    else if (!mod && (e.key === 'Delete' || e.key === 'Backspace')) deleteSelection();
-    else if (!mod && k === 'q') quantize();
-    else if (e.key === 'Escape') st.select([]);
-    else if (e.key === '?') st.set({ modal: st.modal === 'shortcuts' ? null : 'shortcuts' });
-    else if (e.key.startsWith('Arrow') && !e.altKey) {
-      // FL Studio style: ←/→ one grid step (Ctrl: a bar); ↑/↓ or Shift+↑/↓ a semitone (drums: a lane),
-      // Ctrl+↑/↓ an octave
-      const bar = st.song.ppq * 4;
-      const step = mod ? bar : st.snap;
-      const dt = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
-      const dir = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0;
-      if (currentTrack(st)?.type === 'drums') handled = nudgeHits(dt, -dir);
-      else handled = nudge(dt, dir * (mod ? 12 : 1), !mod);
-    } else handled = false;
-    if (handled) e.preventDefault();
+    const id = actionFor(e);
+    if (!id) return;
+    const fn = actions[id];
+    // an action returns false when it had nothing to do (e.g. arrows with nothing selected scroll instead)
+    if (fn && fn() !== false) e.preventDefault();
   };
   window.addEventListener('keydown', onKey);
-  return () => window.removeEventListener('keydown', onKey);
+  return () => {
+    window.removeEventListener('keydown', onKey);
+    document.removeEventListener('change', onChange, true);
+  };
 }

@@ -241,6 +241,57 @@ export class Accounts {
     if (!s || s.expires < Date.now()) return null;
     return this.user(s.userId) ?? null;
   }
+  /** Sign a user out on every device. */
+  async endSessionsOf(userId: string) {
+    if (!this.user(userId)) throw new HttpError(404, 'No such user.');
+    let n = 0;
+    for (const [k, s] of Object.entries(this.acc.data.sessions))
+      if (s.userId === userId) {
+        delete this.acc.data.sessions[k];
+        n++;
+      }
+    await this.acc.save();
+    return n;
+  }
+
+  /** Counts for the admin panel: songs and bytes per owner, live sessions per user. */
+  stats() {
+    const now = Date.now();
+    const per = new Map<string, { songs: number; bytes: number; sessions: number; shared: number }>();
+    const of = (id: string) => {
+      let p = per.get(id);
+      if (!p) per.set(id, (p = { songs: 0, bytes: 0, sessions: 0, shared: 0 }));
+      return p;
+    };
+    let bytes = 0;
+    const songs = Object.values(this.lib.data.songs);
+    for (const s of songs) {
+      const p = of(s.owner);
+      p.songs++;
+      p.bytes += s.size;
+      bytes += s.size;
+      if (Object.keys(s.shares).length) p.shared++;
+    }
+    let sessions = 0;
+    for (const s of Object.values(this.acc.data.sessions))
+      if (s.expires > now) {
+        sessions++;
+        of(s.userId).sessions++;
+      }
+    return {
+      users: this.acc.data.users.length,
+      admins: this.acc.data.users.filter((u) => u.admin).length,
+      songs: songs.length,
+      bytes,
+      sessions,
+      perUser: this.acc.data.users.map((u) => ({
+        ...publicUser(u),
+        createdAt: u.createdAt,
+        ...(per.get(u.id) ?? { songs: 0, bytes: 0, sessions: 0, shared: 0 }),
+      })),
+    };
+  }
+
   async endSession(token: string | undefined) {
     if (!token) return;
     delete this.acc.data.sessions[Accounts.tokenKey(token)];

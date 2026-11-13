@@ -14,6 +14,14 @@ export interface RiffRollBridge {
     /** feed the native File → Open Recent menu (0.3.2+) */
     setRecent?(list: { id: string; title: string }[]): void;
   };
+  /** interface size, 1 = 100 % (0.3.3+) */
+  setZoom?(factor: number): void;
+  /** auto-update preferences (0.3.3+) */
+  updates?: {
+    state(): Promise<{ supported: boolean; auto: boolean }>;
+    setAuto(on: boolean): Promise<void>;
+    check(): Promise<void>;
+  };
   [key: string]: unknown;
 }
 

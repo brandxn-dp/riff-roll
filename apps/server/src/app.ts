@@ -27,6 +27,8 @@ export interface ServerOptions {
   resetPassword?: string;
   /** Reports instrument download progress for the UI (first start without bundled instruments). */
   instrumentStatus?: () => unknown;
+  /** shown in the admin panel */
+  version?: string;
 }
 
 const MAX_PROJECT_BYTES = 512 * 1024 * 1024;

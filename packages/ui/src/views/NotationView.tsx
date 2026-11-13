@@ -4,6 +4,11 @@ import bravuraWoff2 from '@coderline/alphatab/font/Bravura.woff2?url';
 import bravuraWoff from '@coderline/alphatab/font/Bravura.woff?url';
 import { isFretted, songToAlphaTex, type TexBeatRef } from '@riffroll/core';
 import { currentTrack, useStore } from '../store';
+import { useSettings } from '../settings';
+import { isDark } from '../theme';
+
+/** Notation in the theme's colours, or black on white paper (Settings → Appearance). */
+export const notationDark = () => useSettings.getState().notationPaper !== 'light' && isDark();
 
 /** Settings shared by the on-screen view and printing. */
 export function alphaTabSettings(dark: boolean): Record<string, unknown> {
@@ -77,7 +82,7 @@ export function NotationView() {
   };
 
   useEffect(() => {
-    const settings = alphaTabSettings(true) as { display: Record<string, unknown> };
+    const settings = alphaTabSettings(notationDark()) as { display: Record<string, unknown> };
     if (useStore.getState().layout === 'mobile') settings.display.scale = 0.62;
     const api = new alphaTab.AlphaTabApi(hostRef.current!, settings as never);
     apiRef.current = api;
@@ -226,7 +231,7 @@ export function NotationView() {
   useEffect(positionCursor, [tabCursor]);
 
   return (
-    <div className="notation">
+    <div className={'notation' + (notationDark() ? '' : ' paper')}>
       {error && <div className="warn notation-msg">Notation: {error}</div>}
       {busy && !error && <div className="mute notation-msg">Rendering…</div>}
       <div className="notation-scroll">

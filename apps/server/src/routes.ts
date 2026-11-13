@@ -6,6 +6,7 @@ import path from 'node:path';
 import { riffTitle } from './riff-title.js';
 import { Accounts, HttpError, SESSION_DAYS, publicUser, type User } from './accounts.js';
 import type { ServerOptions } from './app.js';
+import { mergedIndex } from './instruments/user.js';
 
 const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
 const COOKIE = 'rr_session';
@@ -65,6 +66,16 @@ class Throttle {
 export async function registerAccounts(app: FastifyInstance, opts: ServerOptions) {
   const accounts = await Accounts.open(opts.projectsDir);
   const throttle = new Throttle();
+  const started = Date.now();
+  // settings an admin can change at runtime (override the environment variables)
+  const settingsFile = path.join(opts.projectsDir, 'server-settings.json');
+  let serverSettings: { signup?: boolean } = {};
+  try {
+    if (existsSync(settingsFile)) serverSettings = JSON.parse(await readFile(settingsFile, 'utf8'));
+  } catch (e) {
+    app.log.warn(`server-settings.json unreadable: ${(e as Error).message}`);
+  }
+  const signupOpen = () => serverSettings.signup ?? !!opts.openSignup;
   const projectFile = (id: string) => path.join(opts.projectsDir, `${id}.riff`);
 
   /** .riff files on disk that the library doesn't know yet, with their titles. */
@@ -137,7 +148,7 @@ export async function registerAccounts(app: FastifyInstance, opts: ServerOptions
   app.get('/api/auth/state', async (req) => ({
     accounts: true,
     setupNeeded: !accounts.hasUsers,
-    signup: !!opts.openSignup,
+    signup: signupOpen(),
     user: req.user ? publicUser(req.user) : null,
   }));
 
@@ -151,7 +162,7 @@ export async function registerAccounts(app: FastifyInstance, opts: ServerOptions
   });
 
   app.post('/api/auth/signup', async (req, reply) => {
-    if (!opts.openSignup) throw new HttpError(403, 'Ask an admin to create an account for you.');
+    if (!signupOpen()) throw new HttpError(403, 'Ask an admin to create an account for you.');
     if (!accounts.hasUsers) throw new HttpError(409, 'Set the server up first.');
     const b = body(req);
     const user = await accounts.createUser({
@@ -224,6 +235,42 @@ export async function registerAccounts(app: FastifyInstance, opts: ServerOptions
     const a = admin(req);
     await accounts.deleteUser(req.params.id, a.id);
     return { ok: true };
+  });
+
+  // ---------------- admin ----------------
+  app.get('/api/admin/stats', async (req) => {
+    admin(req);
+    const instruments = (await mergedIndex(opts.instrumentsDirs)).instruments.length;
+    const mem = process.memoryUsage();
+    return {
+      version: opts.version ?? 'unknown',
+      node: process.version,
+      platform: `${process.platform} ${process.arch}`,
+      uptime: Math.round((Date.now() - started) / 1000),
+      memory: mem.rss,
+      instruments,
+      signup: signupOpen(),
+      signupFromEnv: !!opts.openSignup,
+      basicAuth: !!opts.basicAuth,
+      ...accounts.stats(),
+    };
+  });
+
+  app.put('/api/admin/settings', async (req) => {
+    admin(req);
+    const b = body(req);
+    // true / false override RIFFROLL_SIGNUP; null goes back to it
+    if (typeof b.signup === 'boolean') serverSettings.signup = b.signup;
+    else if (b.signup === null) delete serverSettings.signup;
+    const tmp = settingsFile + '.tmp';
+    await writeFile(tmp, JSON.stringify(serverSettings, null, 1), { mode: 0o600 });
+    await rename(tmp, settingsFile);
+    return { signup: signupOpen() };
+  });
+
+  app.post<{ Params: { id: string } }>('/api/users/:id/sign-out', async (req) => {
+    admin(req);
+    return { ended: await accounts.endSessionsOf(req.params.id) };
   });
 
   // ---------------- songs ----------------

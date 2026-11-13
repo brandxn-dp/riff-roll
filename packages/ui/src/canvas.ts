@@ -26,7 +26,24 @@ export const COL = {
   unplayable: '#4a505d',
   select: 'rgba(120,170,255,0.18)',
   selectLine: 'rgba(140,180,255,0.8)',
+  /** the lane / row under the cursor */
+  laneHi: '#232833',
+  /** recessed strips (ruler, lane headers) */
+  sunk: '#16181e',
+  keyWhite: '#262a33',
+  keyBlack: '#14161b',
+  keyBlackInk: '#8a91a0',
+  keyInk: '#b9bfcb',
+  laneLabel: '#1f232b',
+  laneLabelHi: '#2f3542',
+  chip: '#3b4250',
+  cell: '#1d212a',
+  foot: '#0e1014',
+  ok: '#5fd17c',
+  cursor: '#8cb4ff',
 };
+/** Canvas colours; theme.ts swaps them for the chosen theme. */
+export type Colors = typeof COL;
 
 export const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
 export const BODY = '"IBM Plex Sans", system-ui, sans-serif';

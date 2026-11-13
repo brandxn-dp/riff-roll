@@ -84,3 +84,33 @@ export const setShare = (songId: string, userId: string, access: ShareAccess | n
       access,
     },
   );
+
+// ---------------- admin panel ----------------
+export interface AdminStats {
+  version: string;
+  node: string;
+  platform: string;
+  uptime: number;
+  memory: number;
+  instruments: number;
+  signup: boolean;
+  signupFromEnv: boolean;
+  basicAuth: boolean;
+  users: number;
+  admins: number;
+  songs: number;
+  bytes: number;
+  sessions: number;
+  perUser: (PublicUser & {
+    createdAt: string;
+    songs: number;
+    bytes: number;
+    sessions: number;
+    shared: number;
+  })[];
+}
+export const adminStats = () => api<AdminStats>('GET', './api/admin/stats');
+export const setServerSignup = (signup: boolean) =>
+  api<{ signup: boolean }>('PUT', './api/admin/settings', { signup });
+export const signOutEverywhere = (id: string) =>
+  api<{ ended: number }>('POST', `./api/users/${encodeURIComponent(id)}/sign-out`);

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { settings } from './settings';
 import type { PublicUser } from './account';
 import type { Access } from './storage/types';
 import {
@@ -27,6 +28,14 @@ export const SNAPS: { label: string; ticks: number }[] = [
   { label: '1/8T', ticks: PPQ / 3 },
   { label: '1/16T', ticks: PPQ / 6 },
   { label: 'Off', ticks: 1 },
+];
+
+/** Note lengths for new notes. */
+export const NOTE_LENS: { label: string; ticks: number }[] = [
+  { label: '1/16', ticks: PPQ / 4 },
+  { label: '1/8', ticks: PPQ / 2 },
+  { label: '1/4', ticks: PPQ },
+  { label: '1/2', ticks: PPQ * 2 },
 ];
 
 /** Horizontal zoom: pixels per 1/16 note. */
@@ -84,7 +93,10 @@ export interface UiState {
     | 'share'
     | 'users'
     | 'account'
-    | 'velocity';
+    | 'velocity'
+    | 'settings';
+  /** which page the settings window opens on */
+  settingsTab: string;
   /** sign-in screen, launch screen (recent + all songs), or the editor */
   screen: 'loading' | 'signin' | 'home' | 'editor';
   /** server accounts: whether the server has them, first-run setup, open sign-up */
@@ -106,6 +118,11 @@ export interface UiState {
   snapScale: boolean;
   /** piano roll: show this other track's notes faintly behind the current track (null = off) */
   ghostTrackId: string | null;
+  /** lower panel lanes: velocity shown + height, pedal shown, tab line spacing */
+  lanes: Lanes;
+  /** bumped when the theme changes, so the canvases repaint */
+  themeRev: number;
+  setLanes(p: Partial<Lanes>): void;
   barSel: { t0: number; t1: number; b0: number; b1: number } | null;
   /** song the share dialog is for */
   shareTarget: { id: string; title: string } | null;
@@ -134,8 +151,26 @@ export function initialSong(): Song {
   };
 }
 
+export interface Lanes {
+  vel: boolean;
+  velH: number;
+  pedal: boolean;
+  /** tab line spacing in px */
+  ls: number;
+}
+const LANES_KEY = 'riffroll.lanes';
+const DEFAULT_LANES: Lanes = { vel: true, velH: 38, pedal: true, ls: 15 };
+function readLanes(): Lanes {
+  try {
+    return { ...DEFAULT_LANES, ...JSON.parse(localStorage.getItem(LANES_KEY) ?? '{}') };
+  } catch {
+    return DEFAULT_LANES;
+  }
+}
+
 export const useStore = create<UiState>((set, get) => {
   const song = initialSong();
+  const prefs = settings();
   const history = new History(song);
   history.subscribe((s) => set((st) => ({ song: s, historyVersion: st.historyVersion + 1 })));
   return {
@@ -148,8 +183,8 @@ export const useStore = create<UiState>((set, get) => {
     view: 'split',
     zoom: 4,
     zoomY: 2,
-    snap: PPQ / 4,
-    noteLen: PPQ / 2,
+    snap: prefs.defaultSnap,
+    noteLen: prefs.defaultNoteLen,
     scrollX: 0,
     playing: false,
     playhead: null,
@@ -164,15 +199,27 @@ export const useStore = create<UiState>((set, get) => {
     sheet: false,
     midi: { inputs: [], inputId: null, armed: false, quantize: true, guitarChannels: false },
     modal: null,
+    settingsTab: 'general',
     screen: 'loading',
     auth: { accounts: false, setupNeeded: false, signup: false },
     user: null,
     doc: { access: 'owner', blocked: null },
     shareTarget: null,
-    globalView: true,
-    palette: true,
-    snapScale: false,
+    globalView: prefs.globalView,
+    palette: prefs.palette,
+    snapScale: prefs.snapScale,
     ghostTrackId: null,
+    lanes: readLanes(),
+    themeRev: 0,
+    setLanes: (p) => {
+      const lanes = { ...get().lanes, ...p };
+      set({ lanes });
+      try {
+        localStorage.setItem(LANES_KEY, JSON.stringify(lanes));
+      } catch {
+        /* this session only */
+      }
+    },
     barSel: null,
     exec: (cmd) => get().history.execute(cmd),
     begin: (label) => get().history.begin(label),

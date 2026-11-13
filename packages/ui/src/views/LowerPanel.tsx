@@ -45,7 +45,7 @@ import { tabCursorTo } from '../tabEntry';
 
 // vertical layout of the lower panel
 export const VEL_Y = 6;
-export const VEL_H = 38;
+export let VEL_H = 38;
 export const PED_Y = VEL_Y + VEL_H + 10;
 export const PED_H = 26;
 export const TAB_Y = PED_Y + PED_H + 22 + META_ROW;
@@ -61,6 +61,7 @@ type Drag =
   | { mode: 'vel'; ids: string[]; y0: number }
   /** Alt+drag in the velocity lane: draw a line; notes under it take its height */
   | { mode: 'vline'; x0: number; y0: number; x1: number; y1: number }
+  | { mode: 'velH'; y0: number; h0: number }
   | { mode: 'stomp'; id: string; x0: number; moved: boolean; origTick: number };
 
 interface Menu {
@@ -71,7 +72,7 @@ interface Menu {
 
 /** Draws the footswitch marker used in the pedal lane and above the tab (tells the player when to stomp). */
 function drawFootswitch(c: CanvasRenderingContext2D, x: number, y: number, r = STOMP_R) {
-  c.fillStyle = '#0e1014';
+  c.fillStyle = COL.foot;
   c.beginPath();
   c.arc(x, y, r, 0, Math.PI * 2);
   c.fill();
@@ -101,9 +102,23 @@ export function LowerPanel({
   const strings = useStore((s) => currentTrack(s)?.tuning.strings.length ?? 6);
   const trackType = useStore((s) => currentTrack(s)?.type);
   const pedalOn = trackType === 'guitar' || trackType === 'bass';
-  const height = pedalOn
-    ? lowerPanelHeight(showTab ? strings : 1, showVelocity) - (showTab ? 0 : LS + 8)
-    : 60;
+  const lanes = useStore((s) => s.lanes);
+  const [lanesMenu, setLanesMenu] = useState(false);
+  if (!mobile) LS = lanes.ls;
+  VEL_H = lanes.velH;
+  // each lane can be hidden; what's below moves up
+  const showVel = showVelocity && lanes.vel && trackType !== 'drums';
+  const showPed = pedalOn && lanes.pedal;
+  const pedY0 = VEL_Y + (showVel ? VEL_H + 10 : 0);
+  const tabY0 = pedY0 + (showPed ? PED_H + 22 : 16) + META_ROW;
+  const height =
+    showTab && pedalOn
+      ? tabY0 + (strings - 1) * LS + 14 + RHYTHM_H
+      : showPed
+        ? pedY0 + PED_H + 10
+        : showVel
+          ? VEL_Y + VEL_H + 10
+          : 26;
 
   useEffect(() => {
     const cv = cvRef.current!,
@@ -111,9 +126,8 @@ export function LowerPanel({
       sizer = sizerRef.current!,
       wrap = wrapRef.current!;
     let drag: Drag | null = null;
-    const off = showVelocity ? 0 : VEL_H + 10; // vertical offset when the velocity lane is hidden
-    const pedY = PED_Y - off,
-      tabY = TAB_Y - off;
+    const pedY = pedY0,
+      tabY = tabY0;
 
     const axis = (): TimeAxis => {
       const st = useStore.getState();
@@ -151,8 +165,8 @@ export function LowerPanel({
         tB = xToTick(a, w + 40);
 
       // ---- velocity lane
-      if (showVelocity && t.type !== 'drums') {
-        c.fillStyle = '#16181e';
+      if (showVel) {
+        c.fillStyle = COL.sunk;
         c.fillRect(gx0, VEL_Y, end * a.ppt, VEL_H);
         for (let i = lowerBound(t.notes, tA); i < t.notes.length; i++) {
           const nt = t.notes[i];
@@ -183,7 +197,7 @@ export function LowerPanel({
       }
 
       // ---- pedal lane
-      if (t.type !== 'drums') {
+      if (showPed) {
         for (const sg of pedalSegments(t.pedal, end)) {
           const x0 = tickToX(a, sg.start),
             x1 = tickToX(a, sg.end);
@@ -299,9 +313,9 @@ export function LowerPanel({
       c.textBaseline = 'middle';
       c.fillStyle = COL.mute;
       c.font = '700 11px ' + DISP;
-      if (showVelocity && t.type !== 'drums') c.fillText('VEL', 8, VEL_Y + VEL_H / 2);
+      if (showVel) c.fillText('VEL', 8, VEL_Y + VEL_H / 2);
       if (t.type !== 'drums') {
-        c.fillText('PEDAL', 7, pedY + PED_H / 2 + 1);
+        if (showPed) c.fillText('PEDAL', 7, pedY + PED_H / 2 + 1);
         if (showTab) {
           c.font = '600 12px ' + MONO;
           for (let i = 0; i < n; i++) {
@@ -324,7 +338,9 @@ export function LowerPanel({
       const a = axis();
       return t.pedal.stomps.find((s) => Math.abs(tickToX(a, s.tick) - lx) <= STOMP_R + 2);
     };
-    const inPedal = (ly: number) => ly >= pedY - 6 && ly <= pedY + PED_H + 6;
+    const inPedal = (ly: number) => showPed && ly >= pedY - 6 && ly <= pedY + PED_H + 6;
+    /** the bottom edge of the velocity lane: drag to resize it */
+    const onVelEdge = (ly: number) => showVel && Math.abs(ly - (VEL_Y + VEL_H + 5)) <= 4;
 
     function cycleStartTone(t: Track) {
       const st = useStore.getState();
@@ -350,6 +366,11 @@ export function LowerPanel({
         tap = { x: e.clientX, y: e.clientY, sl: sc.scrollLeft, id: e.pointerId };
         return;
       }
+      if (onVelEdge(ly)) {
+        drag = { mode: 'velH', y0: ly, h0: VEL_H };
+        sc.setPointerCapture(e.pointerId);
+        return;
+      }
       if (inPedal(ly)) {
         if (lx < KEYS_W) {
           if (e.button === 0) cycleStartTone(t);
@@ -369,7 +390,7 @@ export function LowerPanel({
         }
         return;
       }
-      if (showVelocity && ly >= VEL_Y && ly <= VEL_Y + VEL_H && lx >= KEYS_W) {
+      if (showVel && ly >= VEL_Y && ly <= VEL_Y + VEL_H && lx >= KEYS_W) {
         if (e.altKey && e.button === 0) {
           // Alt+drag: draw a velocity line (a ramp) across the notes under it
           st.begin('Draw velocity');
@@ -465,7 +486,15 @@ export function LowerPanel({
     }
 
     const onMove = (e: PointerEvent) => {
-      if (!drag) return;
+      if (!drag) {
+        sc.style.cursor = onVelEdge(local(e).ly) ? 'row-resize' : '';
+        return;
+      }
+      if (drag.mode === 'velH') {
+        const h = Math.round(Math.max(20, Math.min(140, drag.h0 + local(e).ly - drag.y0)));
+        if (h !== VEL_H) useStore.getState().setLanes({ velH: h });
+        return;
+      }
       const st = useStore.getState();
       const t = currentTrack(st);
       if (!t) return;
@@ -508,7 +537,7 @@ export function LowerPanel({
         // a click (no drag) on a stomp removes it
         st.cancel();
         st.exec(removeStomp(t.id, drag.id));
-      } else if (drag) st.commit();
+      } else if (drag && drag.mode !== 'velH') st.commit();
       drag = null;
     };
     const onScroll = () => {
@@ -543,12 +572,81 @@ export function LowerPanel({
       sc.removeEventListener('pointercancel', onUp);
       sc.removeEventListener('scroll', onScroll);
     };
-  }, [showVelocity, showTab, mobile]);
+  }, [showVelocity, showTab, mobile, showVel, showPed, lanes.velH, lanes.ls, pedY0, tabY0]);
 
   const track = useStore((s) => currentTrack(s));
   return (
     <div ref={wrapRef} className="cvwrap lower" style={{ height }} aria-label="Pedal lane and tab">
       <canvas ref={cvRef} />
+      <button
+        className="lanes-btn"
+        aria-expanded={lanesMenu}
+        title="Show or hide the velocity and pedal lanes, change their size"
+        onClick={() => setLanesMenu(!lanesMenu)}
+      >
+        Lanes ▾
+      </button>
+      {lanesMenu && (
+        <div className="lanes-menu" role="menu" onPointerLeave={() => setLanesMenu(false)}>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={lanes.vel}
+              onChange={(e) => useStore.getState().setLanes({ vel: e.target.checked })}
+            />
+            Velocity lane
+          </label>
+          {pedalOn && (
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={lanes.pedal}
+                onChange={(e) => useStore.getState().setLanes({ pedal: e.target.checked })}
+              />
+              Pedal lane
+            </label>
+          )}
+          <div className="lanes-row">
+            <span>Velocity</span>
+            {[
+              ['S', 26],
+              ['M', 38],
+              ['L', 64],
+              ['XL', 100],
+            ].map(([l, v]) => (
+              <button
+                key={l}
+                aria-pressed={lanes.velH === v}
+                onClick={() => useStore.getState().setLanes({ velH: v as number, vel: true })}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          {pedalOn && (
+            <div className="lanes-row">
+              <span>Tab</span>
+              {[
+                ['S', 12],
+                ['M', 15],
+                ['L', 20],
+                ['XL', 26],
+              ].map(([l, v]) => (
+                <button
+                  key={l}
+                  aria-pressed={lanes.ls === v}
+                  onClick={() => useStore.getState().setLanes({ ls: v as number })}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mute small">
+            Drag the bottom of the velocity lane, or the line above the lanes, to resize.
+          </p>
+        </div>
+      )}
       <div
         ref={scRef}
         className="scroller xonly"

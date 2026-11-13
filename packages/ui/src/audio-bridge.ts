@@ -3,6 +3,7 @@
  * user gesture (browsers only allow audio after one).
  */
 import type { Track } from '@riffroll/core';
+import { settings } from './settings';
 
 export interface AudioHooks {
   preview(track: Track, pitch: number, tick: number, lengthTicks?: number): void;
@@ -19,6 +20,8 @@ export function setAudioHooks(h: AudioHooks) {
 }
 
 export const preview = (track: Track, pitch: number, tick: number, len?: number) =>
-  hooks.preview(track, pitch, tick, len);
+  settings().previewNotes && hooks.preview(track, pitch, tick, len);
 export const previewDrum = (track: Track, lane: string, velocity = 100) =>
-  hooks.previewDrum(track, lane, velocity);
+  settings().previewNotes && hooks.previewDrum(track, lane, velocity);
+/** Always sounds (the audio settings' test button). */
+export const testPreview = (track: Track, pitch: number) => hooks.preview(track, pitch, 0, 480);

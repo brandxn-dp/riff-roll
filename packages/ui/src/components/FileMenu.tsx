@@ -19,6 +19,7 @@ import {
 } from '../files/actions';
 import { printScore } from '../files/print';
 import { setLayoutPref } from '../device';
+import { keyHint } from '../keymap';
 import { shareCurrentSong } from './DocBanner';
 
 const run = (fn: () => unknown) => () => {
@@ -66,8 +67,8 @@ export function FileMenu() {
       </button>
       {open && (
         <div className="menu" role="menu">
-          {item('New song', newProject, 'Ctrl+N')}
-          {item('All songs', goHome, 'Ctrl+O')}
+          {item('New song', newProject, keyHint('new'))}
+          {item('All songs', goHome, keyHint('home'))}
           {recent.length > 0 && (
             <>
               <div className="menu-label">Open recent</div>
@@ -89,7 +90,7 @@ export function FileMenu() {
           )}
           {item('Import from disk…', openFromDisk)}
           {window.riffroll && item('Open project folder', openProjectFolder)}
-          {access !== 'view' && item('Save', () => saveProject(), 'Ctrl+S')}
+          {access !== 'view' && item('Save', () => saveProject(), keyHint('save'))}
           {item('Save a copy', saveCopy)}
           {accounts && access === 'owner' && item('Share…', shareCurrentSong)}
           <hr />
@@ -99,10 +100,11 @@ export function FileMenu() {
           {item('Export Guitar Pro 7', exportGuitarPro)}
           {item('Export WAV (mix)', () => exportWav(false))}
           {item('Export WAV stems (.zip)', () => exportWav(true))}
-          {item('Print / PDF…', printScore, 'Ctrl+P')}
-          {item('Copy as ASCII tab', copyAsciiTab, 'Ctrl+Shift+C')}
+          {item('Print / PDF…', printScore, keyHint('print'))}
+          {item('Copy as ASCII tab', copyAsciiTab, keyHint('ascii'))}
           <hr />
           {item('Instruments…', () => st.set({ modal: 'instruments' }))}
+          {item('Settings…', () => st.set({ modal: 'settings' }), keyHint('settings'))}
           {item('Phone layout', () => setLayoutPref('mobile'))}
           {item('About & credits', () => st.set({ modal: 'about' }))}
         </div>

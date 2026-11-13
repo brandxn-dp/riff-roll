@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { loadWindowState, trackWindowState } from './window-state';
 import { buildMenu, type RecentSong } from './menu';
-import { initUpdater } from './updater';
+import { autoCheckEnabled, checkForUpdatesNow, initUpdater, setAutoCheck, updatesSupported } from './updater';
 import {
   finalizeUserInstrument,
   mergedIndex,
@@ -71,13 +71,23 @@ function registerAppProtocol() {
   });
 }
 
+let lastRecent: RecentSong[] = [];
+
 function registerIpc() {
+  // Settings → General in the page
+  ipcMain.handle('updates:state', () => ({ supported: updatesSupported(), auto: autoCheckEnabled() }));
+  ipcMain.handle('updates:set-auto', (_e, on: boolean) => {
+    setAutoCheck(!!on);
+    Menu.setApplicationMenu(buildMenu(lastRecent)); // keep the Help menu checkbox in step
+  });
+  ipcMain.handle('updates:check', () => checkForUpdatesNow());
   // the page owns "recently opened" (it knows titles); it sends the list so the native menu can show it
   ipcMain.on('recent:set', (_e, list: RecentSong[]) => {
     const clean = (Array.isArray(list) ? list : [])
       .filter((r) => r && typeof r.id === 'string' && ID_RE.test(r.id))
       .slice(0, 12)
       .map((r) => ({ id: r.id, title: String(r.title ?? '').slice(0, 80) }));
+    lastRecent = clean;
     Menu.setApplicationMenu(buildMenu(clean));
   });
   ipcMain.handle('projects:open-folder', async () => {

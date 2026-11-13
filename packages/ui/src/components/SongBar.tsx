@@ -252,7 +252,10 @@ function Minimap({ song }: { song: Song }) {
   const zoom = useStore((s) => s.zoom);
   const playhead = useStore((s) => s.playhead);
   // the note layer only changes with the song: render it once into an offscreen canvas, then just blit it
-  const layer = useRef<{ song: Song; w: number; h: number; cv: HTMLCanvasElement } | null>(null);
+  const layer = useRef<{ song: Song; w: number; h: number; theme: number; cv: HTMLCanvasElement } | null>(
+    null,
+  );
+  const themeRev = useStore((s) => s.themeRev);
   useEffect(() => {
     const cv = ref.current!;
     const w = cv.clientWidth,
@@ -266,13 +269,13 @@ function Minimap({ song }: { song: Song }) {
     const end = songEnd(song);
     const k = w / end;
     let L = layer.current;
-    if (!L || L.song !== song || L.w !== w || L.h !== h) {
+    if (!L || L.song !== song || L.w !== w || L.h !== h || L.theme !== themeRev) {
       const off = document.createElement('canvas');
       off.width = w * d;
       off.height = h * d;
       const o = off.getContext('2d')!;
       o.setTransform(d, 0, 0, d, 0, 0);
-      o.fillStyle = '#16181e';
+      o.fillStyle = COL.sunk;
       o.fillRect(0, 0, w, h);
       const rows = song.tracks.length || 1;
       const rh = h / rows;
@@ -285,7 +288,7 @@ function Minimap({ song }: { song: Song }) {
       o.globalAlpha = 1;
       o.fillStyle = COL.ink;
       for (const sec of song.sections) o.fillRect(sec.tick * k, 0, 1, h);
-      L = layer.current = { song, w, h, cv: off };
+      L = layer.current = { song, w, h, theme: themeRev, cv: off };
     }
     const c = cv.getContext('2d')!;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -297,10 +300,10 @@ function Minimap({ song }: { song: Song }) {
     c.lineWidth = 1;
     c.strokeRect((scrollX / pxPerTick(zoom)) * k + 0.5, 0.5, Math.max(4, viewTicks * k), h - 1);
     if (playhead != null) {
-      c.fillStyle = '#fff';
+      c.fillStyle = COL.head;
       c.fillRect(playhead * k, 0, 1.5, h);
     }
-  }, [song, scrollX, zoom, playhead]);
+  }, [song, scrollX, zoom, playhead, themeRev]);
   return (
     <canvas
       ref={ref}

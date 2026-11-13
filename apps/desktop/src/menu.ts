@@ -54,6 +54,8 @@ export function buildMenu(recent: RecentSong[] = []): Menu {
         { role: 'copy' },
         { role: 'paste' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: send('app:settings') },
       ],
     },
     {

@@ -7,9 +7,11 @@ import { setAudioHooks } from './audio-bridge';
 import { setTransport } from './transport';
 import { useStore } from './store';
 import { KEYS_W, pxPerTick } from './canvas';
+import { settings } from './settings';
 
 let engine: AudioEngine | null = null;
 let creating: Promise<AudioEngine> | null = null;
+let unsync: (() => void) | null = null;
 
 export function getEngine(): AudioEngine | null {
   return engine;
@@ -23,13 +25,16 @@ export function ensureEngine(): Promise<AudioEngine> {
       gateWorkletUrl,
       onEnded: () => useStore.getState().set({ playing: false, playhead: null }),
       onStatus: (msg) => useStore.getState().set({ status: msg }),
+      latencyHint: settings().audio.latency,
+      sampleRate: settings().audio.sampleRate || undefined,
+      sinkId: settings().audio.sinkId || undefined,
     }).then((e) => {
       engine = e;
       if (import.meta.env.DEV) (globalThis as Record<string, unknown>).__engine = e;
       e.setSong(useStore.getState().song);
       e.speed = useStore.getState().speed;
       void e.setUserAssets(useStore.getState().assets);
-      useStore.subscribe((s, prev) => {
+      unsync = useStore.subscribe((s, prev) => {
         if (s.song !== prev.song) e.setSong(s.song);
         if (s.assets !== prev.assets) void e.setUserAssets(s.assets);
         if (s.speed !== prev.speed) {
@@ -51,6 +56,29 @@ export function ensureEngine(): Promise<AudioEngine> {
   return creating;
 }
 
+/**
+ * Close the audio device and open it again with the current settings (latency and sample rate can only be
+ * chosen when the AudioContext is made). Playback stops.
+ */
+export async function restartAudio(): Promise<AudioEngine> {
+  const old = engine ?? (creating ? await creating.catch(() => null) : null);
+  unsync?.();
+  unsync = null;
+  if (old) old.dispose();
+  engine = null;
+  creating = null;
+  useStore.getState().set({ playing: false, playhead: null });
+  const e = await ensureEngine();
+  await e.resume();
+  return e;
+}
+
+/** Switch the output device without restarting. */
+export async function setOutputDevice(sinkId: string) {
+  settings().updateAudio({ sinkId });
+  if (engine) await engine.setOutput(sinkId);
+}
+
 function playheadLoop() {
   const st = useStore.getState();
   if (!st.playing || !engine) return;
@@ -59,7 +87,7 @@ function playheadLoop() {
     st.set({ playhead: tick });
     // keep the playhead in view (unless the user is dragging something)
     const sc = document.querySelector<HTMLElement>('.cvwrap .scroller');
-    if (tick != null && sc && !(document.body.dataset.dragging === '1')) {
+    if (tick != null && sc && settings().followPlayhead && !(document.body.dataset.dragging === '1')) {
       const x = tick * pxPerTick(st.zoom);
       const view = sc.clientWidth - KEYS_W;
       if (x < st.scrollX || x > st.scrollX + view - 24) st.set({ scrollX: Math.max(0, x - 24) });

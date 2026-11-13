@@ -122,6 +122,8 @@ export function handleTabKey(e: KeyboardEvent): boolean {
   if (!c || !t || !isFretted(t.type) || (st.view !== 'split' && st.view !== 'tab' && st.view !== 'notation'))
     return false;
   if (e.altKey) return false;
+  // Shift/Ctrl + arrows always move the selected notes (FL Studio style), even with the tab cursor showing
+  if (e.key.startsWith('Arrow') && (e.shiftKey || e.ctrlKey || e.metaKey) && st.selection.size) return false;
   const mod = e.ctrlKey || e.metaKey;
   const here = noteOnString(t, c.tick, c.string);
   const end = songEnd(st.song);

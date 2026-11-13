@@ -83,6 +83,7 @@ function UserMenu() {
           {accounts && item('Account…', () => st.set({ modal: 'account' }))}
           {accounts && user?.admin && item('Manage users…', () => st.set({ modal: 'users' }))}
           {window.riffroll && item('Open project folder', openProjectFolder)}
+          {item('Settings…', () => st.set({ modal: 'settings' }))}
           {item('Instruments…', () => st.set({ modal: 'instruments' }))}
           {item('About & credits', () => st.set({ modal: 'about' }))}
           {accounts && (
