@@ -33,13 +33,16 @@ afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-const api = (url: string, method = 'GET', body?: unknown) =>
+/** fetch, with JSON bodies typed loosely for assertions (Node's fetch types say unknown) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Res = Omit<Response, 'json'> & { json(): Promise<any> };
+const api = (url: string, method = 'GET', body?: unknown): Promise<Res> =>
   fetch(base + url, {
     method,
     headers: { cookie, ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
-const mcp = (token: string, body: unknown) =>
+const mcp = (token: string, body: unknown): Promise<Res> =>
   fetch(base + '/mcp', {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
