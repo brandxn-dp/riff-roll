@@ -22,7 +22,8 @@ COPY scripts/fetch-instruments.ts scripts/gen-notices.ts scripts/
 COPY apps/server/src/instruments apps/server/src/instruments
 RUN mkdir -p /out/instruments packages/ui/src && \
     if [ "$INCLUDE_INSTRUMENTS" = "true" ]; then \
-      pnpm fetch-instruments --out /out/instruments && rm -rf /out/instruments/.cache; \
+      pnpm fetch-instruments --out /out/instruments && rm -rf /out/instruments/.cache && \
+      chmod -R a+rX /out/instruments; \
     fi
 
 COPY . .

@@ -7,7 +7,7 @@
  */
 import { createHash } from 'node:crypto';
 import { chmodSync, createWriteStream, existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { Readable } from 'node:stream';
@@ -132,6 +132,22 @@ async function download(url: string, dest: string, onBytes: (received: number, t
   await rename(tmp, dest);
 }
 
+/**
+ * Make an unpacked pack readable by everyone: folders 755, files 644. Archives made on Windows carry no Unix
+ * permissions, and 7-Zip then creates their folders for the extracting user only. In the Docker image that user is
+ * root while the server runs as PUID, so every sample answered 403 Forbidden (the .sfz at the top level loaded,
+ * the samples/ folder didn't). Linux and macOS desktop builds had the same problem. No-op on Windows.
+ */
+export async function makeReadable(dir: string): Promise<void> {
+  if (process.platform === 'win32') return;
+  await chmod(dir, 0o755);
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) await makeReadable(p);
+    else if (e.isFile()) await chmod(p, 0o644);
+  }
+}
+
 async function walk(dir: string, base = dir): Promise<string[]> {
   const out: string[] = [];
   for (const e of await readdir(dir, { withFileTypes: true })) {
@@ -234,6 +250,7 @@ export async function fetchInstruments(opts: FetchOptions): Promise<InstalledIns
       for (const inc of inst.extract ?? []) args.push(`-ir!${inc}`);
       log(`  extracting…`);
       await run(sevenZipPath(), args);
+      await makeReadable(staging);
 
       const files = await walk(staging);
       const main = inst.sfz ?? pickMainSfz(files);
@@ -329,6 +346,7 @@ async function installFromRemoteZip(
   };
   await writeFile(path.join(staging, DESCRIPTOR), JSON.stringify(descriptor, null, 2));
   await rm(target, { recursive: true, force: true });
+  await makeReadable(staging);
   await rename(staging, target);
   log(`✓ ${inst.id}`);
   emit();
