@@ -71,6 +71,33 @@ function Slider({
   );
 }
 
+/** The master fader: the whole mix, after the master compressor and limiter (also used for WAV export). */
+function MasterStrip() {
+  const vol = useStore((s) => s.song.master?.volume ?? 1);
+  const st = useStore.getState();
+  return (
+    <section className="strip master-strip">
+      <header>
+        <strong>Master</strong>
+      </header>
+      <Slider
+        label="Volume"
+        value={vol}
+        min={0}
+        max={1.5}
+        onChange={(v) => st.exec(updateSong({ master: { volume: v } }, 'Master volume'))}
+        fmt={(v) => db(v) + ' dB'}
+      />
+      <button
+        className="ib small"
+        onClick={() => st.exec(updateSong({ master: { volume: 1 } }, 'Master volume'))}
+      >
+        Reset to 0 dB
+      </button>
+    </section>
+  );
+}
+
 const TYPES: [TrackType, string][] = [
   ['guitar', 'Guitar'],
   ['bass', 'Bass'],
@@ -256,6 +283,7 @@ export function Mixer() {
         {song.tracks.map((t) => (
           <Strip key={t.id} t={t} instruments={instruments} />
         ))}
+        <MasterStrip />
       </div>
       <Humanize />
       <p className="mute">

@@ -493,3 +493,21 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
 - **Bulk strings**: core/strings.ts puts a selection on one string, moves it a string up or down at the same pitch,
   or near a fret (closest fret, thicker string on ties), as pins; notes that don't fit are left and counted. In
   the inspector and in MCP `edit_notes` (with technique add/remove/clear).
+
+## Guitar Pro–style notation, Ctrl+B, master volume (0.3.6)
+
+- **Notation editing**: clicks go through our own staff-aware hit test (the staff nearest the pointer inside the
+  master bar, then the nearest beat), because alphaTab's `getBeatAtPos` ignores which track's staff was clicked once
+  several tracks are shown. A click on a tab line sets the tab cursor on that string; on the score, the cursor goes to
+  the beat (string of its top note). Drag / Shift+click select ranges of beats; Shift+←/→ extends, Ctrl+←/→ jumps
+  bars (in the notation view this moves the cursor, like Guitar Pro, instead of moving notes). Every selected beat is
+  highlighted, and a playback cursor follows the music. View options (staves, this track / full score, page /
+  horizontal, zoom) are per device; the full score passes every track index to `api.tex` (alphaTab draws only the
+  first otherwise), and clicking another track's staff makes it the edited track.
+- **Ctrl+B** (FL Studio): duplicates the selection to start exactly where its last note ends (drum hits: one grid
+  step after the last hit), selects the copy so repeated presses chain, grows the song if needed, leaves the
+  clipboard alone. The edit palette toggle moved to Ctrl+Shift+B.
+- **Master volume** is song data (`song.master.volume`): a gain stage after the master limiter (the metronome goes
+  through it too), applied live and in WAV export. Toolbar slider and a Master strip in the mixer.
+- **Light themes**: string colours used as text (tab fret numbers, string labels) are darkened so yellows and greens
+  stay readable on white.

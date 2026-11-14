@@ -1,8 +1,11 @@
 /** Selection-based edit operations shared by shortcuts, menus and the inspector. */
 import {
+  BarMap,
   addHits,
   addNotes,
+  cmd,
   newId,
+  setBars,
   removeHits,
   removeNotes,
   updateHits,
@@ -106,6 +109,35 @@ export function paste(at?: number) {
     s.st.exec(addNotes(s.t.id, notes, 'Paste'));
   }
   s.st.select(ids, null);
+}
+
+/**
+ * Ctrl+B (FL Studio): copy the selection so it starts exactly where its last note ends, and select the copy, so
+ * pressing it again keeps going. Drum hits have no length: the copy starts one grid step after the last hit. The
+ * song grows if the copy runs past its end. The clipboard is left alone.
+ */
+export function duplicateAfter(): boolean {
+  const s = selected();
+  if (!s || (!s.notes.length && !s.hits.length)) return false;
+  const starts = [...s.notes.map((n) => n.start), ...s.hits.map((h) => h.start)];
+  const ends = [...s.notes.map((n) => n.start + n.duration), ...s.hits.map((h) => h.start + s.st.snap)];
+  const dt = Math.max(...ends) - Math.min(...starts);
+  const notes = s.notes.map((n) => ({
+    ...n,
+    id: newId('n'),
+    start: n.start + dt,
+    pinnedString: n.pinnedString ?? null,
+  }));
+  const hits = s.hits.map((h) => ({ ...h, id: newId('h'), start: h.start + dt }));
+  const last = Math.max(...notes.map((n) => n.start + n.duration), ...hits.map((h) => h.start + 1));
+  const song = s.st.song;
+  const bm = new BarMap(song.timeSigs, song.ppq);
+  const grow = last > songEnd(song) ? setBars(bm.barAtTick(last - 1).index + 1) : null;
+  const add = hits.length ? addHits(s.t.id, hits) : addNotes(s.t.id, notes);
+  s.st.exec(cmd('Duplicate after', (x) => (grow ? grow.apply(add.apply(x)) : add.apply(x))));
+  s.st.select([...notes.map((n) => n.id), ...hits.map((h) => h.id)], null);
+  s.st.set({ status: `Duplicated ${notes.length + hits.length} after the selection` });
+  return true;
 }
 
 /** Ctrl+D: copy the selection to right after its own end (snapped to the grid). */

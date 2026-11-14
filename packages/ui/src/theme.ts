@@ -146,6 +146,10 @@ export function resolveTheme(id: ThemeId = useSettings.getState().theme): Palett
   return dark ? THEMES.studio : THEMES.light;
 }
 
+/** String colours as text: on a light theme they are darkened so yellow, green, etc. stay readable on white. */
+let lightText = false;
+export const readable = (c: string) => (lightText ? mix(c, '#000000', 0.42) : c);
+
 /** The current theme is a dark one (notation colours, colour-scheme). */
 export const isDark = () => resolveTheme().dark;
 
@@ -154,6 +158,7 @@ export function applyTheme() {
   const p = resolveTheme(s.theme);
   const accent = ACCENTS[s.accent].color;
   const d = p.dark;
+  lightText = !d;
 
   applyPalette();
 

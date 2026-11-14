@@ -205,6 +205,8 @@ export interface Song {
   loop: { start: number; end: number; on: boolean } | null;
   metronome: { on: boolean; countIn: number; volume: number };
   humanize: { timingMs: number; velocity: number };
+  /** master fader after the master compressor and limiter (linear, 0..1.5; default 1) */
+  master?: { volume: number };
   tracks: Track[];
 }
 

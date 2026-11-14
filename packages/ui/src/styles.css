@@ -2918,3 +2918,52 @@ body.resizing {
   color: var(--c);
   border-color: color-mix(in srgb, var(--c) 45%, var(--line));
 }
+
+/* notation view (Guitar Pro style) */
+.notation-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.notation-bar .group button {
+  height: 26px;
+}
+.notation-help {
+  margin-left: auto;
+}
+.notation-host:focus {
+  outline: none;
+}
+.notation-sels .notation-sel {
+  display: block;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.notation-playhead {
+  position: absolute;
+  display: none;
+  width: 2px;
+  pointer-events: none;
+  background: var(--ok, #43b562);
+  box-shadow: 0 0 6px color-mix(in srgb, #43b562 60%, transparent);
+}
+
+/* master volume */
+.master-vol {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.master-vol input {
+  width: 74px;
+}
+.strip.master-strip {
+  --tc: var(--ink);
+  border-left: 2px solid var(--accent);
+}

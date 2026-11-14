@@ -45,6 +45,7 @@ export async function renderSong(
     }
   }
   const master = new MasterBus(ctx, ctx.destination);
+  master.setVolume(song.master?.volume ?? 1, ctx, false);
   const audible = o.onlyTrack ? new Set([o.onlyTrack]) : audibleTracks(song);
   const tracks = song.tracks.filter((t) => audible.has(t.id));
   const graphs = new Map<string, TrackGraph>();

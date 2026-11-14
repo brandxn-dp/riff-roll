@@ -155,6 +155,7 @@ export class AudioEngine {
   setSong(song: Song) {
     const prev = this.song;
     this.song = song;
+    this.master.setVolume(song.master?.volume ?? 1, this.ctx);
     const audible = audibleTracks(song);
     const ids = new Set(song.tracks.map((t) => t.id));
     for (const [id, g] of this.graphs)

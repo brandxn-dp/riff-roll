@@ -42,6 +42,7 @@ import {
 } from './tabDraw';
 import { floorTick } from '../canvas';
 import { tabCursorTo } from '../tabEntry';
+import { readable } from '../theme';
 
 // vertical layout of the lower panel
 export const VEL_Y = 6;
@@ -299,7 +300,7 @@ export function LowerPanel({
             rr(c, it.x - it.tw / 2 - 4, it.y - 8.5, it.tw + 8, 17, 3);
             c.stroke();
           }
-          c.fillStyle = stringColor(t.type, n, it.s);
+          c.fillStyle = readable(stringColor(t.type, n, it.s));
           c.fillText(it.txt, it.x, it.y + 0.5);
         }
         c.textAlign = 'left';
@@ -322,7 +323,7 @@ export function LowerPanel({
           c.font = '600 12px ' + MONO;
           for (let i = 0; i < n; i++) {
             const s = n - 1 - i;
-            c.fillStyle = stringColor(t.type, n, s);
+            c.fillStyle = readable(stringColor(t.type, n, s));
             c.fillText(stringLabel(t.tuning, s, t.type), 16, tabY + i * LS + 0.5);
           }
         }

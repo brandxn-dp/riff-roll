@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** Strict CSP for production builds (dev needs inline scripts for React Fast Refresh). */
@@ -57,8 +57,13 @@ function instruments(): Plugin {
   };
 }
 
+/** the app's version (root package.json), shown in Settings */
+const VERSION = JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'))
+  .version as string;
+
 export default defineConfig({
   plugins: [react(), csp(), instruments()],
+  define: { __APP_VERSION__: JSON.stringify(VERSION) },
   // relative base so the same build works from the Fastify server and Electron's app:// protocol
   base: './',
   server: {

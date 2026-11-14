@@ -1,82 +1,114 @@
 # Riff Roll
 
 Songwriting for rock bands. Draw a riff in an FL Studio–style piano roll and get colour-coded Guitar Pro–style tab
-with frets and note names. Drop a stomp on the pedal lane to go from clean to distorted in the same guitar track. Add
-drums and bass, and hear the song through sampled instruments and an amp sim. Save it, export it, print it.
+with frets and note names, or write it straight into the tab and the score. Drop a stomp on the pedal lane to go from
+clean to overdriven in the same guitar track. Add drums and bass, hear the song through sampled instruments, save it,
+export it, print it, or let Claude write parts with you.
 
 It runs two ways from one codebase: as a **Docker** web app and as a **desktop app** for Windows, macOS and Linux.
 
-![Piano roll with string colours, pedal lane and linked tab](docs/screenshots/roll-and-tab.png)
-
-| Notation + tab (alphaTab) | Drum grid |
-|---|---|
-| ![Notation](docs/screenshots/notation.png) | ![Drum grid](docs/screenshots/drum-grid.png) |
+![The editor: piano roll with string colours, pedal lane, linked tab and the global view](docs/screenshots/roll-and-tab.png)
 
 ## Features
 
-- **One note model, many views.** The piano roll, tab, notation and drum grid all show the same data. An edit in one
-  view appears in all of them, and undo/redo covers every edit, including stomps, tempo and track settings.
+### Piano roll, tab and score, all one song
+
+The piano roll, tab, notation and drum grid all show the same notes: an edit in one view appears in all of them, and
+undo/redo covers every edit, including stomps, tempo and track settings.
+
 - **Piano roll → tab.** A fingering engine picks string and fret for every note. It keeps riffs in one position,
   puts power chords on neighbouring strings and avoids strings that are still ringing. Notes are coloured by string.
   Click a note to see every place it can be played and pin it to one, or use **Auto**.
+- **FL Studio editing**: click to add, drag to move, drag the edge to resize, right-click to delete, ←/→ a grid step
+  (Ctrl: a bar), Shift+↑/↓ a semitone, Ctrl+↑/↓ an octave, **Ctrl+B** duplicates the selection right after its last
+  note (press again to keep going), Ctrl+D duplicates on the grid, Alt+drag duplicates, Shift/Ctrl-drag box-selects.
+  Scale shading and snap to scale, ghost notes from another track, and separate horizontal and vertical zoom.
 - **Tab editor**: keyboard entry like Guitar Pro (arrows, frets, durations, dots, triplets, rests, ties, insert/delete
   beat) and techniques (hammer/pull, slides, bend curves, vibrato, palm mute, let ring, dead notes, harmonics,
   tapping, tremolo picking, ghost notes, accents, staccato, pick direction, whammy, volume swell, trills).
-- **Pedal lane**: tones (Clean, Crunch, Dist, Lead …) switched by stomps. Each switch crossfades between amp chains,
-  so ringing strings change tone the way they do with a real footswitch. Stomps show up in the tab and the notation.
-- **Sound**: SFZ sampler (velocity layers, round robins, choke groups) with CC0 instruments:
-  - FreePats FSBS DI guitar, played through an amp sim (gate, drive, two-stage amp, tone stack, cab IR, effects)
-  - FreePats Yamaha bass
-  - Bread Bread's Overdriven Guitar (public domain): the default distorted tone, sampled through its own amp, with
-    real palm-mute, hammer-on/pull-off and up/down-stroke samples
-  - Bread Bread's Drum Kit (the default kit; public domain) and Karoryfer Big Rusty Drums
-- **Song structure**: sections with jump-to chips, tempo changes (including gradual ones), time-signature and key
-  changes, repeats with alternate endings, a loop region, a metronome with count-in, playback at 50–150 % speed
-  without changing pitch, and a minimap.
-- **Files**: `.riff` projects with autosave and crash recovery.
-  - Import: Guitar Pro 3–8/GPX, MusicXML, MIDI.
-  - Export: MIDI, MusicXML, Guitar Pro 7, WAV (full mix or per-track stems), PDF/print, and ASCII tab copied to the
-    clipboard.
+- **Bulk edits**: with several notes selected, the technique buttons apply to all of them, and the inspector puts them
+  on one string, a string up or down, near a fret, an octave up or down, or clears their techniques. Bulk velocity
+  (set, scale, add, ramp, humanize) and Alt+drag to draw velocities.
 
-- **Tones**: each tone either runs the track's DI guitar through the amp chain or plays a sampled guitar (Tone
-  editor → Sound). A pedalboard-style editor for every amp-chain parameter, your own cabinet IRs (WAV), and an A/B
-  listening tool for tuning tones.
-- **Your own instruments**: **File → Instruments…** adds an SFZ instrument from a folder, or any presets of an
-  SF2 / SF3 SoundFont (Docker and desktop).
-- **Inputs**: record from a MIDI keyboard or MIDI guitar (step entry when stopped, string-per-channel mode for MIDI
-  guitars), or play a real guitar through a track's amp and pedal via your audio interface.
+![Several notes selected: string, position, octave and technique buttons apply to all of them](docs/screenshots/bulk-edit.png)
 
-- **Phones**: a dedicated touch layout is picked automatically on phones (tap to add notes, an on-screen fret
-  pad for tab, bottom navigation, full controls in the ☰ sheet). Tablets keep the full layout with larger touch
-  targets. Override it under File → Phone layout or ☰ → App → Layout.
-- **Global view** (Guitar Pro style, under the editor): every track as a row of bars with mute, solo, volume
-  and pan. Drag to select bars across tracks, click a section name to select the section, then copy, cut, paste
-  (overwrite or insert), clear, duplicate, insert or delete bars; right-click for the menu.
-- **Other instruments**: add an **Other** track for piano, synth, strings and so on, and give it any SFZ
-  instrument you upload with the *Other* role (File → Instruments…). Piano roll and notation, no tab or amp.
-- **Editing helpers**: bulk velocity (set, scale, add, ramp, humanize) for selected notes or drum hits, Alt+drag to
-  draw velocities, separate horizontal and vertical zoom, Shift-drag box select and Shift+click a drum or key to
-  select all of it.
-- **Accounts and sharing** (Docker / Unraid server): everyone signs in and sees only their own songs plus songs
-  shared with them. Share a song **view only** (they can open, play and save their own copy) or **can edit**
-  (their changes save into your song; if two people save over each other, the second one is asked to reload or
-  keep a copy). After signing in, a launch screen shows recently opened songs and all your songs.
+### Notation like Guitar Pro
 
-- **Settings** (File → Settings…, Ctrl+,): themes (Studio, Midnight, Ember, High contrast, Light, Paper, or
-  match the system) with six accent colours; audio output device, latency and sample rate; editable keyboard
-  shortcuts; starting grid and note length, note preview, follow playhead; interface size in the desktop app. Server
-  admins also get a **Server admin** page: version, uptime, users, songs and storage, a sign-up switch, and signing
-  a person out of every device.
-- **Bulk edits**: with several notes selected, technique buttons apply to all of them, and the inspector moves them
-  to one string, a string up or down, or around a fret, by octaves, or clears their techniques.
-- **Lanes**: the velocity and pedal lanes under the piano roll can each be hidden and resized (Lanes menu, or drag
-  their edges); the bar count can be typed, and **＋ Bars** in the global view inserts 1, 2, 4, 8 or 16 bars.
+The score view (alphaTab) is edited like Guitar Pro: click a tab line to put the cursor on that string and type frets,
+click the score to put it on a beat, drag or Shift+click to select beats (Shift+←/→ extends, Ctrl+←/→ jumps bars), and
+the edit palette and shortcuts work on the selection. Show notation + tab, notation only or tab only, this track or the
+full score (click any staff to edit that track), page or horizontal layout, and zoom. A playback cursor follows the
+music.
 
-- **Note colour palettes** (Settings → Appearance): Classic, Pastel, Neon, Colour-blind safe, Ocean, Sunset, One
-  colour or your own; strings, drums and new tracks follow it. Piano roll notes can be coloured by string, track,
-  velocity or pitch.
-- **Connect Claude** (Settings → Claude): an MCP endpoint so Claude Code or Claude Desktop can read and edit the
-  open song (see below).
+| Notation + tab, a bar selected | The full score |
+|---|---|
+| ![Notation and tab with a selection and the tab cursor](docs/screenshots/notation.png) | ![Every track in one score](docs/screenshots/notation-full-score.png) |
+
+### Drums, tones and mixing
+
+- **Drum grid** with every kit piece and articulation, velocity lane, box select and painting.
+- **Pedal lane**: tones (Clean, Overdrive, Crunch, Dist, Lead …) switched by stomps. Stomps show up in the tab and the
+  notation.
+- **Tones**: each tone either runs the track's DI guitar through the amp chain (gate, compressor, drive, two-stage amp,
+  tone stack, cabinet IR, chorus, delay, reverb) or plays a sampled guitar recorded through its own amp, with real
+  palm-mute and legato samples. Your own cabinet IRs (WAV) and an A/B listening tool.
+- **Mixer** with volume, pan, mute, solo, instrument and type per track, per-piece drum levels, and a **master
+  volume** (also in the toolbar).
+
+| Drum grid | Tones | Mixer |
+|---|---|---|
+| ![Drum grid](docs/screenshots/drum-grid.png) | ![Tone editor with the sampled Overdrive tone](docs/screenshots/tones.png) | ![Mixer with the master fader](docs/screenshots/mixer.png) |
+
+### Sound
+
+SFZ sampler (velocity layers, round robins, choke groups) with free instruments:
+
+- FreePats FSBS DI guitar, played through the amp sim
+- Bread Bread's Overdriven Guitar (public domain): the default distorted tone, with real palm-mute,
+  hammer-on/pull-off and up/down-stroke samples
+- FreePats Yamaha bass
+- Bread Bread's Drum Kit (the default kit; public domain) and Karoryfer Big Rusty Drums
+
+**File → Instruments…** adds your own SFZ instrument from a folder, or presets of an SF2 / SF3 SoundFont (Docker and
+desktop). Playback stays smooth in big songs: only the tone that's switched on runs its amp chain.
+
+### Song structure and files
+
+- Sections with jump-to chips, tempo changes (including gradual ones), time-signature and key changes, repeats with
+  alternate endings, a loop region with drag handles, a metronome with count-in, playback at 50–150 % speed without
+  changing pitch, and a minimap.
+- **Global view** (Guitar Pro style, under the editor): every track as a row of bars with mute, solo, volume and pan.
+  Select bars across tracks, then copy, cut, paste (overwrite or insert), clear, duplicate, insert (**＋ Bars**: 1, 2,
+  4, 8 or 16) or delete bars.
+- `.riff` projects with autosave and crash recovery. Import Guitar Pro 3–8/GPX, MusicXML and MIDI; export MIDI,
+  MusicXML, Guitar Pro 7, WAV (mix or per-track stems), PDF/print and ASCII tab.
+- **Inputs**: record from a MIDI keyboard or MIDI guitar, or play a real guitar through a track's amp and pedal via
+  your audio interface. **Other** tracks hold piano, synth, strings and so on.
+
+### Settings, themes and your own shortcuts
+
+**File → Settings…** (Ctrl+,): seven themes and six accent colours, note colour palettes (or your own) and what
+colours the notes (string, track, velocity, pitch); audio output device, latency and sample rate; every main
+shortcut can be rebound; starting grid and note length, note preview, follow playhead; interface size in the desktop
+app; the version you're running. Server admins also get a **Server admin** page.
+
+| Appearance | Shortcuts | Light theme |
+|---|---|---|
+| ![Themes, accents and note colour palettes](docs/screenshots/settings-appearance.png) | ![Rebinding keyboard shortcuts](docs/screenshots/settings-shortcuts.png) | ![The editor in the Light theme](docs/screenshots/light-theme.png) |
+
+### Launch screen, accounts, phones
+
+- A launch screen with recently opened songs and all your songs.
+- **Accounts and sharing** (Docker / Unraid server): everyone signs in and sees only their own songs plus songs shared
+  with them, **view only** or **can edit**.
+- **Phones** get a dedicated touch layout (tap to add notes, an on-screen fret pad for tab, bottom navigation); tablets
+  keep the full layout with larger touch targets.
+- **Connect Claude** (Settings → Claude): an MCP endpoint so Claude Code or Claude Desktop can read and edit the open
+  song (see below).
+
+| Launch screen | Phone layout |
+|---|---|
+| ![Recently opened and all songs](docs/screenshots/home.png) | ![The phone layout](docs/screenshots/phone.png) |
 
 Press **?** in the app for the keyboard cheat sheet.
 

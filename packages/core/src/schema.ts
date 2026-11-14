@@ -151,6 +151,7 @@ export const songSchema = z.object({
   loop: z.object({ start: z.number(), end: z.number(), on: z.boolean() }).nullable(),
   metronome: z.object({ on: z.boolean(), countIn: z.number().int().min(0).max(4), volume: z.number() }),
   humanize: z.object({ timingMs: z.number().min(0).max(30), velocity: z.number().min(0).max(40) }),
+  master: z.object({ volume: z.number().min(0).max(2) }).optional(),
   tracks: z.array(track),
 });
 

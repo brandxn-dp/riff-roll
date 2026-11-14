@@ -12,6 +12,8 @@ export class MasterBus {
   readonly reverbIn: GainNode;
   readonly metronome: GainNode;
   private reverb: ConvolverNode;
+  /** master fader: last in the chain, after the limiter */
+  private out: GainNode;
   /** resolves once the reverb IR is loaded (offline renders wait for it) */
   readonly ready: Promise<void>;
   constructor(ctx: BaseAudioContext, dest: AudioNode) {
@@ -29,7 +31,8 @@ export class MasterBus {
     limiter.ratio.value = 20;
     limiter.attack.value = 0.001;
     limiter.release.value = 0.08;
-    this.input.connect(glue).connect(limiter).connect(dest);
+    this.out = ctx.createGain();
+    this.input.connect(glue).connect(limiter).connect(this.out).connect(dest);
     this.reverbIn = ctx.createGain();
     this.reverb = ctx.createConvolver();
     this.reverb.normalize = false;
@@ -40,7 +43,14 @@ export class MasterBus {
       this.reverb.buffer = b;
     });
     this.metronome = ctx.createGain();
-    this.metronome.connect(dest);
+    this.metronome.connect(this.out);
+  }
+
+  /** Master volume (linear; 1 = unity). */
+  setVolume(v: number, ctx: BaseAudioContext, smooth = true) {
+    const g = Math.max(0, Math.min(2, v));
+    if (smooth) this.out.gain.setTargetAtTime(g, ctx.currentTime, 0.02);
+    else this.out.gain.value = g;
   }
 }
 

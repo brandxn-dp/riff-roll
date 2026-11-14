@@ -137,6 +137,17 @@ function General() {
           Reset all settings
         </button>
       </Row>
+      <Row label="Version" hint={bridge ? 'Desktop app' : 'Web app'}>
+        <b>Riff Roll {__APP_VERSION__}</b>
+        <a
+          className="small"
+          href="https://github.com/brandxn-dp/riff-roll/releases"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Release notes
+        </a>
+      </Row>
       <p className="mute small">Settings are kept on this device and browser.</p>
     </>
   );

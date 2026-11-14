@@ -118,6 +118,26 @@ export function Toolbar({ right, left }: { right?: React.ReactNode; left?: React
               ))}
             </select>
           </div>
+          <label className="master-vol" title="Master volume (after the master limiter)">
+            <span aria-hidden="true">🔊</span>
+            <input
+              type="range"
+              min={0}
+              max={1.5}
+              step={0.01}
+              aria-label="Master volume"
+              value={song.master?.volume ?? 1}
+              onPointerDown={() => {
+                // one undo step per drag, however it ends
+                st.begin('Master volume');
+                window.addEventListener('pointerup', () => st.commit(), { once: true });
+              }}
+              onChange={(e) =>
+                st.exec(updateSong({ master: { volume: Number(e.target.value) } }, 'Master volume'))
+              }
+              onDoubleClick={() => st.exec(updateSong({ master: { volume: 1 } }, 'Master volume'))}
+            />
+          </label>
           <span className="tb-sep" />
           <label className="field">
             BPM
