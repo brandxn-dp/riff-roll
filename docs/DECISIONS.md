@@ -511,3 +511,15 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
   through it too), applied live and in WAV export. Toolbar slider and a Master strip in the mixer.
 - **Light themes**: string colours used as text (tab fret numbers, string labels) are darkened so yellows and greens
   stay readable on white.
+
+## MP3 export, interface size on the web (0.3.8)
+
+- **MP3**: LAME via `@breezystack/lamejs` (LGPL-3.0, credited in the notices), run in a module worker so a long
+  song doesn't freeze the page, and loaded only on export (its own chunk; falls back to the page if workers are
+  unavailable). Mix and stems, 128–320 kbit/s (Settings → Audio, default 192), with an ID3v2.3 tag (title,
+  artist).
+- **Interface size** now works outside the desktop app. Desktop app: Electron's zoom, as before. Phones and
+  tablets (coarse pointer): the viewport meta width is set to screen width ÷ scale, so the browser itself scales
+  the page and touch and layout maths stay exact. Desktop browsers: CSS `zoom` on `<html>`; Chromium then reports
+  pointer positions and rectangles in zoomed pixels while the editors draw in CSS pixels, so pointer maths goes
+  through `px()` / `rectOf()` (zoom.ts).

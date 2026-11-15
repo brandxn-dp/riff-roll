@@ -90,6 +90,11 @@
       "url": "https://www.7-zip.org"
     },
     {
+      "name": "LAME MP3 encoder (via @breezystack/lamejs)",
+      "license": "LGPL-3.0",
+      "url": "https://github.com/breezystack/lamejs"
+    },
+    {
       "name": "IBM Plex Sans / Mono",
       "license": "OFL-1.1",
       "url": "https://github.com/IBM/plex"

@@ -28,5 +28,6 @@ Generated from `instruments/manifest.json` by `pnpm notices`. Do not edit by han
 - **Fastify** — MIT — https://fastify.dev
 - **Electron** — MIT — https://www.electronjs.org
 - **7-Zip (via 7zip-bin)** — LGPL-2.1 / MIT — https://www.7-zip.org
+- **LAME MP3 encoder (via @breezystack/lamejs)** — LGPL-3.0 — https://github.com/breezystack/lamejs
 - **IBM Plex Sans / Mono** — OFL-1.1 — https://github.com/IBM/plex
 - **Barlow Condensed** — OFL-1.1 — https://github.com/jpt/barlow

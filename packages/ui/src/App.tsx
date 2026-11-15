@@ -36,6 +36,7 @@ import { Settings } from './components/Settings';
 import { installTheme } from './theme';
 import { installMcp } from './mcp/connect';
 import { useSettings } from './settings';
+import { applyUiScale, rectOf } from './zoom';
 
 export function App() {
   const [storage, setStorage] = useState<StorageAdapter | null>(null);
@@ -51,7 +52,7 @@ export function App() {
   const uiScale = useSettings((s) => s.uiScale);
   // desktop app: interface size (Settings → General)
   useEffect(() => {
-    window.riffroll?.setZoom?.(uiScale / 100);
+    applyUiScale(uiScale);
   }, [uiScale]);
   const [palW, setPalW] = usePanelSize('palette');
 
@@ -101,7 +102,10 @@ export function App() {
 
   const showRoll = view === 'split' || view === 'roll';
   const measure = (sel: string, dim: 'width' | 'height') =>
-    document.querySelector(sel)?.getBoundingClientRect()[dim] ?? 200;
+    (() => {
+      const el = document.querySelector(sel);
+      return el ? rectOf(el)[dim] : 200;
+    })();
   const showTab = view === 'split' || view === 'tab';
 
   return (

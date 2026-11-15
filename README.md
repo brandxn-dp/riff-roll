@@ -81,7 +81,7 @@ desktop). Playback stays smooth in big songs: only the tone that's switched on r
   Select bars across tracks, then copy, cut, paste (overwrite or insert), clear, duplicate, insert (**＋ Bars**: 1, 2,
   4, 8 or 16) or delete bars.
 - `.riff` projects with autosave and crash recovery. Import Guitar Pro 3–8/GPX, MusicXML and MIDI; export MIDI,
-  MusicXML, Guitar Pro 7, WAV (mix or per-track stems), PDF/print and ASCII tab.
+  MusicXML, Guitar Pro 7, WAV or MP3 (mix or per-track stems; MP3 at 128–320 kbit/s), PDF/print and ASCII tab.
 - **Inputs**: record from a MIDI keyboard or MIDI guitar, or play a real guitar through a track's amp and pedal via
   your audio interface. **Other** tracks hold piano, synth, strings and so on.
 
@@ -89,8 +89,8 @@ desktop). Playback stays smooth in big songs: only the tone that's switched on r
 
 **File → Settings…** (Ctrl+,): seven themes and six accent colours, note colour palettes (or your own) and what
 colours the notes (string, track, velocity, pitch); audio output device, latency and sample rate; every main
-shortcut can be rebound; starting grid and note length, note preview, follow playhead; interface size in the desktop
-app; the version you're running. Server admins also get a **Server admin** page.
+shortcut can be rebound; starting grid and note length, note preview, follow playhead; interface size (desktop app,
+browsers and phones); the version you're running. Server admins also get a **Server admin** page.
 
 | Appearance | Shortcuts | Light theme |
 |---|---|---|

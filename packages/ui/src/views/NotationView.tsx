@@ -7,6 +7,7 @@ import { currentTrack, useStore } from '../store';
 import { useSettings } from '../settings';
 import { isDark } from '../theme';
 import { registerKeyHandler } from '../shortcuts';
+import { px, rectOf } from '../zoom';
 
 /** Notation in the theme's colours, or black on white paper (Settings → Appearance). */
 export const notationDark = () => useSettings.getState().notationPaper !== 'light' && isDark();
@@ -242,8 +243,8 @@ export function NotationView() {
 
     const host = hostRef.current!;
     const local = (e: MouseEvent) => {
-      const r = host.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
+      const r = rectOf(host);
+      return { x: px(e.clientX) - r.left, y: px(e.clientY) - r.top };
     };
     /** which string line of a tab staff is at y (null: not on the tab staff) */
     const tabRowAt = (x: number, y: number, ti: number) => {

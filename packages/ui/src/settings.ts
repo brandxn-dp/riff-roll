@@ -32,6 +32,8 @@ export interface Settings {
   /** remember whether the global view and the edit palette are open */
   globalView: boolean;
   palette: boolean;
+  /** MP3 export bitrate (kbit/s) */
+  mp3Kbps: number;
   audio: {
     latency: Latency;
     /** 0 = what the device uses */
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   snapScale: false,
   globalView: true,
   palette: true,
+  mp3Kbps: 192,
   audio: { latency: 'interactive', sampleRate: 0, sinkId: '' },
   keys: {},
 };

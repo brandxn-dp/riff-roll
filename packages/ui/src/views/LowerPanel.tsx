@@ -43,6 +43,7 @@ import {
 import { floorTick } from '../canvas';
 import { tabCursorTo } from '../tabEntry';
 import { readable } from '../theme';
+import { px, rectOf } from '../zoom';
 
 // vertical layout of the lower panel
 export const VEL_Y = 6;
@@ -334,8 +335,8 @@ export function LowerPanel({
     const requestDraw = frameScheduler(draw);
 
     const local = (e: { clientX: number; clientY: number }) => {
-      const r = sc.getBoundingClientRect();
-      return { lx: e.clientX - r.left, ly: e.clientY - r.top };
+      const r = rectOf(sc);
+      return { lx: px(e.clientX) - r.left, ly: px(e.clientY) - r.top };
     };
     const stompAt = (t: Track, lx: number): Stomp | undefined => {
       const a = axis();
@@ -371,7 +372,7 @@ export function LowerPanel({
       }
       if (onVelEdge(ly)) {
         // screen coordinates: the panel grows upward as the lane grows, so panel coordinates would run away
-        d.current = { mode: 'velH', y0: e.clientY, h0: VEL_H };
+        d.current = { mode: 'velH', y0: px(e.clientY), h0: VEL_H };
         sc.setPointerCapture(e.pointerId);
         return;
       }
@@ -495,7 +496,7 @@ export function LowerPanel({
         return;
       }
       if (d.current.mode === 'velH') {
-        const h = Math.round(Math.max(20, Math.min(140, d.current.h0 + e.clientY - d.current.y0)));
+        const h = Math.round(Math.max(20, Math.min(140, d.current.h0 + px(e.clientY) - d.current.y0)));
         if (h !== VEL_H) useStore.getState().setLanes({ velH: h });
         return;
       }

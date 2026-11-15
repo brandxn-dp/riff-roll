@@ -19,6 +19,7 @@ import {
   exportMusicXml,
   exportRiff,
   exportWav,
+  exportMp3,
   goHome,
   newProject,
   openFromDisk,
@@ -208,6 +209,8 @@ function Sheet() {
             {item('Guitar Pro 7', exportGuitarPro)}
             {item('WAV', () => exportWav(false))}
             {item('WAV stems', () => exportWav(true))}
+            {item('MP3', () => exportMp3(false))}
+            {item('MP3 stems', () => exportMp3(true))}
             {item('Print / PDF', () => printScore())}
             {item('Copy ASCII tab', copyAsciiTab)}
           </div>,

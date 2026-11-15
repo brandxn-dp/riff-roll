@@ -49,6 +49,7 @@ import { preview } from '../audio-bridge';
 import { seek } from '../transport';
 import { noteFill } from '../palettes';
 import { techCode } from './tabDraw';
+import { px, rectOf } from '../zoom';
 
 let RH = 18; // row height (24 in the mobile layout: finger-sized)
 const BLACK = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
@@ -422,9 +423,9 @@ export function PianoRoll() {
 
     // ---------------- hit testing ----------------
     const pt = (e: { clientX: number; clientY: number }) => {
-      const r = sc.getBoundingClientRect();
-      const lx = e.clientX - r.left,
-        ly = e.clientY - r.top;
+      const r = rectOf(sc);
+      const lx = px(e.clientX) - r.left,
+        ly = px(e.clientY) - r.top;
       return { lx, ly, gx: lx - KEYS_W + sc.scrollLeft, gy: ly - RULER_H + sc.scrollTop };
     };
     const inGrid = (p: ReturnType<typeof pt>) =>

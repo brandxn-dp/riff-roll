@@ -8,6 +8,7 @@ import {
   type Track,
 } from '@riffroll/core';
 import { useStore } from '../store';
+import { px, rectOf } from '../zoom';
 
 const BEND_PRESETS: Record<string, CurvePoint[]> = {
   full: [
@@ -77,8 +78,8 @@ function CurveEditor({
   const drag = (i: number) => (e: React.PointerEvent) => {
     (e.target as Element).setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => {
-      const r = ref.current!.getBoundingClientRect();
-      const v = max - ((ev.clientY - r.top - P) / (H - 2 * P)) * (max - min);
+      const r = rectOf(ref.current!);
+      const v = max - ((px(ev.clientY) - r.top - P) / (H - 2 * P)) * (max - min);
       const q = Math.max(min, Math.min(max, Math.round(v / step) * step));
       if (q !== curve[i].value) onChange(curve.map((p, k) => (k === i ? { ...p, value: q } : p)));
     };

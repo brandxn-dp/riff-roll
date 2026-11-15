@@ -37,6 +37,7 @@ export function buildMenu(recent: RecentSong[] = []): Menu {
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: send('file:save-as') },
         { type: 'separator' },
         { label: 'Export WAV…', click: send('export:wav') },
+        { label: 'Export MP3…', click: send('export:mp3') },
         { label: 'Export MIDI…', click: send('export:midi') },
         { label: 'Export MusicXML…', click: send('export:musicxml') },
         { label: 'Print Tab…', accelerator: 'CmdOrCtrl+P', click: send('export:print') },

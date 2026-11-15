@@ -8,6 +8,7 @@ import {
   exportMusicXml,
   exportRiff,
   exportWav,
+  exportMp3,
   goHome,
   openProject,
   openProjectFolder,
@@ -100,6 +101,8 @@ export function FileMenu() {
           {item('Export Guitar Pro 7', exportGuitarPro)}
           {item('Export WAV (mix)', () => exportWav(false))}
           {item('Export WAV stems (.zip)', () => exportWav(true))}
+          {item('Export MP3 (mix)', () => exportMp3(false))}
+          {item('Export MP3 stems (.zip)', () => exportMp3(true))}
           {item('Print / PDF…', printScore, keyHint('print'))}
           {item('Copy as ASCII tab', copyAsciiTab, keyHint('ascii'))}
           <hr />

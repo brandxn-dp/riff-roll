@@ -30,6 +30,7 @@ import {
 import { barMap, useStore } from '../store';
 import { COL, DISP, MONO, alpha, fit, frameScheduler, pxPerTick, rr } from '../canvas';
 import { seek } from '../transport';
+import { px, rectOf } from '../zoom';
 
 const CW = 22; // bar cell width
 const RH = 24; // track row height
@@ -193,7 +194,7 @@ function TrackRow({ i, onMenu }: { i: number; onMenu: (i: number, x: number, y: 
       style={{ ['--tc' as string]: t.color }}
       onContextMenu={(e) => {
         e.preventDefault();
-        onMenu(i, e.clientX, e.clientY);
+        onMenu(i, px(e.clientX), px(e.clientY));
       }}
     >
       <button
@@ -361,12 +362,12 @@ export function GlobalView() {
   /** drag a column edge: the whole track panel, or just the names (the sliders get the rest) */
   const resize = (key: 'left' | 'name') => (e: React.PointerEvent) => {
     e.preventDefault();
-    const x0 = e.clientX,
+    const x0 = px(e.clientX),
       v0 = cols[key];
     const lim = key === 'left' ? [220, 760] : [40, cols.left - 150];
     let last = cols;
     const move = (ev: PointerEvent) => {
-      last = { ...cols, [key]: Math.max(lim[0], Math.min(lim[1], v0 + ev.clientX - x0)) };
+      last = { ...cols, [key]: Math.max(lim[0], Math.min(lim[1], v0 + px(ev.clientX) - x0)) };
       if (key === 'left') last.name = Math.min(last.name, last.left - 150);
       setCols(last);
     };
@@ -507,9 +508,9 @@ export function GlobalView() {
     const requestDraw = frameScheduler(draw);
 
     const pt = (e: { clientX: number; clientY: number }) => {
-      const r = sc.getBoundingClientRect();
-      const x = e.clientX - r.left + sc.scrollLeft,
-        y = e.clientY - r.top;
+      const r = rectOf(sc);
+      const x = px(e.clientX) - r.left + sc.scrollLeft,
+        y = px(e.clientY) - r.top;
       const st = useStore.getState();
       return {
         bar: Math.max(0, Math.min(st.song.bars - 1, Math.floor(x / CW))),
@@ -616,8 +617,8 @@ export function GlobalView() {
       }
       // the panel is short: the menu floats over the page, kept inside the window
       setMenu({
-        x: Math.min(e.clientX, window.innerWidth - 240),
-        y: Math.max(8, Math.min(e.clientY, window.innerHeight - 380)),
+        x: Math.min(px(e.clientX), px(window.innerWidth) - 240),
+        y: Math.max(8, Math.min(px(e.clientY), px(window.innerHeight) - 380)),
       });
     };
     const onScroll = () => {

@@ -21,6 +21,7 @@ import { stop } from '../transport';
 import { ensureEngine } from '../audio-setup';
 import { exportGp7, importScoreBytes } from './importScore';
 import type { RiffRollBridge } from '../storage/electron';
+import { settings } from '../settings';
 
 type DesktopBridge = RiffRollBridge & {
   dialogs: {
@@ -337,7 +338,42 @@ export const exportGuitarPro = () =>
     'application/octet-stream',
   );
 
-export async function exportWav(stems = false) {
+/** MP3 from a rendered mix, encoded in a worker (on the page if workers aren't available). */
+async function toMp3(buf: AudioBuffer, label: string): Promise<Uint8Array> {
+  const song = useStore.getState().song;
+  const job = {
+    channels: Array.from({ length: buf.numberOfChannels }, (_, i) => buf.getChannelData(i).slice()),
+    sampleRate: buf.sampleRate,
+    kbps: settings().mp3Kbps,
+    title: label === song.title ? song.title : `${song.title} (${label})`,
+    artist: song.artist,
+  };
+  const onPage = async () => (await import('./mp3')).encodeMp3(job);
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./mp3.worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    return onPage();
+  }
+  return new Promise<Uint8Array>((resolve, reject) => {
+    worker.onmessage = (e: MessageEvent<{ progress?: number; bytes?: Uint8Array; error?: string }>) => {
+      if (e.data.progress != null) status(`Encoding MP3… ${Math.round(e.data.progress * 100)}%`);
+      else {
+        worker.terminate();
+        if (e.data.bytes) resolve(e.data.bytes);
+        else reject(new Error(e.data.error ?? 'MP3 encoding failed'));
+      }
+    };
+    worker.onerror = () => {
+      worker.terminate();
+      onPage().then(resolve, reject);
+    };
+    worker.postMessage(job);
+  });
+}
+
+/** Render the song (or every track as a stem) and save it as WAV or MP3. */
+export async function exportAudio(format: 'wav' | 'mp3', stems = false) {
   const song = useStore.getState().song;
   const e = await ensureEngine();
   const opts = {
@@ -345,9 +381,13 @@ export async function exportWav(stems = false) {
     userIRs: e.userIRs,
     onProgress: (f: number) => status(`Rendering… ${Math.round(f * 100)}%`),
   };
+  const encode = async (buf: AudioBuffer, label: string) =>
+    format === 'mp3' ? await toMp3(buf, label) : audioBufferToWav(buf, 24);
   if (!stems) {
     const buf = await renderSong(song, e.lib, opts);
-    await saveFile(`${base()}.wav`, audioBufferToWav(buf, 24), 'audio/wav');
+    const data = await encode(buf, song.title);
+    await saveFile(`${base()}.${format}`, data, format === 'mp3' ? 'audio/mpeg' : 'audio/wav');
+    status(`Exported ${base()}.${format}`);
     return;
   }
   const files: Record<string, Uint8Array> = {};
@@ -355,10 +395,14 @@ export async function exportWav(stems = false) {
     if (!t.notes.length && !t.hits.length) continue;
     status(`Rendering stem: ${t.name}…`);
     const buf = await renderSong(song, e.lib, { ...opts, onlyTrack: t.id });
-    files[`${base()} - ${safeName(t.name)}.wav`] = audioBufferToWav(buf, 24);
+    files[`${base()} - ${safeName(t.name)}.${format}`] = await encode(buf, t.name);
   }
-  await saveFile(`${base()}-stems.zip`, zipSync(files, { level: 0 }), 'application/zip');
+  await saveFile(`${base()}-stems-${format}.zip`, zipSync(files, { level: 0 }), 'application/zip');
+  status(`Exported ${Object.keys(files).length} stems`);
 }
+
+export const exportWav = (stems = false) => exportAudio('wav', stems);
+export const exportMp3 = (stems = false) => exportAudio('mp3', stems);
 
 /** Copy the selection (or the bar at the cursor) as ASCII tab. */
 export async function copyAsciiTab() {

@@ -15,6 +15,11 @@ const SOFTWARE = [
   { name: 'Fastify', license: 'MIT', url: 'https://fastify.dev' },
   { name: 'Electron', license: 'MIT', url: 'https://www.electronjs.org' },
   { name: '7-Zip (via 7zip-bin)', license: 'LGPL-2.1 / MIT', url: 'https://www.7-zip.org' },
+  {
+    name: 'LAME MP3 encoder (via @breezystack/lamejs)',
+    license: 'LGPL-3.0',
+    url: 'https://github.com/breezystack/lamejs',
+  },
   { name: 'IBM Plex Sans / Mono', license: 'OFL-1.1', url: 'https://github.com/IBM/plex' },
   { name: 'Barlow Condensed', license: 'OFL-1.1', url: 'https://github.com/jpt/barlow' },
 ];

@@ -28,6 +28,7 @@ import {
 import { previewDrum } from '../audio-bridge';
 import { seek } from '../transport';
 import { DRUM_COL } from '../palettes';
+import { px, rectOf } from '../zoom';
 
 let LW = 132; // label gutter (96 on phones)
 let RH = 20; // lane height (28 on phones)
@@ -268,9 +269,9 @@ export function DrumGrid() {
     const requestDraw = frameScheduler(draw);
 
     const pt = (e: { clientX: number; clientY: number }) => {
-      const r = sc.getBoundingClientRect();
-      const lx = e.clientX - r.left,
-        ly = e.clientY - r.top;
+      const r = rectOf(sc);
+      const lx = px(e.clientX) - r.left,
+        ly = px(e.clientY) - r.top;
       return { lx, ly, gy: ly - RULER_H + sc.scrollTop };
     };
     const laneAt = (gy: number) => {

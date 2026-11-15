@@ -1,5 +1,6 @@
 /** Drag handles that resize parts of the workspace; sizes are remembered on this device. */
 import { useCallback, useState } from 'react';
+import { px } from '../zoom';
 
 const KEY = 'riffroll.layout.sizes';
 
@@ -55,10 +56,10 @@ export function Splitter({
 }) {
   const down = (e: React.PointerEvent) => {
     e.preventDefault();
-    const start = axis === 'x' ? e.clientX : e.clientY;
+    const start = px(axis === 'x' ? e.clientX : e.clientY);
     const s0 = size();
     const move = (ev: PointerEvent) => {
-      const d = (axis === 'x' ? ev.clientX : ev.clientY) - start;
+      const d = px(axis === 'x' ? ev.clientX : ev.clientY) - start;
       onSize(Math.max(min, Math.min(max, s0 + (invert ? -d : d))));
     };
     const up = () => {

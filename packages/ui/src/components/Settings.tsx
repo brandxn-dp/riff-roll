@@ -12,6 +12,7 @@ import { ensureEngine, getEngine, restartAudio, setOutputDevice } from '../audio
 import { testPreview } from '../audio-bridge';
 import { adminStats, setServerSignup, signOut, signOutEverywhere, type AdminStats } from '../account';
 import { openProjectFolder } from '../files/actions';
+import { uiScaleMode } from '../zoom';
 
 type Tab = 'general' | 'editor' | 'appearance' | 'audio' | 'shortcuts' | 'claude' | 'account' | 'server';
 
@@ -83,15 +84,15 @@ function General() {
       <Row
         label="Interface size"
         hint={
-          bridge?.setZoom ? 'Also Ctrl + / Ctrl − / Ctrl 0.' : 'Use your browser’s zoom: Ctrl + / Ctrl −.'
+          uiScaleMode() === 'app'
+            ? 'Also Ctrl + / Ctrl − / Ctrl 0.'
+            : uiScaleMode() === 'viewport'
+              ? 'Makes everything bigger or smaller on this phone or tablet.'
+              : 'For this browser; Ctrl + / Ctrl − zoom the page too.'
         }
       >
-        <select
-          value={s.uiScale}
-          disabled={!bridge?.setZoom}
-          onChange={(e) => s.update({ uiScale: Number(e.target.value) })}
-        >
-          {[80, 90, 100, 110, 125, 150].map((v) => (
+        <select value={s.uiScale} onChange={(e) => s.update({ uiScale: Number(e.target.value) })}>
+          {[70, 80, 90, 100, 110, 125, 150, 175].map((v) => (
             <option key={v} value={v}>
               {v} %
             </option>
@@ -518,6 +519,15 @@ function Audio() {
           <option value="interactive">Lowest</option>
           <option value="balanced">Balanced</option>
           <option value="playback">Safest (fewest dropouts)</option>
+        </select>
+      </Row>
+      <Row label="MP3 export quality" hint="File → Export MP3. Higher is closer to the WAV and bigger.">
+        <select value={s.mp3Kbps} onChange={(e) => s.update({ mp3Kbps: Number(e.target.value) })}>
+          {[128, 192, 256, 320].map((k) => (
+            <option key={k} value={k}>
+              {k} kbit/s{k === 192 ? ' (default)' : k === 320 ? ' (best)' : ''}
+            </option>
+          ))}
         </select>
       </Row>
       <Row label="Sample rate" hint="Leave on the device’s rate unless your interface needs another.">
