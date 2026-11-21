@@ -48,6 +48,7 @@ import { pedalSegments } from '@riffroll/core';
 import { preview } from '../audio-bridge';
 import { seek } from '../transport';
 import { noteFill } from '../palettes';
+import { foldIntoRange } from './ghost';
 import { techCode } from './tabDraw';
 import { px, rectOf } from '../zoom';
 
@@ -212,11 +213,17 @@ export function PianoRoll() {
               }))
             : ghost.notes;
         c.save();
+        // pitched ghosts outside this track's range move by octaves to the nearest matching note in it (a bass
+        // line shows on the guitar's lowest notes); drum ghosts stay at their General MIDI numbers
+        const fold = ghost.type !== 'drums';
+        c.font = '500 9px ' + BODY;
+        c.textBaseline = 'middle';
         for (const n of gNotes) {
           if (n.start > tB || n.start + n.duration < tA) continue;
-          if (n.pitch > range.hi || n.pitch < range.lo) continue;
+          const p = fold ? foldIntoRange(n.pitch, range.lo, range.hi) : n.pitch;
+          if (p > range.hi || p < range.lo) continue;
           const x = tickToX(a, n.start) + 1,
-            y = gy0 + (range.hi - n.pitch) * RH + 2;
+            y = gy0 + (range.hi - p) * RH + 2;
           const nw = Math.max(3, n.duration * a.ppt - 2);
           c.fillStyle = alpha(ghost.color, 0.16);
           rr(c, x, y, nw, RH - 4, 3);
@@ -226,6 +233,11 @@ export function PianoRoll() {
           c.setLineDash([3, 2]);
           rr(c, x + 0.5, y + 0.5, nw - 1, RH - 5, 3);
           c.stroke();
+          // a moved ghost says what it really is ("E1")
+          if (p !== n.pitch && nw > 22 && RH >= 10) {
+            c.fillStyle = alpha(ghost.color, 0.9);
+            c.fillText(pitchName(n.pitch), x + 4, y + (RH - 4) / 2);
+          }
         }
         c.restore();
       }

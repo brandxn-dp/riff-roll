@@ -534,3 +534,10 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
   events the target track already has at the same time (a doubled drum hit plays twice as loud). The song's tempo and
   metre stay unless asked; notes keep their bar/beat positions.
 - **Bass Drop C** (C G C F), to go with Drop C guitar.
+
+## Ghost notes folded into range (0.3.10)
+
+Ghost notes from another pitched track move by whole octaves into the range of the track being edited (a note
+below it goes to the lowest matching note in range, one above to the highest), so a bass line shows on the guitar's
+lowest notes instead of off the bottom of the roll. Moved ghosts carry their real note name ("E1"). Drum ghosts stay
+at their General MIDI numbers; a range under an octave isn't folded into.

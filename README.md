@@ -22,7 +22,7 @@ undo/redo covers every edit, including stomps, tempo and track settings.
 - **FL Studio editing**: click to add, drag to move, drag the edge to resize, right-click to delete, ←/→ a grid step
   (Ctrl: a bar), Shift+↑/↓ a semitone, Ctrl+↑/↓ an octave, **Ctrl+B** duplicates the selection right after its last
   note (press again to keep going), Ctrl+D duplicates on the grid, Alt+drag duplicates, Shift/Ctrl-drag box-selects.
-  Scale shading and snap to scale, ghost notes from another track, and separate horizontal and vertical zoom.
+  Scale shading and snap to scale, ghost notes from another track (a bass line shows on the guitar's lowest matching notes), and separate horizontal and vertical zoom.
 - **Tab editor**: keyboard entry like Guitar Pro (arrows, frets, durations, dots, triplets, rests, ties, insert/delete
   beat) and techniques (hammer/pull, slides, bend curves, vibrato, palm mute, let ring, dead notes, harmonics,
   tapping, tremolo picking, ghost notes, accents, staccato, pick direction, whammy, volume swell, trills).
