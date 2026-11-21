@@ -33,6 +33,7 @@ import { installAudio } from './audio-setup';
 import { MobileApp } from './components/mobile/MobileApp';
 import { installLayoutWatcher } from './device';
 import { Settings } from './components/Settings';
+import { ImportIntoDialog } from './components/ImportIntoDialog';
 import { installTheme } from './theme';
 import { installMcp } from './mcp/connect';
 import { useSettings } from './settings';
@@ -87,6 +88,7 @@ export function App() {
       {modal === 'tone' && <ToneEditor />}
       {modal === 'instruments' && <Instruments />}
       {modal === 'settings' && <Settings />}
+      {modal === 'importInto' && <ImportIntoDialog />}
     </>
   );
   if (screen === 'loading') return <div className="auth-screen" aria-busy="true" />;

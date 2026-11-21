@@ -15,6 +15,7 @@ import {
   recentSongs,
   newProject,
   openFromDisk,
+  importIntoCurrent,
   saveCopy,
   saveProject,
 } from '../files/actions';
@@ -90,6 +91,7 @@ export function FileMenu() {
             </>
           )}
           {item('Import from disk…', openFromDisk)}
+          {access !== 'view' && item('Import MIDI into this song…', importIntoCurrent)}
           {window.riffroll && item('Open project folder', openProjectFolder)}
           {access !== 'view' && item('Save', () => saveProject(), keyHint('save'))}
           {item('Save a copy', saveCopy)}

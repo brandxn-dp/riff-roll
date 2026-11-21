@@ -18,6 +18,8 @@ export const GUITAR_TUNINGS: Tuning[] = [
 export const BASS_TUNINGS: Tuning[] = [
   t('Bass Standard E', 'E1 A1 D2 G2'),
   t('Bass Drop D', 'D1 A1 D2 G2'),
+  // goes with Drop C guitar, an octave down
+  t('Bass Drop C', 'C1 G1 C2 F2'),
   t('5-string Bass Standard B', 'B0 E1 A1 D2 G2'),
 ];
 

@@ -94,7 +94,10 @@ export interface UiState {
     | 'users'
     | 'account'
     | 'velocity'
-    | 'settings';
+    | 'settings'
+    | 'importInto';
+  /** a file picked for File → Import MIDI into this song, waiting for the dialog */
+  pendingImport: { name: string; song: Song } | null;
   /** which page the settings window opens on */
   settingsTab: string;
   /** sign-in screen, launch screen (recent + all songs), or the editor */
@@ -200,6 +203,7 @@ export const useStore = create<UiState>((set, get) => {
     midi: { inputs: [], inputId: null, armed: false, quantize: true, guitarChannels: false },
     modal: null,
     settingsTab: 'general',
+    pendingImport: null,
     screen: 'loading',
     auth: { accounts: false, setupNeeded: false, signup: false },
     user: null,

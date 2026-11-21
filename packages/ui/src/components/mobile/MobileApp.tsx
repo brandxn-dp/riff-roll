@@ -23,6 +23,7 @@ import {
   goHome,
   newProject,
   openFromDisk,
+  importIntoCurrent,
   saveCopy,
   saveProject,
 } from '../../files/actions';
@@ -192,6 +193,7 @@ function Sheet() {
             {item('All songs', goHome)}
             {item('New song', newProject)}
             {item('Import file…', openFromDisk)}
+            {item('Import MIDI into this song…', importIntoCurrent)}
             {access !== 'view' && item('Save now', () => saveProject())}
             {item('Save a copy', saveCopy)}
             {accounts && access === 'owner' && item('Share…', shareCurrentSong)}

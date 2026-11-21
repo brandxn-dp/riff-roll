@@ -523,3 +523,14 @@ menu, in-app File menu and the launch screen menu, desktop only) opens the songs
   the page and touch and layout maths stay exact. Desktop browsers: CSS `zoom` on `<html>`; Chromium then reports
   pointer positions and rectangles in zoomed pixels while the editors draw in CSS pixels, so pointer maths goes
   through `px()` / `rectOf()` (zoom.ts).
+
+## Import MIDI into the open song, Drop C bass (0.3.9)
+
+- **File → Import MIDI into this song** parses the file with the normal importer (MIDI; Guitar Pro and MusicXML
+  work too), then a dialog picks, per source track: a new guitar/bass/drum/other track and its instrument (from the
+  installed list), into an existing track (converted to that track's type through `convertTrack`, General MIDI
+  drum numbers both ways), or skip; plus the start bar and whether to take the file's tempo and time signatures from
+  there. `importIntoSong` (core) does it as one undo step with fresh ids, grows the song to fit, and doesn't double
+  events the target track already has at the same time (a doubled drum hit plays twice as loud). The song's tempo and
+  metre stay unless asked; notes keep their bar/beat positions.
+- **Bass Drop C** (C G C F), to go with Drop C guitar.

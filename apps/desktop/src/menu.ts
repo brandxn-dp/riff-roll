@@ -17,6 +17,7 @@ export function buildMenu(recent: RecentSong[] = []): Menu {
       submenu: [
         { label: 'New Song', accelerator: 'CmdOrCtrl+N', click: send('file:new') },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: send('file:open') },
+        { label: 'Import MIDI into Song…', click: send('file:import-into') },
         {
           label: 'Open Recent',
           submenu: recent.length

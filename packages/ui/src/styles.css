@@ -2967,3 +2967,62 @@ body.resizing {
   --tc: var(--ink);
   border-left: 2px solid var(--accent);
 }
+
+/* import MIDI into this song */
+.imp-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.imp-opts input[type='number'] {
+  width: 64px;
+}
+.imp-table {
+  display: flex;
+  flex-direction: column;
+}
+.imp-tr {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(160px, 1fr) minmax(170px, 1.2fr) minmax(110px, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.imp-tr > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.imp-tr.head {
+  color: var(--mute);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.imp-tr.skipped > span:first-child {
+  opacity: 0.5;
+}
+.imp-tr select,
+.imp-tr input {
+  width: 100%;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--raise);
+  padding: 0 8px;
+}
+.imp-actions {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .imp-tr {
+    grid-template-columns: 1fr 1fr;
+  }
+  .imp-tr.head {
+    display: none;
+  }
+}

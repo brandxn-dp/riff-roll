@@ -24,3 +24,4 @@ export * from './bars';
 export * from './convert';
 export * from './scales';
 export * from './strings';
+export * from './importInto';

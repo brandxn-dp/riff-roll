@@ -80,6 +80,8 @@ desktop). Playback stays smooth in big songs: only the tone that's switched on r
 - **Global view** (Guitar Pro style, under the editor): every track as a row of bars with mute, solo, volume and pan.
   Select bars across tracks, then copy, cut, paste (overwrite or insert), clear, duplicate, insert (**＋ Bars**: 1, 2,
   4, 8 or 16) or delete bars.
+- **Import MIDI into this song** (File menu): each track of the file becomes a new guitar, bass, drum or other track
+  with the instrument you pick, goes into one of the song's tracks, or is skipped, from any bar.
 - `.riff` projects with autosave and crash recovery. Import Guitar Pro 3–8/GPX, MusicXML and MIDI; export MIDI,
   MusicXML, Guitar Pro 7, WAV or MP3 (mix or per-track stems; MP3 at 128–320 kbit/s), PDF/print and ASCII tab.
 - **Inputs**: record from a MIDI keyboard or MIDI guitar, or play a real guitar through a track's amp and pedal via

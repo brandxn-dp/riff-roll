@@ -293,6 +293,41 @@ export async function importBytes(name: string, bytes: Uint8Array) {
   status(`Imported ${name}${warnings.length ? ` — ${warnings.join('; ')}` : ''}`);
 }
 
+/**
+ * File → Import MIDI into this song: pick a MIDI file (Guitar Pro and MusicXML work too), then the dialog chooses
+ * what each of its tracks becomes in the open song.
+ */
+export async function importIntoCurrent() {
+  const take = (name: string, bytes: Uint8Array) => {
+    const lower = name.toLowerCase();
+    const song = /\.midi?$/.test(lower)
+      ? midiToSong(bytes, name.replace(/\.midi?$/i, ''))
+      : importScoreBytes(bytes).song;
+    if (!song.tracks.some((t) => t.notes.length || t.hits.length))
+      throw new Error('there are no notes in it');
+    useStore.getState().set({ pendingImport: { name, song }, modal: 'importInto' });
+  };
+  const d = desktop();
+  if (d) {
+    const r = await d.dialogs.open();
+    if (r) take(r.name, r.data);
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.mid,.midi,.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl';
+  input.onchange = async () => {
+    const f = input.files?.[0];
+    if (!f) return;
+    try {
+      take(f.name, new Uint8Array(await f.arrayBuffer()));
+    } catch (e) {
+      status(`Could not read ${f.name}: ${(e as Error).message}`);
+    }
+  };
+  input.click();
+}
+
 export async function openFromDisk() {
   const d = desktop();
   if (d) {
